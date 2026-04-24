@@ -1,0 +1,1 @@
+import{_ as i,o as a,c as n,ah as e}from"./chunks/framework.B7OS7--e.js";const o=JSON.parse('{"title":"关于接口和抽象类","description":"","frontmatter":{},"headers":[],"relativePath":"notes/2.md","filePath":"notes/2.md"}'),h={name:"notes/2.md"};function t(l,s,p,k,r,d){return a(),n("div",null,[...s[0]||(s[0]=[e("",29)])])}const c=i(h,[["render",t]]);export{o as __pageData,c as default};
