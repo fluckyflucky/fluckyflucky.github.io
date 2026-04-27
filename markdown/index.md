@@ -6,7 +6,7 @@ hero:
   tagline: "explorer, recorder, and creator"
 
 features:
-  - title: 小笔记
+  - title: 笔记
     details: 造轮子时的笔记。主要是技术实践、学习心得
     link: /notes/notes
   - title: 夏日记忆
