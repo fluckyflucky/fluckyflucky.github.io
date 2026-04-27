@@ -51,8 +51,8 @@ features:
 ## Recommendation
 如果你不知道从哪里开始，可以看看：
 
-* [[后端] JSON 反序列化中 TypeReference 的使用](./notes/3) - *2025-12-29*
-* [[后端] Gin 框架分层：经典的洋葱模型](./notes/4) - *2025-9-15*
+* [[后端] JSON 反序列化中 TypeReference 的使用](./notes/jackson-type-reference) - *2025-12-29*
+* [[后端] Gin 框架分层：经典的洋葱模型](./notes/gin-layered-architecture) - *2025-9-15*
 
 ---
 
