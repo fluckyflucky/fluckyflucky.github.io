@@ -22,10 +22,10 @@ export default defineConfig({
             '/notes/': {
                 text: '小笔记',
                 items: [
-                    {text: '[前端] 关于 Element 中的 prop 和 slot-scope ', link: '/notes/1'},
-                    {text: '[设计] 关于接口和抽象类', link: '/notes/2'},
-                    {text: '[后端] JSON 反序列化中 TypeReference 的使用', link: '/notes/3'},
-                    {text: '[后端] Gin 框架分层：经典的洋葱模型', link: '/notes/4' }
+                    {text: '[前端] 关于 Element 中的 prop 和 slot-scope', link: '/notes/element-prop-slot-scope'},
+                    {text: '[设计] 关于接口和抽象类', link: '/notes/interface-vs-abstract'},
+                    {text: '[后端] JSON 反序列化中 TypeReference 的使用', link: '/notes/jackson-type-reference'},
+                    {text: '[后端] Gin 框架分层：经典的洋葱模型', link: '/notes/gin-layered-architecture'}
                 ]
             },
             '/thoughts/': {

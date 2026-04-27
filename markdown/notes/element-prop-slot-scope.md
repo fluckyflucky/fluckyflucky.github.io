@@ -1,3 +1,7 @@
+---
+title: "[前端] 关于 Element 中 prop 和 slot-scope"
+---
+
 # \[前端] 关于 Element 中 prop 和 slot-scope
 
 最近两天在给老师做的项目里，在写前端时遇到了这样的代码：

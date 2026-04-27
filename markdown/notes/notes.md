@@ -6,4 +6,4 @@
   <p style="font-size: 0.85em; opacity: 0.6;">——「雨とカプチーノ」· ヨルシカ</p>
 </div>
 
-[开始 >>](./1.md)
+[开始 >>](./element-prop-slot-scope.md)
