@@ -3,18 +3,7 @@ layout: home
 
 hero:
   name: "青い夏"
-#  text: "停不下步伐的旅行者"
-  tagline: "explorer,recorder,and creator"
-#  photos:
-#     src: /logo.png # 如果你还没做 logo，可以先注释掉这一行
-#     alt: Logo
-#  actions:
-#    - theme: notes
-#      text: 阅读文章
-#      link: /notes/notes
-#    - theme: images
-#      text: 看看照片
-#      link: /images/images
+  tagline: "explorer, recorder, and creator"
 
 features:
   - title: 小笔记
@@ -36,33 +25,69 @@ features:
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: -webkit-linear-gradient(135deg, #23e5eb 30%, #41d1ff);
 }
-
-.VPButton.notes {
-  background-color: #5ad2e2;
-  color: white;
-}
-
-.VPButton.images {
-  background-color: #5ad2e2;
-  color: white;
-}
 </style>
 
+<div class="home-bottom">
+
 ## Recommendation
+
 如果你不知道从哪里开始，可以看看：
 
-* [[后端] JSON 反序列化中 TypeReference 的使用](./notes/jackson-type-reference) - *2025-12-29*
-* [[后端] Gin 框架分层：经典的洋葱模型](./notes/gin-layered-architecture) - *2025-9-15*
+* [[后端] JSON 反序列化中 TypeReference 的使用](./notes/jackson-type-reference) — *2025-12-29*
+* [[后端] Gin 框架分层：经典的洋葱模型](./notes/gin-layered-architecture) — *2025-9-15*
 
 ---
 
+<div class="about-section">
+
 ### About me
+
 同济大学计科大三在读，数据/前端/后端/移动开发
 
 爱好旅行、摄影、做有意思的事情，一直在追逐永无止境的夏。
 
 Github：[https://github.com/fluckyflucky](https://github.com/fluckyflucky)
 
+</div>
+
 ---
 
-<div>powered by <a href="https://vitepress.dev/">VitePress</a></div>
+<footer class="site-footer">
+  <span>powered by <a href="https://vitepress.dev/">VitePress</a></span>
+  <span class="footer-divider">·</span>
+  <span>終わらない夏</span>
+</footer>
+
+</div>
+
+<style>
+.home-bottom {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+
+.about-section {
+  padding: 4px 0;
+}
+
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 0 0;
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+  opacity: 0.7;
+  letter-spacing: 0.5px;
+}
+
+.footer-divider {
+  opacity: 0.4;
+}
+
+.site-footer a {
+  color: var(--vp-c-brand-1);
+}
+</style>

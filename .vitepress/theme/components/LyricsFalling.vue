@@ -32,6 +32,7 @@ let nextId = 0
 let idx = 0
 
 const isHome = () => route.path === '/' || route.path === '/index' || route.path === '/index.html'
+const isMobile = () => window.innerWidth < 768
 
 function shuffle<T>(arr: T[]): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -51,7 +52,8 @@ function createEl(lyric: LyricPair, scale: number): HTMLElement {
 
 function spawnLyric() {
   if (!isHome() || !container.value || lyrics.value.length === 0) return
-  if (items.length >= 5) {
+  const maxItems = isMobile() ? 3 : 5
+  if (items.length >= maxItems) {
     scheduleNext()
     return
   }
@@ -63,22 +65,23 @@ function spawnLyric() {
     shuffle(lyrics.value)
   }
 
-  const scale = 0.85 + Math.random() * 0.35
+  const scale = isMobile() ? 0.7 + Math.random() * 0.2 : 0.85 + Math.random() * 0.35
   const el = createEl(lyric, scale)
   container.value.appendChild(el)
 
+  const mobile = isMobile()
   const item: FallingItem = {
     id: nextId++,
     lyric,
     el,
     startTime: performance.now(),
-    duration: (9 + Math.random() * 4) * 1000, // 9-13s in ms
-    x: 10 + Math.random() * 80,
+    duration: (9 + Math.random() * 4) * 1000,
+    x: mobile ? 5 + Math.random() * 90 : 10 + Math.random() * 80,
     scale,
-    swayAmp: 15 + Math.random() * 30, // 15-45px
-    swayFreq: 0.8 + Math.random() * 0.6, // 0.8-1.4 cycles over lifetime
-    rotateAmp: 10 + Math.random() * 20, // 10-30deg
-    rotateFreq: 0.6 + Math.random() * 0.8, // different freq from sway
+    swayAmp: mobile ? 8 + Math.random() * 15 : 15 + Math.random() * 30,
+    swayFreq: 0.8 + Math.random() * 0.6,
+    rotateAmp: mobile ? 5 + Math.random() * 10 : 10 + Math.random() * 20,
+    rotateFreq: 0.6 + Math.random() * 0.8,
   }
   items.push(item)
   scheduleNext()
@@ -186,5 +189,14 @@ onUnmounted(() => {
   color: var(--vp-c-text-2);
   opacity: 0.4;
   margin-top: 3px;
+}
+
+@media (max-width: 767px) {
+  :deep(.lyric-ja) {
+    font-size: 14px;
+  }
+  :deep(.lyric-zh) {
+    font-size: 11px;
+  }
 }
 </style>

@@ -1,64 +1,216 @@
-/* 自定义品牌色 */
+/* ===== 青い夏 — custom theme ===== */
+
+/* ---------- brand palette ---------- */
 :root {
-    /* 青い夏主题 - 浅绿色和青蓝色系 */
-    --vp-c-brand-1: #4ac8de; /* 主色调 - 清新绿 */
-    --vp-c-brand-2: #4de7ff; /* 悬浮色 - 青蓝色 */
-    --vp-c-brand-3: #d3fff9; /* 激活色 - 青绿 */
-    --vp-c-brand-soft: rgba(74, 222, 128, 0.14); /* 浅绿背景 */
+  --vp-c-brand-1: #4ac8de;
+  --vp-c-brand-2: #4de7ff;
+  --vp-c-brand-3: #d3fff9;
+  --vp-c-brand-soft: rgba(74, 222, 128, 0.14);
+  --vp-c-brand-light: #7dd3fc;
+  --vp-c-brand-dark: #0ea5e9;
 
-    --vp-sidebar-width: 200px;
-    /* 补充配色 */
-    --vp-c-brand-light: #7dd3fc; /* 较亮的青蓝 */
-    --vp-c-brand-dark: #0ea5e9; /* 较深的青蓝 */
-    
-    /* 文字颜色调整 */
-    --vp-c-text-1: #1e293b; /* 主要文字颜色 */
-    --vp-c-text-2: rgba(35, 122, 123, 0.75); /* 次要文字颜色 */
-    
-    /* 背景色调整 */
-    --vp-c-bg: #d7faff; /* 整体背景 - 淡绿色 */
-    --vp-c-bg-alt: #a9dffa; /* 替代背景色 */
-    --vp-c-bg-soft: #ffffff; /* 柔和背景 */
-    --vp-c-bg-mute: #f1f5f9; /* 柔和背景 */
+  --vp-c-text-1: #1e293b;
+  --vp-c-text-2: rgba(35, 122, 123, 0.75);
+
+  --vp-c-bg: #d7faff;
+  --vp-c-bg-alt: #a9dffa;
+  --vp-c-bg-soft: #ffffff;
+  --vp-c-bg-mute: #f1f5f9;
+
+  --vp-sidebar-width: 200px;
+
 }
 
-/* 深色模式 */
 .dark {
-    --vp-c-brand-1: #1eb9d1; /* 青蓝色 */
-    --vp-c-brand-2: #2dd4d4; /* 青绿色 */
-    --vp-c-brand-3: #5395cb; /* 亮青绿 */
-    --vp-c-brand-soft: rgb(6, 34, 36); /* 青蓝浅背景 */
+  --vp-c-brand-1: #1eb9d1;
+  --vp-c-brand-2: #2dd4d4;
+  --vp-c-brand-3: #5395cb;
+  --vp-c-brand-soft: rgb(6, 34, 36);
+  --vp-c-brand-light: #7dd3fc;
+  --vp-c-brand-dark: #0ea5e9;
 
-    /* 深色模式补充配色 */
-    --vp-c-brand-light: #7dd3fc;
-    --vp-c-brand-dark: #0ea5e9;
-    
-    /* 深色模式文字颜色 */
-    --vp-c-text-1: #f1f5f9; /* 主要文字颜色 */
-    --vp-c-text-2: #cbd5e1; /* 次要文字颜色 */
-    
-    /* 深色模式背景色 */
-    --vp-c-bg: #101d2e; /* 深蓝灰背景 */
-    --vp-c-bg-alt: #1e293b; /* 替代背景色 */
-    --vp-c-bg-soft: #334155; /* 柔和背景 */
-    --vp-c-bg-mute: #475569; /* 柔和背景 */
+  --vp-c-text-1: #f1f5f9;
+  --vp-c-text-2: #cbd5e1;
+
+  --vp-c-bg: #101d2e;
+  --vp-c-bg-alt: #1e293b;
+  --vp-c-bg-soft: #334155;
+  --vp-c-bg-mute: #475569;
+
 }
 
-/* 调整侧边栏宽度 */
-.VPDocAsideOutline {
-    max-width: 200px !important;
+/* ---------- clean glass navbar ---------- */
+.VPNav {
+  background: rgba(215, 250, 255, 0.75) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  border-bottom: 1px solid rgba(74, 200, 222, 0.2) !important;
+  transition: background 0.4s ease, border-color 0.4s ease;
 }
 
-.VPNavBar .nav-links {
-    max-width: 200px !important;
+.dark .VPNav {
+  background: rgba(16, 29, 46, 0.8) !important;
+  border-bottom: 1px solid rgba(30, 185, 209, 0.15) !important;
 }
 
+/* ---------- custom scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vp-c-brand-1);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vp-c-brand-2);
+}
+
+/* ---------- link hover — subtle underline glow ---------- */
+.vp-doc a {
+  text-decoration: none;
+  background-image: linear-gradient(var(--vp-c-brand-1), var(--vp-c-brand-1));
+  background-size: 0% 1.5px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.35s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease;
+}
+
+.vp-doc a:hover {
+  background-size: 100% 1.5px;
+  color: var(--vp-c-brand-2);
+}
+
+/* ---------- feature cards — clear glass ---------- */
+.VPFeature {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  border: 1px solid rgba(74, 200, 222, 0.25) !important;
+  border-radius: 10px !important;
+  transition: transform 0.3s ease,
+              box-shadow 0.3s ease,
+              border-color 0.3s ease !important;
+}
+
+.VPFeature:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(74, 200, 222, 0.1);
+  border-color: rgba(74, 200, 222, 0.4) !important;
+}
+
+.dark .VPFeature {
+  background: rgba(30, 41, 59, 0.55) !important;
+  border: 1px solid rgba(30, 185, 209, 0.15) !important;
+}
+
+.dark .VPFeature:hover {
+  box-shadow: 0 4px 12px rgba(30, 185, 209, 0.08);
+  border-color: rgba(30, 185, 209, 0.35) !important;
+}
+
+/* ---------- blockquote — clean vertical accent ---------- */
+.vp-doc blockquote {
+  border-left: 2px solid var(--vp-c-brand-1) !important;
+  background: rgba(74, 200, 222, 0.03);
+  padding: 12px 20px;
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
+  color: var(--vp-c-text-2);
+  transition: border-color 0.3s ease;
+}
+
+.vp-doc blockquote:hover {
+  border-left-color: var(--vp-c-brand-2) !important;
+}
+
+.dark .vp-doc blockquote {
+  background: rgba(30, 185, 209, 0.03);
+}
+
+/* ---------- strong text ---------- */
 strong {
-    color: var(--vp-c-brand-1);
-    text-decoration: #1e293b;
+  color: var(--vp-c-brand-1);
 }
 
-/* 左侧导航栏整体宽度调整 */
+/* ---------- sidebar width ---------- */
+.VPDocAsideOutline {
+  max-width: 200px !important;
+}
+
 .aside {
-    width: 100px;
+  width: 100px;
+}
+
+@media (max-width: 767px) {
+  .VPDocAsideOutline {
+    max-width: none !important;
+  }
+  .aside {
+    width: auto;
+  }
+}
+
+/* ---------- smooth page transitions ---------- */
+.VPContent {
+  transition: opacity 0.3s ease;
+}
+
+/* ---------- hero section enhancements ---------- */
+.VPHero .main {
+  position: relative;
+  z-index: 2;
+}
+
+.VPHero .name {
+  letter-spacing: 2px;
+}
+
+.VPHero .tagline {
+  font-weight: 300;
+  letter-spacing: 1.5px;
+  opacity: 0.8;
+}
+
+/* ---------- footer area ---------- */
+.VPDoc .container > .content {
+  padding-bottom: 48px;
+}
+
+/* ---------- image hover in gallery ---------- */
+.vp-doc img {
+  border-radius: 6px;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.4s ease;
+}
+
+.vp-doc img:hover {
+  transform: scale(1.01);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ---------- code block styling ---------- */
+.vp-doc div[class*='language-'] {
+  border-radius: 10px !important;
+  border: 1px solid rgba(74, 200, 222, 0.1);
+}
+
+.dark .vp-doc div[class*='language-'] {
+  border: 1px solid rgba(30, 185, 209, 0.08);
+}
+
+/* ---------- selection color ---------- */
+::selection {
+  background: rgba(74, 200, 222, 0.25);
+  color: inherit;
+}
+
+.dark ::selection {
+  background: rgba(30, 185, 209, 0.3);
 }
