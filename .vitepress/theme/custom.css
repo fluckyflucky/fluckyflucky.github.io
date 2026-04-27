@@ -214,3 +214,21 @@ strong {
 .dark ::selection {
   background: rgba(30, 185, 209, 0.3);
 }
+
+/* ---------- mobile nav fix — layout-top covers VPLocalNav ---------- */
+.VPLocalNav {
+  z-index: 50 !important;
+}
+
+/* ---------- responsive article images ---------- */
+.vp-doc .hero-img {
+  display: block;
+  width: 30%;
+  margin: 0 auto;
+}
+
+@media (max-width: 767px) {
+  .vp-doc .hero-img {
+    width: 75%;
+  }
+}

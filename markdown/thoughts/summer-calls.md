@@ -6,7 +6,7 @@ title: 若是夏天呼唤我们
 
 ---
 
-<img src="/img/psc.jpeg" alt="" style="width: 30%;margin:auto;" />
+<img src="/img/psc.jpeg" alt="" class="hero-img" />
 
 热烈的夏天。热烈的音乐。
 
