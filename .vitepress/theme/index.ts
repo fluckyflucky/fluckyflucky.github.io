@@ -1,7 +1,14 @@
 // .vitepress/theme/index.ts
 import DefaultTheme from 'vitepress/theme'
-import './custom.css' // 引入你的自定义样式
+import './custom.css'
+import LyricsFalling from './components/LyricsFalling.vue'
+import { h } from 'vue'
 
 export default {
-    extends: DefaultTheme, // 继承默认主题
+    extends: DefaultTheme,
+    Layout() {
+        return h(DefaultTheme.Layout, null, {
+            'layout-top': () => h(LyricsFalling),
+        })
+    },
 }

@@ -4,30 +4,10 @@ title: 写在前面
 
 # 写在前面
 
-在这本无页码的画册里，
-
-每一帧都是时光的切片，每一张照片都是生活的注脚。
-
-
-镜头捕捉的不只是光影，
-更是那些转瞬即逝的瞬间——
-
-山川湖海的呼吸， 城市街角的故事，
-
-以及旅途中偶遇的自己。
-
-画笔勾勒出想象的边界，
-相机记录下现实的温度。
-无论是铅笔下的素描，
-还是镜头里的世界，
-都是对转瞬即逝的美好的探寻。
-
-这里没有终点，
-只有无数个起点。
-愿这些画面能带你走很远的路，
-看很多的风景，
-去感受生命中无穷无尽的可能。
-
-欢迎来到永不褪色的夏。
+<div style="max-width: 90%; width: 30em; margin: 3em auto; text-align: center; line-height: 2.4; letter-spacing: 0.05em;">
+  <p style="font-style: italic; margin-bottom: 0.4em;">記憶の中はいつも夏の匂いがする</p>
+  <p style="margin-bottom: 2.4em;">记忆中总是有夏日的气息</p>
+  <p style="font-size: 0.85em; opacity: 0.6;">——「ただ君に晴れ」· ヨルシカ</p>
+</div>
 
 [开始 >>](./photos.md)

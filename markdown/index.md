@@ -20,28 +20,31 @@ features:
   - title: 小笔记
     details: 造轮子时的笔记。主要是技术实践、学习心得
     link: /notes/notes
-  - title: 胡思乱想
+  - title: 夏日记忆
     details: 一些突如其来的想法、随笔。非技术性内容为主
     link: /thoughts/thoughts
   - title: 图库
     link: /images/images
     details: 镜头下那些转瞬即逝的美。未来也考虑把画放在这里。
+  - title: 工具箱
+    link: /tools/tools
+    details: 一些纯前端的开发小工具，JSON 格式化、Base64 编解码、时间戳转换等。
 ---
 
 <style>
 :root {
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: -webkit-linear-gradient(135deg, #23e5eb 30%, #41d1ff);
+}
+
 .VPButton.notes {
   background-color: #5ad2e2;
- color: white;
+  color: white;
 }
 
 .VPButton.images {
   background-color: #5ad2e2;
- color: white;
-}
-
+  color: white;
 }
 </style>
 

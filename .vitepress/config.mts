@@ -14,8 +14,9 @@ export default defineConfig({
         nav: [
             {text: '首页', link: '/index'},
             {text: '小笔记', link: '/notes/notes'},
-            {text: '胡思乱想', link: '/thoughts/thoughts'},
-            {text: '图库', link: '/images/images'}
+            {text: '夏日记忆', link: '/thoughts/thoughts'},
+            {text: '图库', link: '/images/images'},
+            {text: '工具箱', link: '/tools/tools'}
         ],
         sidebar: {
             '/notes/': {
@@ -27,11 +28,10 @@ export default defineConfig({
                     {text: '[后端] Gin 框架分层：经典的洋葱模型', link: '/notes/4' }
                 ]
             },
-            '/random-thoughts/': {
-                text: '胡思乱想',
+            '/thoughts/': {
+                text: '夏日记忆',
                 items: [
-                    {text: '年度总结-2025', link: '/thoughts/2025-summary'},
-                    {text: '永无止境的夏', link: '/thoughts/endless-summer'},
+                    {text: '若是夏天呼唤我们', link: '/thoughts/summer-calls'},
                 ]
             },
             '/images/': {
@@ -40,6 +40,15 @@ export default defineConfig({
                     {text: '写在前面', link: '/images/images'},
                     {text: '照片', link: '/images/photos'},
                     {text: '第一次日本行', link: '/images/japan-1'},
+                ]
+            },
+            '/tools/': {
+                text: '工具箱',
+                items: [
+                    {text: 'JSON 格式化', link: '/tools/json-formatter'},
+                    {text: 'Base64 编解码', link: '/tools/base64'},
+                    {text: '时间戳转换', link: '/tools/timestamp'},
+                    {text: '下载速度计算', link: '/tools/download-calc'},
                 ]
             }
         },
