@@ -183,33 +183,24 @@ onMounted(() => {
     const isDark = document.documentElement.classList.contains('dark')
 
     const speed = t * 0.4
+    // light mode: lower frequency → larger, more relaxed caustic patterns
+    const fq = isDark ? 1 : 0.55
     for (let y = 0; y < oh; y++) {
       for (let x = 0; x < ow; x++) {
         const px = x * SCALE
         const py = y * SCALE
 
-        const v1 = Math.sin(px * 0.015 + speed * 0.7)
-              + Math.sin(py * 0.012 + speed * 0.5)
-        const v2 = Math.sin((px * 0.8 + py * 0.6) * 0.01 + speed * 0.6)
-              + Math.sin((px * 0.6 - py * 0.8) * 0.013 - speed * 0.4)
+        const v1 = Math.sin(px * 0.015 * fq + speed * 0.7)
+              + Math.sin(py * 0.012 * fq + speed * 0.5)
+        const v2 = Math.sin((px * 0.8 + py * 0.6) * 0.01 * fq + speed * 0.6)
+              + Math.sin((px * 0.6 - py * 0.8) * 0.013 * fq - speed * 0.4)
         const v3 = Math.sin(
-          Math.sqrt(px * px * 0.00004 + py * py * 0.00004) * 3
+          Math.sqrt(px * px * 0.00004 * fq * fq + py * py * 0.00004 * fq * fq) * 3
           + speed * 0.3
         )
 
-        let mouseBright = 0
-        if (mouseX >= 0) {
-          const dx = px - mouseX
-          const dy = py - mouseY
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          const radius = isMobile ? 150 : 200
-          if (dist < radius) {
-            mouseBright = (1 - dist / radius) * 0.4
-          }
-        }
-
         const raw = (v1 + v2 + v3) / 6 + 0.5
-        const bright = Math.pow(Math.max(0, raw), 2.5) + mouseBright
+        const bright = Math.pow(Math.max(0, raw), 2.5)
 
         const idx = (y * ow + x) * 4
         if (isDark) {
