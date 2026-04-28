@@ -10,4 +10,4 @@ title: 写在前面
   <p style="font-size: 0.85em; opacity: 0.6;">——「ただ君に晴れ」· ヨルシカ</p>
 </div>
 
-<IntroEntryLink href="./photos.md">开始 >></IntroEntryLink>
+<IntroEntryLink href="./photos">开始 >></IntroEntryLink>

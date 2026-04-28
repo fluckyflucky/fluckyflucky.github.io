@@ -6,4 +6,4 @@
   <p style="font-size: 0.85em; opacity: 0.6;">——「雨とカプチーノ」· ヨルシカ</p>
 </div>
 
-<IntroEntryLink href="./element-prop-slot-scope.md">开始 >></IntroEntryLink>
+<IntroEntryLink href="./element-prop-slot-scope">开始 >></IntroEntryLink>

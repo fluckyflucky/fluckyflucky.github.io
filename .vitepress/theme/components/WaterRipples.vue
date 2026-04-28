@@ -8,6 +8,8 @@ interface Ripple {
   maxRadius: number
   opacity: number
   rings: number // 1=small trail, 2=auto, 3=click/tap splash
+  birth: number // timestamp for phase animation
+  wobble: number // per-ripple random offset for organic feel
 }
 
 interface TrailDot {
@@ -66,25 +68,30 @@ onMounted(() => {
       lastTrailSpawn = now
     }
 
-    if (Math.random() < 0.3 && ripples.length < MAX_RIPPLES) {
+    if (Math.random() < 0.45 && ripples.length < MAX_RIPPLES) {
       ripples.push({
-        x: x + (Math.random() - 0.5) * 10,
-        y: y + (Math.random() - 0.5) * 10,
+        x: x + (Math.random() - 0.5) * 14,
+        y: y + (Math.random() - 0.5) * 14,
         radius: 0,
-        maxRadius: 20 + Math.random() * 25,
-        opacity: 0.2 + Math.random() * 0.1,
+        maxRadius: 40 + Math.random() * 50,
+        opacity: 0.25 + Math.random() * 0.1,
         rings: 1,
+        birth: performance.now(),
+        wobble: Math.random() * Math.PI * 2,
       })
     }
   }
 
   function addSplash(x: number, y: number) {
+    const now = performance.now()
     if (ripples.length < MAX_RIPPLES) {
       ripples.push({
         x, y, radius: 0,
         maxRadius: isMobile ? 80 + Math.random() * 40 : 100 + Math.random() * 60,
         opacity: 0.45,
         rings: 3,
+        birth: now,
+        wobble: Math.random() * Math.PI * 2,
       })
     }
     const count = isMobile ? 2 : 3
@@ -99,6 +106,8 @@ onMounted(() => {
         maxRadius: 30 + Math.random() * 30,
         opacity: 0.2 + Math.random() * 0.1,
         rings: 2,
+        birth: now,
+        wobble: Math.random() * Math.PI * 2,
       })
     }
   }
@@ -148,6 +157,8 @@ onMounted(() => {
       maxRadius: isMobile ? 50 + Math.random() * 60 : 60 + Math.random() * 100,
       opacity: 0.3 + Math.random() * 0.15,
       rings: 2,
+      birth: performance.now(),
+      wobble: Math.random() * Math.PI * 2,
     })
   }
 
@@ -217,39 +228,54 @@ onMounted(() => {
     offCtx.putImageData(imageData, 0, 0)
   }
 
-  function drawRipple(r: Ripple, isDark: boolean) {
+  function drawRipple(r: Ripple, isDark: boolean, now: number) {
     const progress = r.radius / r.maxRadius
-    const alpha = r.opacity * (1 - progress)
-    if (alpha <= 0.003) return false
+    const baseAlpha = r.opacity * (1 - progress)
+    if (baseAlpha <= 0.003) return false
 
     const baseColor = isDark ? '30, 185, 209' : '74, 200, 222'
+    const glowColor = isDark ? '120, 220, 240' : '180, 240, 255'
 
-    ctx.beginPath()
-    ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2)
-    ctx.strokeStyle = `rgba(${baseColor}, ${alpha})`
-    ctx.lineWidth = (r.rings >= 3 ? 2 : 1.5) * (1 - progress * 0.5)
-    ctx.stroke()
+    // Determine wave count based on ripple type and current radius
+    // More rings appear as the ripple expands — like real water
+    const waveSpacing = r.rings === 1 ? 10 : r.rings === 3 ? 14 : 16
+    const waveCount = Math.min(
+      r.rings === 1 ? 5 : r.rings === 3 ? 8 : 5,
+      Math.floor(r.radius / waveSpacing) + 1
+    )
 
-    if (r.radius > 6 && r.rings >= 2) {
+    // Animate a subtle phase shift for liveliness
+    const age = (now - r.birth) / 1000
+    const phase = age * 1.2 + r.wobble
+
+    for (let i = 0; i < waveCount; i++) {
+      // Each wave ring sits at a fraction of the current radius
+      const waveFrac = 1 - (i * waveSpacing) / r.radius
+      if (waveFrac <= 0.05) break
+      const waveRadius = r.radius * waveFrac
+
+      // Sine modulation: outer rings are stronger, inner rings fade
+      const envelope = Math.pow(waveFrac, 0.6) * (1 - waveFrac * 0.3)
+      // Subtle breathing via sine
+      const breath = 1 + Math.sin(phase + i * 0.8) * 0.08
+      const alpha = baseAlpha * envelope * breath * (i === 0 ? 1 : 0.7)
+
+      if (alpha < 0.005) continue
+
+      // Line width: outermost ring is thickest, inner rings thinner
+      const lw = (r.rings >= 3 ? 1.8 : 1.2) * (1 - progress * 0.4) * (i === 0 ? 1 : 0.6 + 0.4 * waveFrac)
+
       ctx.beginPath()
-      ctx.arc(r.x, r.y, r.radius * 0.6, 0, Math.PI * 2)
-      ctx.strokeStyle = `rgba(${baseColor}, ${alpha * 0.45})`
-      ctx.lineWidth = 1 * (1 - progress * 0.5)
+      ctx.arc(r.x, r.y, waveRadius, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(${baseColor}, ${alpha})`
+      ctx.lineWidth = lw
       ctx.stroke()
     }
 
-    if (r.radius > 14 && r.rings >= 3) {
-      ctx.beginPath()
-      ctx.arc(r.x, r.y, r.radius * 0.3, 0, Math.PI * 2)
-      ctx.strokeStyle = `rgba(${baseColor}, ${alpha * 0.25})`
-      ctx.lineWidth = 0.8 * (1 - progress * 0.5)
-      ctx.stroke()
-    }
-
-    if (progress < 0.15) {
-      const dotAlpha = alpha * (1 - progress / 0.15) * 0.6
-      const glowColor = isDark ? '120, 220, 240' : '180, 240, 255'
-      const s = r.rings >= 3 ? 6 : 3
+    // Center glow at birth
+    if (progress < 0.12) {
+      const dotAlpha = baseAlpha * (1 - progress / 0.12) * 0.6
+      const s = r.rings >= 3 ? 7 : 4
       const grad = ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, s)
       grad.addColorStop(0, `rgba(${glowColor}, ${dotAlpha})`)
       grad.addColorStop(1, 'rgba(0,0,0,0)')
@@ -257,8 +283,9 @@ onMounted(() => {
       ctx.fillRect(r.x - s, r.y - s, s * 2, s * 2)
     }
 
-    const speed = r.rings === 1 ? 0.8 : r.rings === 3 ? 0.7 : 0.5
-    r.radius += speed + (1 - progress) * 0.4
+    // Expansion speed: decelerates naturally
+    const speed = r.rings === 1 ? 0.7 : r.rings === 3 ? 0.65 : 0.45
+    r.radius += speed + (1 - progress) * 0.5
     return true
   }
 
@@ -300,7 +327,7 @@ onMounted(() => {
     drawTrail(isDark)
 
     for (let i = ripples.length - 1; i >= 0; i--) {
-      if (!drawRipple(ripples[i], isDark)) {
+      if (!drawRipple(ripples[i], isDark, now)) {
         ripples.splice(i, 1)
       }
     }

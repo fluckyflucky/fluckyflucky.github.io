@@ -178,25 +178,25 @@ onUnmounted(() => {
 }
 
 :deep(.lyric-ja) {
-  font-size: 17px;
+  font-size: 1.0625rem;
   color: var(--vp-c-brand-1);
   opacity: 0.6;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.03125rem;
 }
 
 :deep(.lyric-zh) {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--vp-c-text-2);
   opacity: 0.4;
-  margin-top: 3px;
+  margin-top: 0.1875rem;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 47.9375rem) {
   :deep(.lyric-ja) {
-    font-size: 14px;
+    font-size: 0.875rem;
   }
   :deep(.lyric-zh) {
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
 }
 </style>
