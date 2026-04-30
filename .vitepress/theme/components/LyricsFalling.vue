@@ -161,10 +161,7 @@ onUnmounted(() => {
 <style scoped>
 .lyrics-container {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   pointer-events: none;
   z-index: 1;
   overflow: hidden;
@@ -191,7 +188,7 @@ onUnmounted(() => {
   margin-top: 0.1875rem;
 }
 
-@media (max-width: 47.9375rem) {
+@media (max-aspect-ratio: 13/9) {
   :deep(.lyric-ja) {
     font-size: 0.875rem;
   }
