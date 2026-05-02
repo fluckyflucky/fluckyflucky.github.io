@@ -32,6 +32,7 @@ export default defineConfig({
             '/thoughts/': {
                 text: '夏日记忆',
                 items: [
+                    {text: '夏の色は青', link: '/thoughts/natsu-no-iro-wa-ao'},
                     {text: '若是夏天呼唤我们', link: '/thoughts/summer-calls'},
                 ]
             },
