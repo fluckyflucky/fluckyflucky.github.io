@@ -2,7 +2,7 @@ import {defineConfig} from 'vitepress'
 
 export default defineConfig({
     title: "青い夏的世界",
-    description: "旅行，绘画与摄影",
+    description: "風のない海辺を歩いた あの夏へ",
     srcDir: 'markdown',
     cleanUrls: true,
     head: [
