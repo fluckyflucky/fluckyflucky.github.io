@@ -3,3 +3,4 @@ dist
 .vitepress
 *.local
 .DS_Store
+*.tsbuildinfo

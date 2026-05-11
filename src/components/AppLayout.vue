@@ -48,7 +48,7 @@ const sideNavGroup = computed(() => {
 <template>
   <div class="min-h-screen flex flex-col">
     <!-- Navbar -->
-    <header class="sticky top-0 z-50 bg-stone-950/80 backdrop-blur border-b border-stone-800">
+    <header class="sticky top-0 z-50 bg-stone-950/40 backdrop-blur border-b border-stone-800">
       <div class="max-w-[1440px] mx-auto px-4 h-14 flex items-center justify-between">
         <button @click="goTo('/')" class="flex items-center gap-2 hover:opacity-80 transition">
           <img :src="'/logo.png'" alt="logo" class="w-7 h-7 rounded" />
