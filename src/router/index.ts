@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
+import { createRouter, createWebHashHistory, type RouteLocationNormalized } from 'vue-router'
 import Home from '../pages/Home.vue'
 import MarkdownPage from '../pages/MarkdownPage.vue'
 import ToolJsonFormatter from '../pages/ToolJsonFormatter.vue'
@@ -26,7 +26,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes,
   scrollBehavior() {
     return { top: 0 }
