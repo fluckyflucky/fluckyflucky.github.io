@@ -12,9 +12,9 @@
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
-    "sql.js": "1.11.0",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "wanakana": "^5.3.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

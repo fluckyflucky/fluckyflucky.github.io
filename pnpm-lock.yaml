@@ -17,15 +17,15 @@ importers:
       markdown-it-anchor:
         specifier: ^9.2.0
         version: 9.2.0(@types/markdown-it@14.1.2)(markdown-it@14.1.1)
-      sql.js:
-        specifier: 1.11.0
-        version: 1.11.0
       vue:
         specifier: ^3.5.13
         version: 3.5.33(typescript@5.7.3)
       vue-router:
         specifier: ^4.5.0
         version: 4.6.4(vue@3.5.33(typescript@5.7.3))
+      wanakana:
+        specifier: ^5.3.1
+        version: 5.3.1
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.1.6
@@ -764,9 +764,6 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
-  sql.js@1.11.0:
-    resolution: {integrity: sha512-GsLUDU3vhOo14Pd5ME0y2te49JQyby6HuoCuadevEV+CGgTUjmYRrm7B7lhRyzOgrmcWmspUfyjNb6sOAEqdsA==}
-
   tailwindcss@4.2.4:
     resolution: {integrity: sha512-HhKppgO81FQof5m6TEnuBWCZGgfRAWbaeOaGT00KOy/Pf/j6oUihdvBpA7ltCeAvZpFhW3j0PTclkxsd4IXYDA==}
 
@@ -847,6 +844,10 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  wanakana@5.3.1:
+    resolution: {integrity: sha512-OSDqupzTlzl2LGyqTdhcXcl6ezMiFhcUwLBP8YKaBIbMYW1wAwDvupw2T9G9oVaKT9RmaSpyTXjxddFPUcFFIw==}
+    engines: {node: '>=12'}
 
 snapshots:
 
@@ -1415,8 +1416,6 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
-  sql.js@1.11.0: {}
-
   tailwindcss@4.2.4: {}
 
   tapable@2.3.3: {}
@@ -1465,3 +1464,5 @@ snapshots:
       '@vue/shared': 3.5.33
     optionalDependencies:
       typescript: 5.7.3
+
+  wanakana@5.3.1: {}

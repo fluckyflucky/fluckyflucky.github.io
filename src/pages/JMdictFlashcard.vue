@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import initSqlJs from 'sql.js'
 
 const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 
-interface Example { ja: string; zh: string }
-interface Sense { pos: string[]; en: string[]; zh?: string[] }
+interface Sense { p: string[]; e: string[]; z: string[] }
+interface Example { j: string; c: string }
 interface Entry {
-  rowid: number
-  kanji: string[]
-  readings: string[]
-  senses: Sense[]
-  examples: Example[]
+  k: string[]
+  r: string[]
+  o: string[]
+  s: Sense[]
+  x: Example[]
 }
 
 const CACHE_TARGET = 6
@@ -23,19 +22,19 @@ const currentEntry = ref<Entry | null>(null)
 const isRevealed = ref(false)
 const statusText = ref('')
 
-let db: any = null
-let totalEntries = 0
+let allExamples: Entry[] = []
 
 async function initDB() {
   try {
-    const SQL = await initSqlJs({
-      locateFile: (file: string) => `/jmdict/sql-wasm.wasm`
-    })
-    const response = await fetch('/jmdict/dict.db')
-    const buf = await response.arrayBuffer()
-    db = new SQL.Database(new Uint8Array(buf))
-    totalEntries = db.exec("SELECT COUNT(*) FROM entries")[0].values[0][0]
+    const resp = await fetch('/jmdict/examples.json')
+    allExamples = await resp.json()
     loading.value = false
+
+    if (allExamples.length === 0) {
+      error.value = 'No words with example sentences found.'
+      return
+    }
+
     await ensureCache(CACHE_TARGET)
     if (entryCache.value.length > 0) {
       showCard()
@@ -54,7 +53,7 @@ async function ensureCache(minCount: number) {
   while (entryCache.value.length < minCount) {
     const batch = getRandomBatch(40)
     for (const entry of batch) {
-      if (entry.examples.length > 0) {
+      if (entry.x.length > 0) {
         entryCache.value.push(entry)
         if (entryCache.value.length >= minCount) break
       }
@@ -63,30 +62,17 @@ async function ensureCache(minCount: number) {
   updateStatus()
 }
 
-function getRandomBatch(size: number) {
-  const ids = new Set<number>()
-  while (ids.size < size) {
-    ids.add(Math.floor(Math.random() * totalEntries) + 1)
-  }
-  const idList = [...ids]
-  const stmt = db.prepare("SELECT rowid, kanji, readings, senses_json, examples_json FROM entries WHERE rowid = ?")
-  const results: Entry[] = []
-  for (const id of idList) {
-    stmt.bind([id])
-    if (stmt.step()) {
-      const row = stmt.get()
-      results.push({
-        rowid: row[0],
-        kanji: row[1] ? row[1].split(',') : [],
-        readings: row[2] ? row[2].split(',') : [],
-        senses: JSON.parse(row[3]),
-        examples: row[4] ? JSON.parse(row[4]) : [],
-      })
+function getRandomBatch(size: number): Entry[] {
+  const result: Entry[] = []
+  const seen = new Set<number>()
+  while (result.length < size && seen.size < allExamples.length) {
+    const idx = Math.floor(Math.random() * allExamples.length)
+    if (!seen.has(idx)) {
+      seen.add(idx)
+      result.push(allExamples[idx])
     }
-    stmt.reset()
   }
-  stmt.free()
-  return results
+  return result
 }
 
 function highlightSentence(sentence: string, kanjiArr: string[], readingsArr: string[]) {
@@ -107,7 +93,10 @@ function showCard() {
   if (entryCache.value.length === 0) return
 
   if (currentEntry.value && entryCache.value.length > 1) {
-    const sameIdx = entryCache.value.findIndex(e => e.rowid === currentEntry.value!.rowid)
+    const sameIdx = entryCache.value.findIndex(
+      e => e.k.join(',') === currentEntry.value!.k.join(',') &&
+           e.r.join(',') === currentEntry.value!.r.join(',')
+    )
     if (sameIdx === 0 && entryCache.value.length > 1) {
       [entryCache.value[0], entryCache.value[1]] = [entryCache.value[1], entryCache.value[0]]
     }
@@ -166,21 +155,21 @@ function esc(s: string) {
           <!-- Word -->
           <div class="text-center mb-5">
             <div class="text-4xl font-bold text-stone-100 leading-tight">
-              {{ currentEntry.kanji.length ? esc(currentEntry.kanji[0]) : esc(currentEntry.readings[0]) }}
+              {{ currentEntry.k.length ? esc(currentEntry.k[0]) : esc(currentEntry.r[0]) }}
             </div>
-            <div v-if="currentEntry.kanji.length" class="text-base text-stone-500 mt-1">
-              {{ esc(currentEntry.readings.join('、')) }}
+            <div v-if="currentEntry.k.length" class="text-base text-stone-500 mt-1">
+              {{ esc(currentEntry.r.join('、')) }}
             </div>
           </div>
 
           <!-- Sentence -->
-          <div v-if="currentEntry.examples[0]" class="bg-stone-900 border border-stone-800 rounded-xl px-4 py-4 text-center flex-1">
+          <div v-if="currentEntry.x[0]" class="bg-stone-900 border border-stone-800 rounded-xl px-4 py-4 text-center flex-1">
             <div class="text-[11px] text-stone-600 uppercase tracking-wider mb-2">例文</div>
-            <div class="text-base leading-relaxed text-stone-300" v-html="highlightSentence(esc(currentEntry.examples[0].ja), currentEntry.kanji, currentEntry.readings)"></div>
-            <div class="text-sm text-stone-600 mt-1.5" :class="{ hidden: !isRevealed }">{{ esc(currentEntry.examples[0].zh) }}</div>
-            <template v-if="currentEntry.examples[1]">
-              <div class="text-base leading-relaxed text-stone-300 mt-2.5" v-html="highlightSentence(esc(currentEntry.examples[1].ja), currentEntry.kanji, currentEntry.readings)"></div>
-              <div class="text-sm text-stone-600 mt-1.5" :class="{ hidden: !isRevealed }">{{ esc(currentEntry.examples[1].zh) }}</div>
+            <div class="text-base leading-relaxed text-stone-300" v-html="highlightSentence(esc(currentEntry.x[0].j), currentEntry.k, currentEntry.r)"></div>
+            <div class="text-sm text-stone-600 mt-1.5" :class="{ hidden: !isRevealed }">{{ esc(currentEntry.x[0].c) }}</div>
+            <template v-if="currentEntry.x[1]">
+              <div class="text-base leading-relaxed text-stone-300 mt-2.5" v-html="highlightSentence(esc(currentEntry.x[1].j), currentEntry.k, currentEntry.r)"></div>
+              <div class="text-sm text-stone-600 mt-1.5" :class="{ hidden: !isRevealed }">{{ esc(currentEntry.x[1].c) }}</div>
             </template>
           </div>
 
@@ -190,12 +179,12 @@ function esc(s: string) {
               class="overflow-hidden transition-all duration-300"
               :class="isRevealed ? 'max-h-[400px] opacity-100 mt-1 pt-4 border-t border-stone-800' : 'max-h-0 opacity-0'"
             >
-              <div v-for="(s, i) in currentEntry.senses.slice(0, 4)" :key="i" class="mb-2">
-                <div v-if="s.pos && s.pos.length" class="text-[11px] text-stone-600 italic mb-1">{{ s.pos.join(', ') }}</div>
-                <div v-if="s.zh && s.zh.length && s.zh[0]" class="text-sm text-stone-200 font-medium">{{ s.zh.join('；') }}</div>
-                <div class="text-sm text-stone-400">{{ s.en.join('; ') }}</div>
+              <div v-for="(s, i) in currentEntry.s.slice(0, 4)" :key="i" class="mb-2">
+                <div v-if="s.p && s.p.length" class="text-[11px] text-stone-600 italic mb-1">{{ s.p.join(', ') }}</div>
+                <div v-if="s.z && s.z.length && s.z[0]" class="text-sm text-stone-200 font-medium">{{ s.z.join('；') }}</div>
+                <div class="text-sm text-stone-400">{{ s.e.join('; ') }}</div>
               </div>
-              <div v-if="currentEntry.senses.length > 4" class="text-[11px] text-stone-600 italic mt-1">+{{ currentEntry.senses.length - 4 }} more senses</div>
+              <div v-if="currentEntry.s.length > 4" class="text-[11px] text-stone-600 italic mt-1">+{{ currentEntry.s.length - 4 }} more senses</div>
             </div>
           </div>
 

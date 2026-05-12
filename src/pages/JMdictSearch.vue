@@ -1,95 +1,157 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import initSqlJs from 'sql.js'
+import { toRomaji } from 'wanakana'
 
 const router = useRouter()
 const query = ref('')
-const results = ref<any[]>([])
-const loading = ref(true)
+const results = ref<CompactEntry[]>([])
+const searching = ref(false)
 const count = ref(0)
 const limit = ref(50)
+const page = ref(1)
+const totalPages = ref(0)
 
-let db: any = null
-
-async function initDB() {
-  const SQL = await initSqlJs({
-    locateFile: (file: string) => `/jmdict/sql-wasm.wasm`
-  })
-  const response = await fetch('/jmdict/dict.db')
-  const buf = await response.arrayBuffer()
-  db = new SQL.Database(new Uint8Array(buf))
-  loading.value = false
+interface CompactSense { p: string[]; e: string[]; z: string[] }
+interface CompactExample { j: string; c: string }
+interface CompactEntry {
+  k: string[]
+  r: string[]
+  o: string[]
+  s: CompactSense[]
+  x: CompactExample[]
 }
 
-onMounted(initDB)
+const fileCache = new Map<string, any>()
+async function fetchJSON(url: string): Promise<any> {
+  if (fileCache.has(url)) return fileCache.get(url)
+  const resp = await fetch(url)
+  if (!resp.ok) throw new Error('not found')
+  const data = await resp.json()
+  fileCache.set(url, data)
+  return data
+}
+
+function isKana(ch: string): boolean { return /^[぀-ゟ゠-ヿ]$/.test(ch) }
+function isKanji(ch: string): boolean { return /^[\p{Script=Han}]$/u.test(ch) }
+
+function getRomajiPrefix(text: string): string {
+  const r = toRomaji(text).toLowerCase().replace(/[^a-z]/g, '')
+  return r.slice(0, 2)
+}
+
+function matchesPrefix(entry: CompactEntry, q: string, field: 'k' | 'r' | 'o'): boolean {
+  return entry[field].some(v => v.toLowerCase().startsWith(q.toLowerCase()))
+}
 
 let timer: ReturnType<typeof setTimeout>
 function onInput() {
   clearTimeout(timer)
-  timer = setTimeout(doSearch, 300)
+  page.value = 1
+  timer = setTimeout(doSearch, 200)
 }
 
-function doSearch() {
-  if (!db) return
-  if (!query.value.trim()) {
+function onEnter() {
+  clearTimeout(timer)
+  page.value = 1
+  doSearch()
+}
+
+function onLimitChange() {
+  page.value = 1
+  doSearch()
+}
+
+async function doSearch() {
+  const q = query.value.trim()
+  if (!q) {
     results.value = []
     count.value = 0
+    totalPages.value = 0
     return
   }
-  const entries = search(query.value.trim(), limit.value)
-  results.value = entries
-  count.value = entries.length
-}
 
-function search(q: string, lim: number) {
-  const escaped = q.replace(/'/g, "''")
+  searching.value = true
   const seen = new Set<string>()
-  const all: any[] = []
+  const all: CompactEntry[] = []
+  const firstChar = q[0]
+  let prefixes: string[] = []
 
-  const prefix = db.exec(
-    "SELECT kanji, readings, senses_json, examples_json FROM entries WHERE kanji LIKE ? OR readings LIKE ? OR romaji LIKE ? LIMIT ?",
-    [escaped + '%', escaped + '%', escaped + '%', lim]
-  )
-  if (prefix.length && prefix[0].values.length) {
-    for (const row of prefix[0].values) {
-      const entry = parseRow(row)
-      const key = entry.kanji.join(',') + entry.readings.join(',')
-      if (!seen.has(key)) { seen.add(key); all.push(entry) }
-    }
+  if (isKanji(firstChar)) {
+    try {
+      const km = await fetchJSON('/jmdict/kanji-map.json')
+      prefixes = km[firstChar] || km[q.slice(0, 2)] || []
+    } catch (_) {}
+  } else if (isKana(firstChar)) {
+    prefixes = [getRomajiPrefix(firstChar)]
+  } else {
+    prefixes = [q.slice(0, 2).toLowerCase().replace(/[^a-z]/g, '')]
   }
 
-  if (all.length < lim) {
-    const remaining = lim - all.length
-    const ftsQuery = q.replace(/['"]/g, '')
+  const pageStart = (page.value - 1) * limit.value
+  let totalMatches = 0
+
+  for (const prefix of prefixes) {
     try {
-      const fts = db.exec(
-        `SELECT e.kanji, e.readings, e.senses_json, e.examples_json FROM entries_fts f
-         JOIN entries e ON e.rowid = f.rowid
-         WHERE entries_fts MATCH '"${ftsQuery}"'
-         LIMIT ?`,
-        [remaining]
-      )
-      if (fts.length && fts[0].values.length) {
-        for (const row of fts[0].values) {
-          const entry = parseRow(row)
-          const key = entry.kanji.join(',') + entry.readings.join(',')
-          if (!seen.has(key)) { seen.add(key); all.push(entry) }
+      const entries: CompactEntry[] = await fetchJSON(`/jmdict/ro/${prefix}.json`)
+
+      for (const entry of entries) {
+        const key = entry.k.join(',') + '|' + entry.r.join(',')
+
+        if (seen.has(key)) continue
+
+        let match = false
+        if (isKanji(firstChar)) {
+          match = matchesPrefix(entry, q, 'k')
+        } else if (isKana(firstChar)) {
+          match = matchesPrefix(entry, q, 'r')
+        } else {
+          match = entry.o.some(o => o.toLowerCase().startsWith(q.toLowerCase()))
+          if (!match) match = matchesPrefix(entry, q, 'k') || matchesPrefix(entry, q, 'r')
+        }
+
+        if (match) {
+          seen.add(key)
+          totalMatches++
+          if (totalMatches > pageStart && all.length < limit.value) {
+            all.push(entry)
+          }
         }
       }
     } catch (_) {}
   }
-  return all
+
+  results.value = all
+  count.value = totalMatches
+  totalPages.value = Math.ceil(totalMatches / limit.value)
+  searching.value = false
 }
 
-function parseRow(row: any[]) {
-  return {
-    kanji: row[0] ? row[0].split(',') : [],
-    readings: row[1] ? row[1].split(',') : [],
-    senses: JSON.parse(row[2]),
-    examples: row[3] ? JSON.parse(row[3]) : [],
-  }
+function goToPage(n: number) {
+  if (n < 1 || n > totalPages.value) return
+  page.value = n
+  doSearch()
 }
+
+const displayPages = computed(() => {
+  const tp = totalPages.value
+  const cp = page.value
+  const pages: (number | string)[] = []
+
+  if (tp <= 7) {
+    for (let i = 1; i <= tp; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    if (cp > 3) pages.push('...')
+    for (let i = Math.max(2, cp - 1); i <= Math.min(tp - 1, cp + 1); i++) {
+      pages.push(i)
+    }
+    if (cp < tp - 2) pages.push('...')
+    pages.push(tp)
+  }
+
+  return pages
+})
 </script>
 
 <template>
@@ -109,53 +171,84 @@ function parseRow(row: any[]) {
           <input
             v-model="query"
             type="text"
-            placeholder="日本語・中文・ローマ字..."
-            :disabled="loading"
+            placeholder="日本語・ローマ字..."
             class="flex-1 px-4 py-3 text-base border border-stone-700 rounded-xl outline-none bg-transparent text-stone-200 placeholder-stone-400 focus:border-stone-500 transition-colors min-w-0"
             @input="onInput"
-            @keydown.enter="doSearch"
+            @keydown.enter="onEnter"
           />
-          <select v-model="limit" class="px-3 py-2 text-sm border border-stone-700 rounded-xl outline-none bg-transparent text-stone-400">
+          <select v-model="limit" @change="onLimitChange" class="px-3 py-2 text-sm border border-stone-700 rounded-xl outline-none bg-transparent text-stone-400">
             <option value="20">20件</option>
             <option value="50">50件</option>
             <option value="100">100件</option>
             <option value="200">200件</option>
             <option value="500">500件</option>
           </select>
-          <button
-            :disabled="loading"
-            class="px-6 py-3 text-sm font-medium bg-sky-700 text-white rounded-xl whitespace-nowrap hover:bg-sky-600 disabled:bg-stone-700 disabled:text-stone-600 disabled:cursor-not-allowed"
-            @click="doSearch"
-          >検索</button>
         </div>
       </div>
 
-      <div v-if="count > 0" class="text-center text-stone-600 text-xs mb-2">{{ count }} 件</div>
+      <!-- Count & Pagination -->
+      <div v-if="count > 0" class="flex items-center justify-between mb-3">
+        <div class="text-xs" :class="searching ? 'text-stone-500' : 'text-stone-600'">
+          {{ searching ? '検索中...' : `${count} 件` }}
+        </div>
+        <div v-if="totalPages > 1" class="flex items-center gap-0.5">
+          <button
+            class="px-2 py-1 text-xs rounded-md text-stone-400 hover:text-stone-200 hover:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed"
+            :disabled="page === 1"
+            @click="goToPage(1)"
+          >«</button>
+          <button
+            class="px-2 py-1 text-xs rounded-md text-stone-400 hover:text-stone-200 hover:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed"
+            :disabled="page === 1"
+            @click="goToPage(page - 1)"
+          >‹</button>
+          <template v-for="p in displayPages" :key="p">
+            <span v-if="p === '...'" class="px-1 text-xs text-stone-600">...</span>
+            <button
+              v-else
+              class="px-2 py-1 text-xs rounded-md"
+              :class="p === page ? 'bg-sky-700 text-white' : 'text-stone-400 hover:text-stone-200 hover:bg-stone-800'"
+              @click="goToPage(p as number)"
+            >{{ p }}</button>
+          </template>
+          <button
+            class="px-2 py-1 text-xs rounded-md text-stone-400 hover:text-stone-200 hover:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed"
+            :disabled="page === totalPages"
+            @click="goToPage(page + 1)"
+          >›</button>
+          <button
+            class="px-2 py-1 text-xs rounded-md text-stone-400 hover:text-stone-200 hover:bg-stone-800 disabled:opacity-30 disabled:cursor-not-allowed"
+            :disabled="page === totalPages"
+            @click="goToPage(totalPages)"
+          >»</button>
+        </div>
+      </div>
+      <div v-else-if="searching" class="text-center text-stone-600 text-xs mb-2">検索中...</div>
 
-      <div v-if="loading" class="text-center text-stone-600 mt-16 text-base">Loading dictionary...</div>
-      <div v-else-if="count === 0 && query" class="text-center text-stone-600 mt-16 text-base">未找到结果</div>
-      <div v-else-if="!query" class="text-center text-stone-400 mt-16 text-base">输入关键词开始搜索</div>
+      <!-- Results -->
+      <div v-if="!query" class="text-center text-stone-400 mt-16 text-base">输入关键词开始搜索</div>
+      <div v-else-if="!searching && count === 0" class="text-center text-stone-600 mt-16 text-base">未找到结果</div>
 
       <div
         v-for="e in results"
-        :key="e.kanji.join() + e.readings.join()"
+        :key="e.k.join() + e.r.join()"
         class="border-b border-stone-800 py-4 last:border-b-0"
       >
         <div class="mb-2">
-          <span v-if="e.kanji.length" class="text-xl font-bold text-stone-100">{{ e.kanji.join('、') }}</span>
-          <span class="text-sm text-stone-500 ml-2">{{ e.readings.join('、') }}</span>
+          <span v-if="e.k.length" class="text-xl font-bold text-stone-100">{{ e.k.join('、') }}</span>
+          <span class="text-sm text-stone-500 ml-2">{{ e.r.join('、') }}</span>
         </div>
 
-        <div v-for="(s, i) in e.senses" :key="i" class="mt-2 pl-3 border-l-2 border-stone-700">
-          <div v-if="s.pos && s.pos.length" class="text-[11px] text-stone-500 italic mb-0.5">{{ s.pos.join(', ') }}</div>
-          <div v-if="s.zh && s.zh.length && s.zh[0]" class="text-sm text-stone-200 font-medium mt-0.5">{{ i + 1 }}. {{ s.zh.join('; ') }}</div>
-          <div class="text-sm text-stone-400">{{ s.en.join('; ') }}</div>
+        <div v-for="(s, i) in e.s" :key="i" class="mt-2 pl-3 border-l-2 border-stone-700">
+          <div v-if="s.p && s.p.length" class="text-[11px] text-stone-500 italic mb-0.5">{{ s.p.join(', ') }}</div>
+          <div v-if="s.z && s.z.length && s.z[0]" class="text-sm text-stone-200 font-medium mt-0.5">{{ i + 1 }}. {{ s.z.join('; ') }}</div>
+          <div class="text-sm text-stone-400">{{ s.e.join('; ') }}</div>
         </div>
 
-        <div v-if="e.examples && e.examples.length" class="mt-2 pt-2 border-t border-stone-800">
-          <div v-for="(ex, i) in e.examples" :key="i" class="mt-1.5 text-xs leading-relaxed">
-            <span class="block text-stone-300">{{ ex.ja }}</span>
-            <span class="block text-stone-600">{{ ex.zh }}</span>
+        <div v-if="e.x && e.x.length" class="mt-2 pt-2 border-t border-stone-800">
+          <div v-for="(ex, i) in e.x" :key="i" class="mt-1.5 text-xs leading-relaxed">
+            <span class="block text-stone-300">{{ ex.j }}</span>
+            <span class="block text-stone-600">{{ ex.c }}</span>
           </div>
         </div>
       </div>
