@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
 import { toRomaji } from 'wanakana'
 
-const router = useRouter()
+const tab = ref<'search' | 'flashcard'>('search')
+
+// ── Search state ──
 const query = ref('')
 const results = ref<CompactEntry[]>([])
 const searching = ref(false)
@@ -152,20 +153,165 @@ const displayPages = computed(() => {
 
   return pages
 })
+
+// ── Flashcard state ──
+const CACHE_TARGET = 6
+const entryCache = ref<Entry[]>([])
+const currentEntry = ref<Entry | null>(null)
+const isRevealed = ref(false)
+const statusText = ref('')
+const flashcardLoading = ref(true)
+const flashcardError = ref('')
+
+interface Sense { p: string[]; e: string[]; z: string[] }
+interface Example { j: string; c: string }
+interface Entry {
+  k: string[]
+  r: string[]
+  o: string[]
+  s: Sense[]
+  x: Example[]
+}
+
+let allExamples: Entry[] = []
+
+async function initDB() {
+  flashcardLoading.value = true
+  flashcardError.value = ''
+  try {
+    const resp = await fetch('/jmdict/examples.json')
+    allExamples = await resp.json()
+    flashcardLoading.value = false
+
+    if (allExamples.length === 0) {
+      flashcardError.value = 'No words with example sentences found.'
+      return
+    }
+
+    await ensureCache(CACHE_TARGET)
+    if (entryCache.value.length > 0) {
+      showCard()
+    } else {
+      flashcardError.value = 'No words with example sentences found. Try again later.'
+    }
+  } catch (e) {
+    flashcardError.value = 'Failed to load dictionary.'
+    flashcardLoading.value = false
+  }
+}
+
+async function ensureCache(minCount: number) {
+  while (entryCache.value.length < minCount) {
+    const batch = getRandomBatch(40)
+    for (const entry of batch) {
+      if (entry.x.length > 0) {
+        entryCache.value.push(entry)
+        if (entryCache.value.length >= minCount) break
+      }
+    }
+  }
+  updateStatus()
+}
+
+function getRandomBatch(size: number): Entry[] {
+  const result: Entry[] = []
+  const seen = new Set<number>()
+  while (result.length < size && seen.size < allExamples.length) {
+    const idx = Math.floor(Math.random() * allExamples.length)
+    if (!seen.has(idx)) {
+      seen.add(idx)
+      result.push(allExamples[idx])
+    }
+  }
+  return result
+}
+
+function highlightSentence(sentence: string, kanjiArr: string[], readingsArr: string[]) {
+  const candidates = [...new Set(
+    [...kanjiArr, ...readingsArr].filter((t: string) => {
+      if (/^[぀-ゟ゠-ヿ]+$/.test(t)) return t.length >= 3
+      return t.length > 0
+    })
+  )].sort((a: string, b: string) => b.length - a.length)
+  let result = sentence
+  for (const c of candidates) {
+    result = result.replaceAll(c, '<mark>$&</mark>')
+  }
+  return result
+}
+
+function showCard() {
+  if (entryCache.value.length === 0) return
+
+  if (currentEntry.value && entryCache.value.length > 1) {
+    const sameIdx = entryCache.value.findIndex(
+      e => e.k.join(',') === currentEntry.value!.k.join(',') &&
+           e.r.join(',') === currentEntry.value!.r.join(',')
+    )
+    if (sameIdx === 0 && entryCache.value.length > 1) {
+      [entryCache.value[0], entryCache.value[1]] = [entryCache.value[1], entryCache.value[0]]
+    }
+  }
+
+  currentEntry.value = entryCache.value.shift()!
+  isRevealed.value = false
+  updateStatus()
+
+  if (entryCache.value.length <= 2) {
+    ensureCache(CACHE_TARGET)
+  }
+}
+
+function onCardTap() {
+  if (!currentEntry.value || isRevealed.value) return
+  isRevealed.value = true
+}
+
+function nextCard() {
+  if (entryCache.value.length === 0) {
+    flashcardError.value = 'No words found. Try again.'
+    return
+  }
+  showCard()
+}
+
+function updateStatus() {
+  statusText.value = entryCache.value.length > 0 ? `卡片缓存: ${entryCache.value.length}` : ''
+}
+
+function esc(s: string) {
+  if (typeof s !== 'string') return ''
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+function switchTab(t: 'search' | 'flashcard') {
+  tab.value = t
+  if (t === 'flashcard' && entryCache.value.length === 0) {
+    initDB()
+  }
+}
 </script>
 
 <template>
   <div class="px-4 py-6 min-h-[70vh]">
-    <div class="max-w-[720px] mx-auto">
-      <!-- Tab bar -->
-      <div class="flex gap-1 mb-5 bg-stone-800 rounded-xl p-1">
-        <span class="flex-1 text-center py-2.5 px-4 rounded-lg cursor-pointer text-sm font-medium bg-stone-950 text-stone-200">搜索</span>
-        <span class="flex-1 text-center py-2.5 px-4 rounded-lg cursor-pointer text-sm font-medium text-stone-500 hover:text-stone-300" @click="router.push('/jmdict/flashcard')">单词卡片</span>
-      </div>
+    <!-- Tab bar -->
+    <div class="max-w-[720px] mx-auto flex gap-1 mb-5 bg-stone-800 rounded-xl p-1">
+      <span
+        class="flex-1 text-center py-2.5 px-4 rounded-lg cursor-pointer text-sm font-medium"
+        :class="tab === 'search' ? 'bg-stone-950 text-stone-200' : 'text-stone-500 hover:text-stone-300'"
+        @click="switchTab('search')"
+      >搜索</span>
+      <span
+        class="flex-1 text-center py-2.5 px-4 rounded-lg cursor-pointer text-sm font-medium"
+        :class="tab === 'flashcard' ? 'bg-stone-950 text-stone-200' : 'text-stone-500 hover:text-stone-300'"
+        @click="switchTab('flashcard')"
+      >单词卡片</span>
+    </div>
 
+    <!-- Search tab -->
+    <div v-if="tab === 'search'" class="max-w-[720px] mx-auto">
       <h1 class="text-center mb-6 text-2xl font-bold tracking-wide text-stone-100">JMdict</h1>
 
-      <!-- Search -->
       <div class="sticky top-14 z-10 py-3 mb-3 -mx-4 px-4 border-b border-stone-800">
         <div class="flex gap-2 max-w-[720px] mx-auto">
           <input
@@ -186,7 +332,6 @@ const displayPages = computed(() => {
         </div>
       </div>
 
-      <!-- Count & Pagination -->
       <div v-if="count > 0" class="flex items-center justify-between mb-3">
         <div class="text-xs" :class="searching ? 'text-stone-500' : 'text-stone-600'">
           {{ searching ? '検索中...' : `${count} 件` }}
@@ -225,7 +370,6 @@ const displayPages = computed(() => {
       </div>
       <div v-else-if="searching" class="text-center text-stone-600 text-xs mb-2">検索中...</div>
 
-      <!-- Results -->
       <div v-if="!query" class="text-center text-stone-400 mt-16 text-base">输入关键词开始搜索</div>
       <div v-else-if="!searching && count === 0" class="text-center text-stone-600 mt-16 text-base">未找到结果</div>
 
@@ -253,5 +397,66 @@ const displayPages = computed(() => {
         </div>
       </div>
     </div>
+
+    <!-- Flashcard tab -->
+    <div v-if="tab === 'flashcard'" class="max-w-[520px] mx-auto flex flex-col items-center">
+      <div v-if="flashcardLoading" class="text-center text-stone-500 mt-16 text-base">Loading dictionary...</div>
+      <div v-else-if="flashcardError" class="text-center text-stone-500 mt-10 text-sm leading-relaxed">{{ flashcardError }}</div>
+
+      <template v-else-if="currentEntry">
+        <div
+          class="w-full border border-stone-700 rounded-2xl px-8 pt-10 pb-8 cursor-pointer min-h-[360px] flex flex-col"
+          :class="isRevealed ? 'cursor-default' : ''"
+          @click="onCardTap"
+        >
+          <div class="text-center mb-5">
+            <div class="text-4xl font-bold text-stone-100 leading-tight">
+              {{ currentEntry.k.length ? esc(currentEntry.k[0]) : esc(currentEntry.r[0]) }}
+            </div>
+            <div v-if="currentEntry.k.length" class="text-base text-stone-400 mt-1">
+              {{ esc(currentEntry.r.join('、')) }}
+            </div>
+          </div>
+
+          <div v-if="currentEntry.x[0]" class="bg-stone-800 border border-stone-700 rounded-xl px-4 py-4 text-center flex-1">
+            <div class="text-[11px] text-stone-500 uppercase tracking-wider mb-2">例文</div>
+            <div class="text-base leading-relaxed text-stone-200" v-html="highlightSentence(esc(currentEntry.x[0].j), currentEntry.k, currentEntry.r)"></div>
+            <div class="text-sm text-stone-500 mt-1.5" :class="{ hidden: !isRevealed }">{{ esc(currentEntry.x[0].c) }}</div>
+            <template v-if="currentEntry.x[1]">
+              <div class="text-base leading-relaxed text-stone-200 mt-2.5" v-html="highlightSentence(esc(currentEntry.x[1].j), currentEntry.k, currentEntry.r)"></div>
+              <div class="text-sm text-stone-500 mt-1.5" :class="{ hidden: !isRevealed }">{{ esc(currentEntry.x[1].c) }}</div>
+            </template>
+          </div>
+
+          <div>
+            <div
+              class="overflow-hidden transition-all duration-300"
+              :class="isRevealed ? 'max-h-[400px] opacity-100 mt-1 pt-4 border-t border-stone-700' : 'max-h-0 opacity-0'"
+            >
+              <div v-for="(s, i) in currentEntry.s.slice(0, 4)" :key="i" class="mb-2">
+                <div v-if="s.p && s.p.length" class="text-[11px] text-stone-500 italic mb-1">{{ s.p.join(', ') }}</div>
+                <div v-if="s.z && s.z.length && s.z[0]" class="text-sm text-stone-100 font-medium">{{ s.z.join('；') }}</div>
+                <div class="text-sm text-stone-300">{{ s.e.join('; ') }}</div>
+              </div>
+              <div v-if="currentEntry.s.length > 4" class="text-[11px] text-stone-500 italic mt-1">+{{ currentEntry.s.length - 4 }} more senses</div>
+            </div>
+          </div>
+
+          <div class="text-center text-stone-500 text-sm mt-4" :class="{ invisible: isRevealed }">点击卡片查看释义</div>
+        </div>
+
+        <div class="w-full mt-4 flex gap-2">
+          <button class="flex-1 py-3.5 text-base font-medium bg-sky-700 text-white rounded-xl hover:bg-sky-600" @click="nextCard">下一张 →</button>
+        </div>
+      </template>
+    </div>
   </div>
 </template>
+
+<style scoped>
+:deep(mark) {
+  background: none;
+  color: #5eead4;
+  font-weight: 700;
+}
+</style>

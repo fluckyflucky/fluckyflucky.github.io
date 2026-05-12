@@ -6,7 +6,6 @@ import ToolBase64 from '../pages/ToolBase64.vue'
 import ToolTimestamp from '../pages/ToolTimestamp.vue'
 import ToolDownloadCalc from '../pages/ToolDownloadCalc.vue'
 import JMdictSearch from '../pages/JMdictSearch.vue'
-import JMdictFlashcard from '../pages/JMdictFlashcard.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -23,7 +22,6 @@ const routes = [
   { path: '/tools/download-calc', name: 'tool-download-calc', component: ToolDownloadCalc },
   { path: '/tools/:slug', name: 'tool', component: MarkdownPage, props: (route: RouteLocationNormalized) => ({ category: 'tools', slug: route.params.slug }) },
   { path: '/jmdict', name: 'jmdict', component: JMdictSearch },
-  { path: '/jmdict/flashcard', name: 'jmdict-flashcard', component: JMdictFlashcard },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: MarkdownPage, props: { category: '', slug: '404' } },
 ]
 
