@@ -19,7 +19,7 @@ const shardDir = path.join(jmdictDir, 'ro')
 const examplesDir = path.join(jmdictDir, 'examples')
 const kanjiMapPath = path.join(jmdictDir, 'kanji-map.json')
 
-const EXAMPLES_PER_SHARD = 500
+const EXAMPLES_PER_SHARD = 100
 
 const prefixLen = parsePrefixLength(process.argv[2])
 
