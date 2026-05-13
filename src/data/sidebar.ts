@@ -17,6 +17,7 @@ export const sidebar: Record<string, SidebarGroup> = {
       { text: '[杂项] 关于接口和抽象类', link: '/notes/interface-vs-abstract' },
       { text: '[后端] JSON 反序列化中 TypeReference 的使用', link: '/notes/jackson-type-reference' },
       { text: '[后端] Gin 框架分层：经典的洋葱模型', link: '/notes/gin-layered-architecture' },
+      { text: '[杂项] JMdict 词典的 JSON 切片方案', link: '/notes/jmdict-json-slicing' },
       { text: '[杂项] Git 常用命令汇总', link: '/notes/git-common-commands' },
     ],
   },

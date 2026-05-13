@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "jmdict:rebuild": "node --experimental-strip-types scripts/rebuild-jmdict-shards.ts",
+    "jmdict:rebuild:3": "pnpm jmdict:rebuild 3"
   },
   "dependencies": {
     "highlight.js": "^11.11.1",

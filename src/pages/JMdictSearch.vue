@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { toRomaji } from 'wanakana'
 
 const tab = ref<'search' | 'flashcard'>('search')
@@ -24,6 +24,8 @@ interface CompactEntry {
 }
 
 const fileCache = new Map<string, any>()
+const PREFIX_LEN = 3
+let searchToken = 0
 async function fetchJSON(url: string): Promise<any> {
   if (fileCache.has(url)) return fileCache.get(url)
   const resp = await fetch(url)
@@ -38,7 +40,7 @@ function isKanji(ch: string): boolean { return /^[\p{Script=Han}]$/u.test(ch) }
 
 function getRomajiPrefix(text: string): string {
   const r = toRomaji(text).toLowerCase().replace(/[^a-z]/g, '')
-  return r.slice(0, 2)
+  return r.slice(0, PREFIX_LEN)
 }
 
 function matchesPrefix(entry: CompactEntry, q: string, field: 'k' | 'r' | 'o'): boolean {
@@ -65,14 +67,21 @@ function onLimitChange() {
 
 async function doSearch() {
   const q = query.value.trim()
+  const token = ++searchToken
+
   if (!q) {
     results.value = []
     count.value = 0
     totalPages.value = 0
+    searching.value = false
     return
   }
 
+  results.value = []
+  count.value = 0
+  totalPages.value = 0
   searching.value = true
+
   const seen = new Set<string>()
   const all: CompactEntry[] = []
   const firstChar = q[0]
@@ -81,48 +90,62 @@ async function doSearch() {
   if (isKanji(firstChar)) {
     try {
       const km = await fetchJSON('/jmdict/kanji-map.json')
-      prefixes = km[firstChar] || km[q.slice(0, 2)] || []
+      prefixes = km[firstChar] || km[q.slice(0, PREFIX_LEN)] || []
     } catch (_) {}
   } else if (isKana(firstChar)) {
-    prefixes = [getRomajiPrefix(firstChar)]
+    prefixes = [getRomajiPrefix(q)]
   } else {
-    prefixes = [q.slice(0, 2).toLowerCase().replace(/[^a-z]/g, '')]
+    prefixes = [q.slice(0, PREFIX_LEN).toLowerCase().replace(/[^a-z]/g, '')]
   }
 
   const pageStart = (page.value - 1) * limit.value
   let totalMatches = 0
 
-  for (const prefix of prefixes) {
-    try {
-      const entries: CompactEntry[] = await fetchJSON(`/jmdict/ro/${prefix}.json`)
+  const processEntry = (entry: CompactEntry) => {
+    const key = entry.k.join(',') + '|' + entry.r.join(',')
 
-      for (const entry of entries) {
-        const key = entry.k.join(',') + '|' + entry.r.join(',')
+    if (seen.has(key)) return
 
-        if (seen.has(key)) continue
+    let match = false
+    if (isKanji(firstChar)) {
+      match = matchesPrefix(entry, q, 'k')
+    } else if (isKana(firstChar)) {
+      match = matchesPrefix(entry, q, 'r')
+    } else {
+      match = entry.o.some(o => o.toLowerCase().startsWith(q.toLowerCase()))
+      if (!match) match = matchesPrefix(entry, q, 'k') || matchesPrefix(entry, q, 'r')
+    }
 
-        let match = false
-        if (isKanji(firstChar)) {
-          match = matchesPrefix(entry, q, 'k')
-        } else if (isKana(firstChar)) {
-          match = matchesPrefix(entry, q, 'r')
-        } else {
-          match = entry.o.some(o => o.toLowerCase().startsWith(q.toLowerCase()))
-          if (!match) match = matchesPrefix(entry, q, 'k') || matchesPrefix(entry, q, 'r')
-        }
+    if (!match) return
 
-        if (match) {
-          seen.add(key)
-          totalMatches++
-          if (totalMatches > pageStart && all.length < limit.value) {
-            all.push(entry)
-          }
-        }
-      }
-    } catch (_) {}
+    seen.add(key)
+    totalMatches++
+    if (totalMatches > pageStart && all.length < limit.value) {
+      all.push(entry)
+    }
   }
 
-  results.value = all
+  const sortedPrefixes = [...new Set(prefixes)].sort()
+
+  await Promise.allSettled(sortedPrefixes.map(async prefix => {
+    try {
+      const entries: CompactEntry[] = await fetchJSON(`/jmdict/ro/${prefix}.json`)
+      if (token !== searchToken) return
+
+      for (const entry of entries) {
+        processEntry(entry)
+      }
+
+      if (token !== searchToken) return
+      results.value = [...all]
+      count.value = totalMatches
+      totalPages.value = Math.ceil(totalMatches / limit.value)
+    } catch (_) {}
+  }))
+
+  if (token !== searchToken) return
+
+  results.value = [...all]
   count.value = totalMatches
   totalPages.value = Math.ceil(totalMatches / limit.value)
   searching.value = false
@@ -174,13 +197,16 @@ interface Entry {
 }
 
 let allExamples: Entry[] = []
+let examplesShardCount = 0
+const loadedShards = new Set<number>()
 
 async function initDB() {
   flashcardLoading.value = true
   flashcardError.value = ''
   try {
-    const resp = await fetch('/jmdict/examples.json')
-    allExamples = await resp.json()
+    const meta = await fetchJSON('/jmdict/examples/meta.json')
+    examplesShardCount = meta.count
+    await loadRandomShard()
     flashcardLoading.value = false
 
     if (allExamples.length === 0) {
@@ -200,14 +226,26 @@ async function initDB() {
   }
 }
 
+async function loadRandomShard() {
+  if (loadedShards.size >= examplesShardCount) return
+  let idx: number
+  do {
+    idx = Math.floor(Math.random() * examplesShardCount)
+  } while (loadedShards.has(idx))
+  loadedShards.add(idx)
+  const shard: Entry[] = await fetchJSON(`/jmdict/examples/${idx}.json`)
+  allExamples = allExamples.concat(shard)
+}
+
 async function ensureCache(minCount: number) {
   while (entryCache.value.length < minCount) {
     const batch = getRandomBatch(40)
-    for (const entry of batch) {
-      if (entry.x.length > 0) {
-        entryCache.value.push(entry)
-        if (entryCache.value.length >= minCount) break
-      }
+    const found = batch.filter(entry => entry.x.length > 0)
+    entryCache.value.push(...found.slice(0, minCount - entryCache.value.length))
+    if (entryCache.value.length < minCount && loadedShards.size < examplesShardCount) {
+      await loadRandomShard()
+    } else {
+      break
     }
   }
   updateStatus()
