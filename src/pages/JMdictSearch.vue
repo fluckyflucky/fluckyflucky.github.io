@@ -298,6 +298,9 @@ function showCard() {
   if (entryCache.value.length <= 2) {
     ensureCache(CACHE_TARGET)
   }
+  if (loadedShards.size < examplesShardCount) {
+    loadRandomShard()
+  }
 }
 
 function onCardTap() {

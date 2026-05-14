@@ -19,12 +19,12 @@ const shardDir = path.join(jmdictDir, 'ro')
 const examplesDir = path.join(jmdictDir, 'examples')
 const kanjiMapPath = path.join(jmdictDir, 'kanji-map.json')
 
-const EXAMPLES_PER_SHARD = 100
+const EXAMPLES_PER_SHARD = 25
 
 const prefixLen = parsePrefixLength(process.argv[2])
 
 function parsePrefixLength(arg?: string): number {
-  const value = Number(arg ?? '3')
+  const value = Number(arg ?? '4')
   if (!Number.isInteger(value) || value < 1) {
     throw new Error(`invalid prefix length: ${arg ?? ''}`)
   }
