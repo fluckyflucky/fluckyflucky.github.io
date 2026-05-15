@@ -50,7 +50,9 @@ md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
 
   if (href && href.endsWith('.md')) {
     const clean = href.replace(/\.md$/, '').replace(/^\.?\//, '')
-    token.attrSet('href', `/${clean}`)
+    const category = (env as any)?.category || ''
+    const prefix = category ? `/${category}` : ''
+    token.attrSet('href', `${prefix}/${clean}`)
   }
   if (defaultLinkRender) {
     return defaultLinkRender(tokens, idx, options, env, self)

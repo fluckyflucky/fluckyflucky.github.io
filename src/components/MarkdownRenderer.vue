@@ -37,14 +37,12 @@ function handleClick(e: MouseEvent) {
   const href = anchor.getAttribute('href')
   if (!href) return
 
-  // Build base URL for relative path resolution.
-  // If the current path has no trailing slash and no file extension,
-  // append / so that ./ resolves directory-relative, not file-relative.
-  let base = window.location.href
-  const path = window.location.pathname
-  if (!path.endsWith('/') && !path.includes('.')) {
-    base = window.location.origin + path + '/' + window.location.search + window.location.hash
+  // Resolve relative URLs against the hash-routing path (e.g. /#/notes)
+  let hashPath = window.location.hash.replace(/^#/, '') || '/'
+  if (!hashPath.endsWith('/')) {
+    hashPath = hashPath + '/'
   }
+  const base = window.location.origin + hashPath
 
   const url = new URL(href, base)
   if (url.origin !== window.location.origin) return

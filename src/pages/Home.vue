@@ -113,7 +113,7 @@ const recommendations = [
         <a
           v-for="item in recommendations"
           :key="item.path"
-          :href="item.path"
+          :href="'#' + item.path"
           class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl transition-all duration-200
                  hover:bg-white/[0.04]"
           @click.prevent="router.push(item.path)"
