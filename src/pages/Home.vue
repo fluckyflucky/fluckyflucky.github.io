@@ -6,15 +6,15 @@ const router = useRouter()
 document.title = '青い夏'
 
 const features = [
-  {
-    title: '笔记',
-    desc: '造轮子时的笔记。主要是技术实践、学习心得',
-    path: '/notes',
-    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-  },
+  // {
+  //   title: '笔记',
+  //   desc: '造轮子时的笔记。主要是技术实践、学习心得',
+  //   path: '/notes',
+  //   icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  // },
   {
     title: '夏日记忆',
-    desc: '一些突如其来的想法、随笔。非技术性内容为主',
+    desc: '一些不会发在社交媒体上的随笔。',
     path: '/thoughts',
     icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
   },
@@ -40,14 +40,14 @@ const features = [
 
 const recommendations = [
   {
-    title: '[后端] JSON 反序列化中 TypeReference 的使用',
-    path: '/notes/jackson-type-reference',
-    date: '2025-12-29',
+    title: '四度目の夏が来る',
+    path: '/thoughts/yondome-no-natsu-ga-kuru',
+    date: '2026-06-22',
   },
   {
-    title: '[后端] Gin 框架分层：经典的洋葱模型',
-    path: '/notes/gin-layered-architecture',
-    date: '2025-09-15',
+    title: '六月の雨 - 青い夏',
+    path: '/thoughts/6-21',
+    date: '2026-06-21',
   },
 ]
 </script>
@@ -101,14 +101,14 @@ const recommendations = [
     <!-- Divider -->
     <div class="flex items-center gap-4 px-4 mt-10 sm:mt-14 mb-8 sm:mb-12 md:px-0">
       <span class="flex-1 h-px bg-stone-800" />
-      <span class="text-stone-700 text-xs tracking-widest">RECOMMENDED</span>
+      <span class="text-stone-700 text-xs tracking-widest">RECENT</span>
       <span class="flex-1 h-px bg-stone-800" />
     </div>
 
-    <!-- Recommendation -->
+    <!-- Recent thoughts -->
     <section class="px-4 md:px-0">
-      <h2 class="text-lg font-semibold text-stone-200 mb-1">推荐阅读</h2>
-      <p class="text-sm text-stone-500 mb-5">如果你不知道从哪里开始，可以看看：</p>
+      <h2 class="text-lg font-semibold text-stone-200 mb-1">最近随笔</h2>
+      <p class="text-sm text-stone-500 mb-5">最近写的一些文字：</p>
       <div class="space-y-1">
         <a
           v-for="item in recommendations"

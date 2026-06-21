@@ -13,3 +13,4 @@
 - [夏の色は青](/thoughts/natsu-no-iro-wa-ao)
 - [若是夏天呼唤我们](/thoughts/summer-calls)
 - [六月の雨 - 青い夏](/thoughts/6-21)
+- [四度目の夏が来る](/thoughts/yondome-no-natsu-ga-kuru)

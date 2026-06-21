@@ -11,7 +11,7 @@ const sidebarOpen = ref(false)
 
 const navItems = [
   { text: '首页', path: '/' },
-  { text: '小笔记', path: '/notes' },
+  // { text: '小笔记', path: '/notes' },
   { text: '夏日记忆', path: '/thoughts' },
   { text: '图库', path: '/images' },
   { text: '工具箱', path: '/tools' },
