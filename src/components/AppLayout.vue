@@ -52,7 +52,7 @@ const sideNavGroup = computed(() => {
       <div class="max-w-[1440px] mx-auto px-4 h-14 flex items-center justify-between">
         <button @click="goTo('/')" class="flex items-center gap-2 hover:opacity-80 transition">
           <img :src="'/logo.png'" alt="logo" class="w-7 h-7 rounded" />
-          <span class="text-lg font-bold text-stone-100 tracking-wide">青い夏的世界</span>
+          <span class="text-lg font-bold text-stone-100 tracking-wide">青い夏</span>
         </button>
 
         <nav class="hidden md:flex items-center gap-1">

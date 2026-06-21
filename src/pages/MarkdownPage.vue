@@ -19,7 +19,7 @@ const pageTitle = computed(() => {
 
 // Update document title
 watch(pageTitle, (title) => {
-  document.title = title ? `${title} — 青い夏的世界` : '青い夏的世界'
+  document.title = title ? `${title} — 青い夏` : '青い夏'
 }, { immediate: true })
 
 async function loadContent(cat: string, slug: string) {
