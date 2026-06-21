@@ -25,6 +25,7 @@ export const sidebar: Record<string, SidebarGroup> = {
     items: [
       { text: '夏の色は青', link: '/thoughts/natsu-no-iro-wa-ao' },
       { text: '若是夏天呼唤我们', link: '/thoughts/summer-calls' },
+      { text: '六月の雨 - 青い夏', link: '/thoughts/6-21' },
     ],
   },
   '/images': {

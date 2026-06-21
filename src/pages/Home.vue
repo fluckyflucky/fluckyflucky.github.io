@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-document.title = '青い夏的世界'
+document.title = '青い夏'
 
 const features = [
   {
