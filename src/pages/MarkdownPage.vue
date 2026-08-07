@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
+import { categories } from 'virtual:markdown-index'
 
 const props = defineProps<{
   category: string
@@ -15,6 +16,23 @@ const error = ref('')
 const pageTitle = computed(() => {
   const match = content.value.match(/^# (.+)$/m)
   return match ? match[1] : props.slug || props.category
+})
+
+// Detect category index pages (e.g., /thoughts → category='thoughts', slug='thoughts')
+const isIndexPage = computed(() => props.category === props.slug)
+
+// Auto-generated article list for category index pages
+const indexArticles = computed(() => {
+  if (!isIndexPage.value) return []
+  const cat = categories[`/${props.category}`]
+  return cat?.items ?? []
+})
+
+// Inject article list into markdown content for index pages
+const displayContent = computed(() => {
+  if (!isIndexPage.value || indexArticles.value.length === 0) return content.value
+  const items = indexArticles.value.map(item => `- [${item.text}](${item.link})`).join('\n')
+  return `${content.value}\n\n最近文章：\n\n${items}`
 })
 
 // Update document title
@@ -59,5 +77,7 @@ watch([() => props.category, () => props.slug], ([newCat, newSlug]) => {
     <p class="text-6xl mb-4">404</p>
     <p class="text-stone-400">ページが見つかりません</p>
   </div>
-  <MarkdownRenderer v-else :content="content" :category="props.category" />
+  <template v-else>
+    <MarkdownRenderer :content="displayContent" :category="props.category" />
+  </template>
 </template>

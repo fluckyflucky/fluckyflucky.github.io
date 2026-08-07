@@ -6,11 +6,4 @@
   <p style="font-size: 0.85em; opacity: 0.6;">——「花に亡霊」· ヨルシカ</p>
 </div>
 
-[开始 >>](./natsu-no-iro-wa-ao)
-
-最近文章：
-
-- [夏の色は青](/thoughts/natsu-no-iro-wa-ao)
-- [若是夏天呼唤我们](/thoughts/summer-calls)
-- [六月の雨 - 青い夏](/thoughts/6-21)
-- [四度目の夏が来る](/thoughts/yondome-no-natsu-ga-kuru)
+[开始 >>](./2026-05-08-natsu-no-iro-wa-ao)

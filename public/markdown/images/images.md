@@ -6,4 +6,4 @@
   <p style="font-size: 0.85em; opacity: 0.6;">——「ただ君に晴れ」· ヨルシカ</p>
 </div>
 
-[开始 >>](./photos)
+[开始 >>](./2026-05-08-photos)

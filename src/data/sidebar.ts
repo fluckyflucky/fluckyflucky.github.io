@@ -1,3 +1,5 @@
+import { categories } from 'virtual:markdown-index'
+
 export interface SidebarItem {
   text: string
   link: string
@@ -8,35 +10,8 @@ export interface SidebarGroup {
   items: SidebarItem[]
 }
 
-// Keyed by category path prefix
-export const sidebar: Record<string, SidebarGroup> = {
-  // '/notes': {
-  //   text: '小笔记',
-  //   items: [
-  //     { text: '[前端] 关于 Element 中的 prop 和 slot-scope', link: '/notes/element-prop-slot-scope' },
-  //     { text: '[杂项] 关于接口和抽象类', link: '/notes/interface-vs-abstract' },
-  //     { text: '[后端] JSON 反序列化中 TypeReference 的使用', link: '/notes/jackson-type-reference' },
-  //     { text: '[后端] Gin 框架分层：经典的洋葱模型', link: '/notes/gin-layered-architecture' },
-  //     { text: '[杂项] JMdict 词典的 JSON 切片方案', link: '/notes/jmdict-json-slicing' },
-  //     { text: '[杂项] Git 常用命令汇总', link: '/notes/git-common-commands' },
-  //   ],
-  // },
-  '/thoughts': {
-    text: '夏日记忆',
-    items: [
-      { text: '夏の色は青', link: '/thoughts/natsu-no-iro-wa-ao' },
-      { text: '若是夏天呼唤我们', link: '/thoughts/summer-calls' },
-      { text: '六月の雨 - 青い夏', link: '/thoughts/6-21' },
-    ],
-  },
-  '/images': {
-    text: '图库',
-    items: [
-      { text: '写在前面', link: '/images/images' },
-      { text: '照片', link: '/images/photos' },
-      { text: '第一次日本行', link: '/images/japan-1' },
-    ],
-  },
+// Manual overrides for categories that mix markdown pages with custom Vue pages
+const manualOverrides: Record<string, SidebarGroup> = {
   '/tools': {
     text: '工具箱',
     items: [
@@ -46,4 +21,10 @@ export const sidebar: Record<string, SidebarGroup> = {
       { text: '下载速度计算', link: '/tools/download-calc' },
     ],
   },
+}
+
+// Auto-detected from markdown files, with manual overrides taking precedence
+export const sidebar: Record<string, SidebarGroup> = {
+  ...categories,
+  ...manualOverrides,
 }

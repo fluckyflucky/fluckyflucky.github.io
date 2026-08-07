@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { categories } from 'virtual:markdown-index'
 
 const router = useRouter()
 
 document.title = '青い夏'
 
 const features = [
-  // {
-  //   title: '笔记',
-  //   desc: '造轮子时的笔记。主要是技术实践、学习心得',
-  //   path: '/notes',
-  //   icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-  // },
+  {
+    title: '笔记',
+    desc: '造轮子时的笔记。主要是技术实践、学习心得',
+    path: '/notes',
+    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  },
   {
     title: '夏日记忆',
     desc: '一些不会发在社交媒体上的随笔。',
@@ -38,18 +39,7 @@ const features = [
   },
 ]
 
-const recommendations = [
-  {
-    title: '四度目の夏が来る',
-    path: '/thoughts/yondome-no-natsu-ga-kuru',
-    date: '2026-06-22',
-  },
-  {
-    title: '六月の雨 - 青い夏',
-    path: '/thoughts/6-21',
-    date: '2026-06-21',
-  },
-]
+const recommendations = categories['/thoughts']?.items.slice(0, 2) ?? []
 </script>
 
 <template>
@@ -112,17 +102,17 @@ const recommendations = [
       <div class="space-y-1">
         <a
           v-for="item in recommendations"
-          :key="item.path"
-          :href="'#' + item.path"
+          :key="item.link"
+          :href="'#' + item.link"
           class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-xl transition-all duration-200
                  hover:bg-white/[0.04]"
-          @click.prevent="router.push(item.path)"
+          @click.prevent="router.push(item.link)"
         >
           <span class="shrink-0 w-1.5 h-1.5 rounded-full bg-cyan-500/40
                        group-hover:bg-cyan-400 group-hover:shadow-[0_0_6px_rgba(34,211,238,0.4)]
                        transition-all duration-300" />
           <span class="text-sm text-stone-300 group-hover:text-stone-100 transition-colors truncate">
-            {{ item.title }}
+            {{ item.text }}
           </span>
           <span class="shrink-0 text-xs text-stone-600 ml-auto">{{ item.date }}</span>
         </a>
