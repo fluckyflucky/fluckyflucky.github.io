@@ -1,0 +1,10 @@
+.puzzle .arcade-title { font-size: clamp(24px, 5vw, 30px); }
+.puzzle .arcade-score { min-width: 62px; }
+.puzzle .arcade-score strong { font-size: 19px; }
+.puzzle .arcade-button { min-height: 44px; }
+.puzzle-hint { margin-top: 14px; }
+.puzzle-levels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; margin-top: 18px; }
+.puzzle-levels button { position: relative; padding: 8px; font-variant-numeric: tabular-nums; }
+.puzzle-levels .completed { border-color: #658c74; }
+.puzzle-levels span { position: absolute; top: 2px; right: 4px; font-size: 10px; color: #98d7b2; }
+@media (max-width: 380px) { .puzzle .arcade-header { gap: 10px; }.puzzle .arcade-score { min-width: 55px; padding: 8px; }.puzzle .arcade-stats { gap: 5px; } }

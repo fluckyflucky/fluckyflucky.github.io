@@ -23,6 +23,35 @@ export interface GameDefinition {
 // The lobby and player both read this list. Add a game here to give it a card and URL.
 export const games: GameDefinition[] = [
   {
+    id: 'screws',
+    title: '拧螺丝',
+    description: '挪开螺丝，拆掉木板。共 10 关。',
+    category: '拆卸解谜',
+    coverText: '拧螺丝',
+    accent: '#c69056',
+    controls: '点击螺丝，再点空孔',
+    load: () => import('./screws/GameScrews.vue'),
+  },
+  {
+    id: 'paint-maze',
+    title: '涂色迷宫',
+    description: '一滑到底，把迷宫里的路涂满。',
+    category: '滑动解谜',
+    coverText: '涂色迷宫',
+    accent: '#89c8a6',
+    controls: '方向键 / WASD · 手机滑动',
+    load: () => import('./paintMaze/GamePaintMaze.vue'),
+  },
+  {
+    id: 'civilization',
+    title: '文明 · 六角世界',
+    description: '建城、研究、扩张。从开拓者到火星。',
+    category: '回合策略',
+    coverText: '文明',
+    controls: '点击操作 · 拖动地图',
+    load: () => import('./civilization/GameCivilization.vue'),
+  },
+  {
     id: '2048',
     title: '2048',
     description: '滑动数字，合出 2048。',
