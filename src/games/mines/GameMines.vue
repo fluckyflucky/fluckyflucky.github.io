@@ -13,15 +13,70 @@ import {
 import { readSaved, saveLocal } from "../shared/storage";
 import "../shared/game-ui.css";
 import "../shared/puzzle-ui.css";
-const key = "aoinatsu:mines:v1",
+const key = "aoinatsu:mines:v2",
   saved = readSaved(key),
   state = ref(validMine(saved) ? saved : fresh()),
   flagMode = ref(false),
   message = ref("第一下不会踩雷。"),
-  size = ref(window.matchMedia('(max-width: 767px), (pointer: coarse)').matches ? 44 : 36),
+  size = ref(27),
   confirm = ref<Mode | null>(null),
   suggested = ref(-1),
   scroll = ref<HTMLDivElement | null>(null);
+const focused = ref(0);
+let holdTimer: number | undefined;
+let gesture: { x: number; y: number; cell: number; cancelled: boolean } | null = null;
+let suppressClick = false;
+function cancelHold() {
+  window.clearTimeout(holdTimer);
+  holdTimer = undefined;
+}
+function pointerStart(event: PointerEvent, i: number) {
+  suppressClick = false;
+  if (event.pointerType === 'mouse' || ended.value) return;
+  cancelHold();
+  suppressClick = false;
+  gesture = { x: event.clientX, y: event.clientY, cell: i, cancelled: false };
+  holdTimer = window.setTimeout(() => {
+    if (!gesture || gesture.cancelled) return;
+    suppressClick = true;
+    flag(i);
+    message.value = state.value.flags[i] ? '已标旗。' : '已取消标旗。';
+  }, 450);
+}
+function pointerMove(event: PointerEvent) {
+  if (!gesture) return;
+  if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 8) {
+    gesture.cancelled = true;
+    suppressClick = true;
+    cancelHold();
+  }
+}
+function pointerEnd() { cancelHold(); gesture = null; }
+function pointerCancel() { suppressClick = true; pointerEnd(); }
+function contextFlag(i: number) {
+  cancelHold();
+  if (!suppressClick) flag(i);
+}
+function clickCell(i: number) {
+  if (suppressClick) { suppressClick = false; return; }
+  focused.value = i;
+  open(i);
+}
+function keyboard(event: KeyboardEvent, i: number) {
+  const w = config.value.width, row = Math.floor(i / w), col = i % w;
+  let next = i;
+  if (event.key === 'ArrowLeft') next = row * w + Math.max(0, col - 1);
+  else if (event.key === 'ArrowRight') next = row * w + Math.min(w - 1, col + 1);
+  else if (event.key === 'ArrowUp') next = Math.max(0, row - 1) * w + col;
+  else if (event.key === 'ArrowDown') next = Math.min(config.value.height - 1, row + 1) * w + col;
+  else if (event.key.toLowerCase() === 'f') { event.preventDefault(); flag(i); return; }
+  else return;
+  event.preventDefault();
+  focused.value = next;
+  const cell = scroll.value?.querySelector<HTMLButtonElement>(`[data-cell="${next}"]`);
+  cell?.focus({ preventScroll: true });
+  cell?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
 const config = computed(() => modes[state.value.mode]),
   flags = computed(() => state.value.flags.filter(Boolean).length),
   ended = computed(
@@ -47,8 +102,12 @@ const timer = window.setInterval(() => {
 }, 1000);
 onUnmounted(() => {
   window.clearInterval(timer);
+  cancelHold();
 });
 function reset(mode: Mode) {
+  pointerEnd();
+  suppressClick = false;
+  focused.value = 0;
   state.value = fresh(mode);
   confirm.value = null;
   suggested.value = -1;
@@ -97,10 +156,9 @@ function showHint() {
     : "亮起的格子能由数字推出安全，可以打开。";
   const row = Math.floor(step.cell / config.value.width),
     col = step.cell % config.value.width;
-  scroll.value?.scrollTo({
-    left: Math.max(0, col * size.value - 100),
-    top: Math.max(0, row * size.value - 100),
-    behavior: "smooth",
+  scroll.value?.querySelector(`[data-cell="${row * config.value.width + col}"]`)?.scrollIntoView({
+    block: 'nearest', inline: 'nearest',
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
   });
 }
 function label(i: number) {
@@ -127,7 +185,8 @@ function label(i: number) {
           :key="k"
           class="arcade-button"
           :class="{ primary: state.mode === k }"
-          @click="confirm = k as Mode"
+          :aria-pressed="state.mode === k"
+          @click="k !== state.mode && (state.status === 'ready' ? reset(k as Mode) : confirm = k as Mode)"
         >
           {{ m.label }}
         </button>
@@ -154,15 +213,16 @@ function label(i: number) {
         <input
           v-model.number="size"
           type="range"
-          min="28"
-          max="52"
-          step="4" /></label
+          min="24"
+          max="36"
+          step="3" /></label
       ><span
         >{{ config.width }} × {{ config.height }} · 还剩
         {{ remaining }} 个安全格</span
       >
     </div>
-    <div ref="scroll" class="mine-scroll">
+    <p v-if="state.mode === 'large'" class="pan-note">手机横滑棋盘，往下看直接滚动页面。</p>
+    <div ref="scroll" class="mine-scroll" @pointermove="pointerMove" @pointerup="pointerEnd" @pointercancel="pointerCancel" @scroll="cancelHold">
       <div
         class="mine-board"
         role="group"
@@ -183,10 +243,15 @@ function label(i: number) {
             hit: state.hit === i,
           }"
           :style="{ height: `${size}px` }"
+          :data-cell="i"
+          :tabindex="focused === i ? 0 : -1"
           :aria-label="label(i)"
           :disabled="ended"
-          @click="open(i)"
-          @contextmenu.prevent="flag(i)"
+          @pointerdown="pointerStart($event, i)"
+          @keydown="keyboard($event, i)"
+          @focus="focused = i"
+          @click="clickCell(i)"
+          @contextmenu.prevent="contextFlag(i)"
         >
           <span v-if="state.status === 'lost' && state.board?.[i] === -1"
             >✹</span
@@ -212,9 +277,9 @@ function label(i: number) {
     </p>
     <div class="arcade-note">
       <p>
-        点击开格，右键标旗。手机先切到标旗模式。点已开的数字，周围旗数相等时会一起打开邻格；标错旗也会踩雷。
+        点击开格，右键或长按标旗，也可切换标旗模式。点数字可连开邻格，标错旗会踩雷。
       </p>
-      <p>只保证第一下不踩雷，后面可能需要猜。大地图可双向滚动、调大格子。</p>
+      <p>第一下不会踩雷。方向键移动，Enter 开格，F 标旗。</p>
       <p class="arcade-save-note">棋盘和计时保存在这个浏览器。</p>
     </div>
   </section>
@@ -242,13 +307,20 @@ function label(i: number) {
   color: #afbdad;
 }
 .mine-scroll {
-  overflow: auto;
-  max-height: 60vh;
+  overflow-x: auto;
+  width: max-content;
+  max-width: 100%;
   border: 3px solid #58746b;
   border-radius: 8px;
   background: #d3dfd2;
   touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #58746b #d3dfd2;
 }
+.pan-note { margin: 8px 0; font-size: 13px; color: #afbdad; }
 .mine-board {
   display: grid;
   gap: 0;
@@ -266,10 +338,11 @@ function label(i: number) {
   place-items: center;
   cursor: pointer;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 16px;
   color: #20392e;
   padding: 0;
   touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 .cell.open {
   background: #ecf0e4;
@@ -338,9 +411,6 @@ function label(i: number) {
 @media (max-width: 480px) {
   .arcade-header {
     flex-wrap: wrap;
-  }
-  .mine-scroll {
-    max-height: 55vh;
   }
 }
 </style>

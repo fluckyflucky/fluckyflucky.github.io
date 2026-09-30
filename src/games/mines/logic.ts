@@ -1,6 +1,6 @@
 export const modes = {
-  expert: { width: 30, height: 16, mines: 99, label: "99 雷" },
-  large: { width: 50, height: 50, mines: 500, label: "50 × 50" },
+  expert: { width: 9, height: 9, mines: 10, label: "9 × 9 · 10 雷" },
+  large: { width: 25, height: 25, mines: 100, label: "25 × 25 · 100 雷" },
 };
 export type Mode = keyof typeof modes;
 export function neighbors(i: number, w: number, h: number) {

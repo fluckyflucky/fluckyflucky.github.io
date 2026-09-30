@@ -158,6 +158,9 @@ for (let seed = 1; seed <= 50; seed++) {
 console.log(
   "Sudoku: 50 seeded puzzles, unique solutions, logic-only solving and validation passed",
 );
+assert.deepEqual(Object.values(modes).map(({width, height, mines}) => [width, height, mines]), [[9, 9, 10], [25, 25, 100]]);
+assert(!validMine({ ...fresh("expert"), opened: Array(480).fill(0), flags: Array(480).fill(0) }));
+assert(!validMine({ ...fresh("large"), opened: Array(2500).fill(0), flags: Array(2500).fill(0) }));
 for (const mode of ["expert", "large"]) {
   const started = Date.now();
   for (let seed = 1; seed <= 100; seed++) {
