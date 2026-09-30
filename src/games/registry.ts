@@ -25,7 +25,7 @@ export const games: GameDefinition[] = [
   {
     id: 'screws',
     title: '拧螺丝',
-    description: '挪开螺丝，拆掉木板。共 10 关。',
+    description: '挪开螺丝，拆掉木板。共 40 关。',
     category: '拆卸解谜',
     coverText: '拧螺丝',
     accent: '#c69056',

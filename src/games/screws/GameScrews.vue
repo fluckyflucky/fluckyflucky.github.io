@@ -7,7 +7,7 @@ import '../shared/game-ui.css'
 import '../shared/puzzle-ui.css'
 
 const key = 'aoinatsu:screws:v1'
-const saved = readProgress(readSaved(key), levels.length)
+const saved = readProgress(readSaved(key), levels.length, 10)
 const level = ref(saved?.level ?? 0), unlocked = ref(saved?.unlocked ?? 0)
 const best = ref(saved?.best ?? Array<number>(levels.length).fill(0))
 const puzzle = computed(() => levels[level.value])
@@ -58,7 +58,7 @@ function geometry(p: Plate) {
 
 <template>
   <section class="arcade puzzle">
-    <header class="arcade-header"><h1 class="arcade-title">拧螺丝</h1><div class="arcade-stats"><div class="arcade-score"><span>关卡</span><strong>{{ level + 1 }} / 10</strong></div><div class="arcade-score"><span>步数</span><strong>{{ state.moves }}</strong></div></div></header>
+    <header class="arcade-header"><h1 class="arcade-title">拧螺丝</h1><div class="arcade-stats"><div class="arcade-score"><span>关卡</span><strong>{{ level + 1 }} / {{ levels.length }}</strong></div><div class="arcade-score"><span>步数</span><strong>{{ state.moves }}</strong></div></div></header>
     <div class="arcade-layout">
       <div class="arcade-player">
         <div class="arcade-toolbar"><p>{{ puzzle.name }} · 剩 {{ remaining }} 块</p><div class="arcade-actions"><button class="arcade-button" :disabled="!history.length" @click="undo">撤销</button><button class="arcade-button" @click="select(level)">重玩</button></div></div>
@@ -79,7 +79,7 @@ function geometry(p: Plate) {
             </TransitionGroup>
           </svg>
           <button v-for="(h, i) in holes" :key="i" class="hole-button" :class="{ selected: selected === i, suggested: suggested?.includes(i), empty: !state.screws.includes(i) }" :style="{ left: `${h.x / 3}%`, top: `${h.y / 3.6}%` }" :disabled="won || !accessible(puzzle, state, i)" :aria-label="`${state.screws.includes(i) ? '螺丝' : '空孔'} ${i + 1}${!accessible(puzzle, state, i) ? '，被木板遮住' : ''}`" :aria-pressed="selected === i" @click="clickHole(i)"><span v-if="state.screws.includes(i) && accessible(puzzle, state, i)" class="bolt"><i /></span><span v-else-if="accessible(puzzle, state, i)" class="empty-ring" /></button>
-          <div v-if="won" class="arcade-result"><h2>{{ level === 9 ? '全部拆完了' : '拆干净了！' }}</h2><p>{{ state.moves }} 步 · 本关最佳 {{ best[level] }} 步</p><button class="arcade-button primary" @click="select(level < 9 ? level + 1 : 0)">{{ level < 9 ? '下一关' : '再玩一遍' }}</button></div>
+          <div v-if="won" class="arcade-result"><h2>{{ level === levels.length - 1 ? '全部拆完了' : '拆干净了！' }}</h2><p>{{ state.moves }} 步 · 本关最佳 {{ best[level] }} 步</p><button class="arcade-button primary" @click="select(level < levels.length - 1 ? level + 1 : 0)">{{ level < levels.length - 1 ? '下一关' : '再玩一遍' }}</button></div>
         </div>
         <p class="arcade-status" role="status">{{ won ? '过关了' : message }}</p>
       </div>
