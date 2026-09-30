@@ -1,5 +1,7 @@
+import { layouts } from './levels.ts'
+
 export type Direction = 'up' | 'down' | 'left' | 'right'
-export interface Maze { size: number; floor: number[]; start: number }
+export interface Maze { size: number; floor: number[]; start: number; name?: string }
 export interface MazeState { position: number; painted: number[]; moves: number }
 
 export function slide(maze: Maze, position: number, direction: Direction): number[] {
@@ -31,7 +33,7 @@ export function reachablePaint(maze: Maze, start = maze.start): Set<number> {
   return paint
 }
 
-function paintableFromEveryStop(maze: Maze): boolean {
+export function paintableFromEveryStop(maze: Maze): boolean {
   const stops = new Set([maze.start]), queue = [maze.start]
   for (let i = 0; i < queue.length; i++) {
     if (reachablePaint(maze, queue[i]).size !== maze.floor.length) return false
@@ -43,36 +45,15 @@ function paintableFromEveryStop(maze: Maze): boolean {
   return true
 }
 
-function random(seed: number) {
-  return () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296 }
-}
-
-export function createMaze(level: number, excluded: Set<string> = new Set()): Maze {
-  const size = 7 + 2 * Math.floor(level / 3)
-  for (let attempt = 0; attempt < 500; attempt++) {
-    const rng = random(90210 + level * 7919 + attempt * 37)
-    const start = size + 1, floor = new Set([start]), stack = [start]
-    while (stack.length) {
-      const p = stack.at(-1)!, x = p % size, y = Math.floor(p / size)
-      const options = [[0, -2], [2, 0], [0, 2], [-2, 0]].filter(([dx, dy]) =>
-        x + dx > 0 && x + dx < size - 1 && y + dy > 0 && y + dy < size - 1 && !floor.has(p + dy * size + dx))
-      if (!options.length) { stack.pop(); continue }
-      const [dx, dy] = options[Math.floor(rng() * options.length)]
-      floor.add(p + dy / 2 * size + dx / 2); floor.add(p + dy * size + dx); stack.push(p + dy * size + dx)
-    }
-    const maze = { size, floor: [...floor].sort((a, b) => a - b), start }
-    if (!excluded.has(JSON.stringify(maze.floor)) && paintableFromEveryStop(maze)) return maze
-  }
-  // Serpentine fallback is always paintable in wall-to-wall slides.
-  const floor: number[] = []
-  for (let y = 1; y < size - 1; y++) {
-    for (let x = 1; x < size - 1; x++) if (y % 2 || x === (y % 4 === 2 ? size - 2 : 1)) floor.push(y * size + x)
-  }
-  return { size, floor, start: size + 1 }
-}
-
-export const mazes: Maze[] = []
-for (let level = 0; level < 10; level++) mazes.push(createMaze(level, new Set(mazes.map(m => JSON.stringify(m.floor)))))
+export const mazes: Maze[] = layouts.map(([name, rows]) => {
+  const size = rows.length, floor: number[] = []
+  let start = -1
+  rows.forEach((row, y) => [...row].forEach((cell, x) => {
+    if (cell !== '#') floor.push(y * size + x)
+    if (cell === 'S') start = y * size + x
+  }))
+  return { name, size, floor, start }
+})
 
 export function move(maze: Maze, state: MazeState, direction: Direction): MazeState {
   const path = slide(maze, state.position, direction)

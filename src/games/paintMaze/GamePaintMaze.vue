@@ -6,13 +6,14 @@ import { readProgress } from '../shared/puzzleProgress'
 import '../shared/game-ui.css'
 import '../shared/puzzle-ui.css'
 
-const key = 'aoinatsu:paint-maze:v1'
-const saved = readProgress(readSaved(key), mazes.length)
+const key = 'aoinatsu:paint-maze:v2'
+const currentSave = readSaved(key)
+const saved = readProgress(currentSave ?? readSaved('aoinatsu:paint-maze:v1'), mazes.length)
 const level = ref(saved?.level ?? 0), unlocked = ref(saved?.unlocked ?? 0)
-const best = ref(saved?.best ?? Array<number>(mazes.length).fill(0))
+const best = ref(currentSave && saved ? saved.best : Array<number>(mazes.length).fill(0))
 const maze = computed(() => mazes[level.value])
 function fresh(): MazeState { return { position: maze.value.start, painted: [maze.value.start], moves: 0 } }
-const state = ref<MazeState>(saved && validState(maze.value, saved.state) ? saved.state : fresh())
+const state = ref<MazeState>(currentSave && saved && validState(maze.value, saved.state) ? saved.state : fresh())
 const history = ref<MazeState[]>([]), suggested = ref<Direction | null>(null)
 const floor = computed(() => new Set(maze.value.floor)), paint = computed(() => new Set(state.value.painted))
 const won = computed(() => paint.value.size === floor.value.size)
@@ -66,7 +67,7 @@ function pointerup(e: PointerEvent) {
     </header>
     <div class="arcade-layout">
       <div class="arcade-player">
-        <div class="arcade-toolbar"><p>还剩 {{ remaining }} 格</p><div class="arcade-actions"><button class="arcade-button" :disabled="!history.length" @click="undo">撤销</button><button class="arcade-button" @click="select(level)">重玩</button></div></div>
+        <div class="arcade-toolbar"><p>{{ maze.name }} · 剩 {{ remaining }} 格</p><div class="arcade-actions"><button class="arcade-button" :disabled="!history.length" @click="undo">撤销</button><button class="arcade-button" @click="select(level)">重玩</button></div></div>
         <div class="maze-stage" tabindex="0" role="group" aria-label="迷宫，使用方向键或滑动涂色" @pointerdown="pointerdown" @pointerup="pointerup" @pointercancel="pointer = null">
           <div class="maze-grid" :style="{ gridTemplateColumns: `repeat(${maze.size}, 1fr)` }" aria-hidden="true">
             <span v-for="(_, i) in maze.size ** 2" :key="`${level}-${i}`" class="maze-cell" :class="{ floor: floor.has(i), painted: paint.has(i) }" />

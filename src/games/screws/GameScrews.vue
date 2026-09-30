@@ -1,23 +1,29 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { holes, levels, freshState, accessible, relocate, hint, validState, type ScrewState, type Plate } from './logic'
+import { computed, ref, shallowRef, watch, onMounted, onBeforeUnmount } from 'vue'
+import { holes, levels, validState } from './logic'
+import { ScrewWorld, validPhysicsSave, type ScrewPhysicsSave } from './physics'
 import { readSaved, saveLocal } from '../shared/storage'
 import { readProgress } from '../shared/puzzleProgress'
 import '../shared/game-ui.css'
 import '../shared/puzzle-ui.css'
 
-const key = 'aoinatsu:screws:v1'
-const saved = readProgress(readSaved(key), levels.length, 10)
+const key = 'aoinatsu:screws:v2'
+const physicsSave = readSaved(key)
+const saved = readProgress(physicsSave ?? readSaved('aoinatsu:screws:v1'), levels.length, 10)
 const level = ref(saved?.level ?? 0), unlocked = ref(saved?.unlocked ?? 0)
-const best = ref(saved?.best ?? Array<number>(levels.length).fill(0))
+const best = ref(physicsSave && saved ? saved.best : Array<number>(levels.length).fill(0))
 const puzzle = computed(() => levels[level.value])
-const state = ref<ScrewState>(saved && validState(puzzle.value, saved.state) ? saved.state : freshState(puzzle.value))
+let world = new ScrewWorld(puzzle.value, saved && validPhysicsSave(puzzle.value, saved.state) ? saved.state : undefined,
+  saved && validState(puzzle.value, saved.state) ? saved.state : undefined)
+const state = ref({ screws: [...world.screws], moves: world.moves })
+const views = shallowRef(world.views)
+const accessibleHoles = ref(holes.map((_, h) => world.accessible(h)))
+const remaining = ref(world.remaining)
 const selected = ref<number | null>(null), suggested = ref<[number, number] | null>(null)
-const history = ref<ScrewState[]>([]), message = ref('点一颗螺丝，再点空孔。')
-const won = computed(() => state.value.removed.length === puzzle.value.plates.length)
-const remaining = computed(() => puzzle.value.plates.length - state.value.removed.length)
-const visiblePlates = computed(() => puzzle.value.plates.flatMap((p, i) => state.value.removed.includes(i) ? [] : [{ p, i }]))
-watch([state, level, unlocked, best], () => saveLocal(key, { level: level.value, unlocked: unlocked.value, best: best.value, state: state.value }), { deep: true })
+const history = ref<ScrewPhysicsSave[]>([]), message = ref('点一颗螺丝，再点空孔。')
+const won = computed(() => remaining.value === 0)
+function persist() { saveLocal(key, { level: level.value, unlocked: unlocked.value, best: best.value, state: world.snapshot() }) }
+watch([level, unlocked, best], persist, { deep: true })
 watch(won, value => {
   if (!value) return
   selected.value = null
@@ -26,11 +32,12 @@ watch(won, value => {
 }, { immediate: true })
 function select(index: number) {
   if (index < 0 || index > unlocked.value) return
-  level.value = index; state.value = freshState(puzzle.value); history.value = []; selected.value = null; suggested.value = null
+  level.value = index; world.destroy(); world = new ScrewWorld(puzzle.value); sync(); history.value = []; selected.value = null; suggested.value = null
   message.value = '点一颗螺丝，再点空孔。'
+  persist(); animate()
 }
 function clickHole(hole: number) {
-  if (won.value || !accessible(puzzle.value, state.value, hole)) return
+  if (won.value || !world.accessible(hole)) return
   suggested.value = null
   if (state.value.screws.includes(hole)) {
     selected.value = selected.value === hole ? null : hole
@@ -38,22 +45,42 @@ function clickHole(hole: number) {
     return
   }
   if (selected.value === null) { message.value = '先选一颗螺丝。'; return }
-  const next = relocate(puzzle.value, state.value, selected.value, hole)
-  if (!next) return
-  history.value.push(state.value); if (history.value.length > 100) history.value.shift()
-  const fallen = next.removed.length - state.value.removed.length
-  state.value = next; selected.value = null
-  message.value = fallen ? `拆下了 ${fallen} 块木板。` : '螺丝挪好了。'
+  const previous = world.snapshot()
+  if (!world.relocate(selected.value, hole)) { message.value = '这个孔刚被木板挡住了。'; return }
+  history.value.push(previous); if (history.value.length > 100) history.value.shift()
+  sync(); selected.value = null
+  message.value = '螺丝挪好了。'
+  persist(); animate()
 }
-function undo() { const prev = history.value.pop(); if (prev) state.value = prev; selected.value = null; suggested.value = null; message.value = '退回一步。' }
+function undo() {
+  const prev = history.value.pop()
+  if (prev) { world.destroy(); world = new ScrewWorld(puzzle.value, prev); sync(); persist(); animate() }
+  selected.value = null; suggested.value = null; message.value = '退回一步。'
+}
 function showHint() {
-  suggested.value = hint(puzzle.value, state.value)
+  suggested.value = world.hint()
   message.value = suggested.value ? '把亮起的螺丝移到亮起的空孔。' : '先撤销几步，腾出木板外的空孔。'
 }
-function geometry(p: Plate) {
-  const a = holes[p.a], b = holes[p.b]
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, length: Math.hypot(b.x - a.x, b.y - a.y) + 44, angle: Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI }
+function sync() {
+  state.value = { screws: [...world.screws], moves: world.moves }
+  views.value = world.views; remaining.value = world.remaining
+  accessibleHoles.value = holes.map((_, h) => world.accessible(h))
 }
+let frame = 0, previousTime = 0, accumulator = 0, lastSave = 0, disposed = false
+function tick(time: number) {
+  frame = 0
+  if (disposed || document.hidden) return
+  accumulator += Math.min(50, previousTime ? time - previousTime : 1000 / 60); previousTime = time
+  while (accumulator >= 1000 / 60) { world.step(); accumulator -= 1000 / 60 }
+  sync()
+  if (time - lastSave > 500) { persist(); lastSave = time }
+  if (world.active) frame = requestAnimationFrame(tick)
+  else { previousTime = 0; accumulator = 0; persist() }
+}
+function animate() { if (!frame && !disposed && !document.hidden) { previousTime = 0; frame = requestAnimationFrame(tick) } }
+function visibility() { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; persist() } else animate() }
+onMounted(() => { animate(); document.addEventListener('visibilitychange', visibility) })
+onBeforeUnmount(() => { disposed = true; cancelAnimationFrame(frame); persist(); world.destroy(); document.removeEventListener('visibilitychange', visibility) })
 </script>
 
 <template>
@@ -67,23 +94,23 @@ function geometry(p: Plate) {
             <defs><pattern id="screw-grain" width="60" height="30" patternUnits="userSpaceOnUse"><path d="M0 8 Q20 4 60 9 M0 22 Q35 28 60 20" fill="none" stroke="#735638" stroke-opacity=".12" /></pattern></defs>
             <rect width="300" height="360" rx="16" fill="#ece0c7" /><rect width="300" height="360" fill="url(#screw-grain)" />
             <circle v-for="(h, i) in holes" :key="i" :cx="h.x" :cy="h.y" r="9" fill="#574b3e" stroke="#fff7" stroke-width="3" />
-            <TransitionGroup name="plate" tag="g">
-              <g v-for="{ p, i } in visiblePlates" :key="`${level}-${i}`" class="wood-plate">
-                <g :transform="`translate(${geometry(p).x} ${geometry(p).y}) rotate(${geometry(p).angle})`">
-                  <rect :x="-geometry(p).length / 2" y="-17" :width="geometry(p).length" height="38" rx="15" fill="#0003" />
-                  <rect :x="-geometry(p).length / 2" y="-19" :width="geometry(p).length" height="36" rx="14" :fill="p.color" stroke="#fff6" stroke-width="2" />
-                  <path :d="`M${-geometry(p).length / 2 + 26} -10 H${geometry(p).length / 2 - 26} M${-geometry(p).length / 2 + 30} 9 H${geometry(p).length / 2 - 25}`" stroke="#fff3" stroke-width="2" />
+            <g>
+              <g v-for="v in views" :key="`${level}-${v.i}`" class="wood-plate" :data-plate="v.i">
+                <g :transform="`translate(${v.x} ${v.y}) rotate(${v.angle})`">
+                  <rect :x="-v.length / 2" y="-17" :width="v.length" height="38" rx="15" fill="#0003" />
+                  <rect :x="-v.length / 2" y="-19" :width="v.length" height="36" rx="14" :fill="puzzle.plates[v.i].color" stroke="#fff6" stroke-width="2" />
+                  <path :d="`M${-v.length / 2 + 26} -10 H${v.length / 2 - 26} M${-v.length / 2 + 30} 9 H${v.length / 2 - 25}`" stroke="#fff3" stroke-width="2" />
                 </g>
-                <circle v-for="h in [p.a, p.b]" :key="h" :cx="holes[h].x" :cy="holes[h].y" r="9" fill="#574b3e" stroke="#fff6" stroke-width="2" />
+                <circle v-for="(h, side) in [v.a, v.b]" :key="side" :cx="h.x" :cy="h.y" r="9" fill="#574b3e" stroke="#fff6" stroke-width="2" />
               </g>
-            </TransitionGroup>
+            </g>
           </svg>
-          <button v-for="(h, i) in holes" :key="i" class="hole-button" :class="{ selected: selected === i, suggested: suggested?.includes(i), empty: !state.screws.includes(i) }" :style="{ left: `${h.x / 3}%`, top: `${h.y / 3.6}%` }" :disabled="won || !accessible(puzzle, state, i)" :aria-label="`${state.screws.includes(i) ? '螺丝' : '空孔'} ${i + 1}${!accessible(puzzle, state, i) ? '，被木板遮住' : ''}`" :aria-pressed="selected === i" @click="clickHole(i)"><span v-if="state.screws.includes(i) && accessible(puzzle, state, i)" class="bolt"><i /></span><span v-else-if="accessible(puzzle, state, i)" class="empty-ring" /></button>
+          <button v-for="(h, i) in holes" :key="i" class="hole-button" :class="{ selected: selected === i, suggested: suggested?.includes(i), empty: !state.screws.includes(i) }" :style="{ left: `${h.x / 3}%`, top: `${h.y / 3.6}%` }" :disabled="won || !accessibleHoles[i]" :aria-label="`${state.screws.includes(i) ? '螺丝' : '空孔'} ${i + 1}${!accessibleHoles[i] ? '，被木板遮住' : ''}`" :aria-pressed="selected === i" @click="clickHole(i)"><span v-if="state.screws.includes(i) && accessibleHoles[i]" class="bolt"><i /></span><span v-else-if="accessibleHoles[i]" class="empty-ring" /></button>
           <div v-if="won" class="arcade-result"><h2>{{ level === levels.length - 1 ? '全部拆完了' : '拆干净了！' }}</h2><p>{{ state.moves }} 步 · 本关最佳 {{ best[level] }} 步</p><button class="arcade-button primary" @click="select(level < levels.length - 1 ? level + 1 : 0)">{{ level < levels.length - 1 ? '下一关' : '再玩一遍' }}</button></div>
         </div>
         <p class="arcade-status" role="status">{{ won ? '过关了' : message }}</p>
       </div>
-      <aside class="arcade-notes"><div class="arcade-note"><h2>玩法</h2><p>点螺丝，再点空孔。挪走木板上的螺丝，木板就会掉下来。</p><p>先拆挡住螺丝的木板。挪进别的木板孔里，会把那块板钉住。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="showHint">提示</button></div>
+      <aside class="arcade-notes"><div class="arcade-note"><h2>玩法</h2><p>点螺丝，再点空孔。剩一颗时木板绕它摆动；全部拆掉才会下落。</p><p>等木板转开，露出下面的螺丝。木板孔和底板孔对齐时，也能重新钉住。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="showHint">提示</button></div>
         <div class="puzzle-levels" aria-label="选择关卡"><button v-for="(_, i) in levels" :key="i" class="arcade-button" :class="{ primary: i === level, completed: best[i] }" :disabled="i > unlocked" :aria-label="`第 ${i + 1} 关${best[i] ? '，已通过' : ''}`" :aria-current="i === level ? 'step' : undefined" @click="select(i)">{{ i + 1 }}<span v-if="best[i]">✓</span></button></div>
         <p class="arcade-save-note">自动存档</p>
       </aside>
@@ -102,5 +129,4 @@ function geometry(p: Plate) {
 .hole-button.selected .bolt { transform: rotate(70deg) scale(1.12); outline: 3px solid #167b8b; outline-offset: 3px; }
 .hole-button.suggested .bolt, .hole-button.suggested .empty-ring { outline: 3px solid #167b8b; outline-offset: 3px; }
 .hole-button.empty:not(:disabled):hover .empty-ring { border-color: #167b8b; }
-.plate-leave-active { transition: transform 300ms ease-in, opacity 300ms; }.plate-leave-to { transform: translateY(100px) rotate(8deg); opacity: 0; }
 </style>
