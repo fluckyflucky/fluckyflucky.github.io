@@ -1,8 +1,9 @@
 import Matter from 'matter-js'
+import { RADII } from './levels'
+export { RADII } from './levels'
 
 const { Bodies, Body, Composite, Engine, Events } = Matter
 export const WIDTH = 360, HEIGHT = 480, DANGER = 74
-export const RADII = [16, 22, 29, 37, 46, 56, 67, 79, 92] as const
 
 export interface SavedPiece { level: number; x: number; y: number; angle: number; vx: number; vy: number; age: number }
 export interface MergeSave {
@@ -24,9 +25,9 @@ export function validSave(value: unknown): value is MergeSave {
     && Number.isInteger(save.current) && save.current >= 0 && save.current <= 3
     && Number.isInteger(save.next) && save.next >= 0 && save.next <= 3
     && typeof save.keepPlaying === 'boolean' && typeof save.over === 'boolean'
-    && Number.isInteger(save.maxLevel) && save.maxLevel >= 0 && save.maxLevel <= 8
+    && Number.isInteger(save.maxLevel) && save.maxLevel >= 0 && save.maxLevel < RADII.length
     && Array.isArray(save.pieces) && save.pieces.length <= 120
-    && save.pieces.every(piece => piece && Number.isInteger(piece.level) && piece.level >= 0 && piece.level <= 8
+    && save.pieces.every(piece => piece && Number.isInteger(piece.level) && piece.level >= 0 && piece.level < RADII.length
       && Number.isFinite(piece.x) && piece.x >= RADII[piece.level] - 3 && piece.x <= WIDTH - RADII[piece.level] + 3
       && Number.isFinite(piece.y) && piece.y >= -100 && piece.y <= HEIGHT + 5
       && Number.isFinite(piece.angle) && Math.abs(piece.angle) < 1e6
@@ -79,8 +80,7 @@ export class MergeWorld {
     const chance = this.random()
     return chance < 0.45 ? 0 : chance < 0.75 ? 1 : chance < 0.93 ? 2 : 3
   }
-  get won() { return this.maxLevel === 8 && !this.keepPlaying }
-  get ready() { return !this.over && !this.won && this.elapsed >= this.readyAt }
+  get ready() { return !this.over && this.elapsed >= this.readyAt }
   get danger() { return Math.min(1, Math.max(0, ...[...this.pieces.values()].map(piece => piece.overflow / 1400))) }
 
   private add(level: number, x: number, y: number, born = this.elapsed) {
@@ -104,7 +104,7 @@ export class MergeWorld {
   }
 
   step(delta = 1000 / 60) {
-    if (this.over || this.won) return
+    if (this.over) return
     this.elapsed += delta
     Engine.update(this.engine, delta)
     const queue = this.pending
@@ -128,7 +128,8 @@ export class MergeWorld {
     this.effects = this.effects.filter(effect => { effect.age += delta; return effect.age < 380 })
     for (const piece of this.pieces.values()) {
       const top = piece.body.position.y - RADII[piece.level]
-      if (this.elapsed - piece.born > 1400 && top < DANGER && Math.abs(piece.body.velocity.y) < 1.5) piece.overflow += delta
+      // Ignore newly dropped/merged pieces briefly, but don't let pile jitter prevent overflow.
+      if (this.elapsed - piece.born > 1400 && top < DANGER) piece.overflow += delta
       else piece.overflow = 0
       if (piece.overflow >= 1400) this.over = true
     }

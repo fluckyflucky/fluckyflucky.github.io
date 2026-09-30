@@ -17,7 +17,7 @@ const canvas = ref<HTMLCanvasElement | null>(null)
 const loading = ref(true), loadFailed = ref(false), paused = ref(false)
 const aim = ref(WIDTH / 2)
 function currentState() {
-  return { score: world.score, current: world.current, next: world.next, ready: world.ready, over: world.over, won: world.won, maxLevel: world.maxLevel }
+  return { score: world.score, current: world.current, next: world.next, ready: world.ready, over: world.over, maxLevel: world.maxLevel }
 }
 const state = ref(currentState())
 const launchX = computed(() => Math.max(RADII[state.value.current] + 2, Math.min(WIDTH - RADII[state.value.current] - 2, aim.value)))
@@ -69,7 +69,7 @@ function drawPiece(ctx: CanvasRenderingContext2D, level: number, x: number, y: n
     ctx.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, -radius, -radius, radius * 2, radius * 2)
   }
   ctx.restore()
-  ctx.strokeStyle = '#dcaa52'; ctx.lineWidth = ghost ? 1.5 : 2
+  ctx.strokeStyle = levels[level].color; ctx.lineWidth = ghost ? 1.5 : level > 8 ? 4 + (level - 8) * 2 : 2
   ctx.stroke()
   ctx.restore()
 }
@@ -84,7 +84,7 @@ function draw() {
   ctx.setLineDash([5, 5]); ctx.strokeStyle = world.danger > 0 ? '#dc6654' : '#cdab80'; ctx.lineWidth = 1.5
   ctx.beginPath(); ctx.moveTo(8, DANGER); ctx.lineTo(WIDTH - 8, DANGER); ctx.stroke(); ctx.setLineDash([])
   ctx.fillStyle = '#a7815e'; ctx.font = '11px sans-serif'; ctx.fillText('危险线', 12, DANGER - 8)
-  if (!world.over && !world.won) {
+  if (!world.over) {
     const x = launchX.value
     ctx.setLineDash([3, 6]); ctx.strokeStyle = '#ddc995'; ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(x, DANGER + 12); ctx.lineTo(x, HEIGHT - 8); ctx.stroke(); ctx.setLineDash([])
@@ -113,7 +113,7 @@ function loop(time: number) {
     if (saveElapsed > 1200) { persist(); saveElapsed = 0 }
   }
   syncState(); draw()
-  if (world.over || world.won) { persist(); lastTime = 0 }
+  if (world.over) { persist(); lastTime = 0 }
   else if (!paused.value) scheduleFrame()
 }
 function scheduleFrame() { if (!disposed && !frame && !document.hidden) frame = requestAnimationFrame(loop) }
@@ -132,7 +132,6 @@ function restart() {
   scheduleFrame()
   nextTick(() => canvas.value?.focus({ preventScroll: true }))
 }
-function continuePlaying() { world.keepPlaying = true; syncState(); persist(); scheduleFrame(); canvas.value?.focus({ preventScroll: true }) }
 function togglePause() {
   paused.value = !paused.value; lastTime = 0; accumulator = 0
   if (paused.value) { cancelAnimationFrame(frame); frame = 0; persist() }
@@ -192,7 +191,7 @@ onBeforeUnmount(() => {
         <div class="arcade-toolbar">
           <div class="next-piece"><span>下一个</span><img :src="levels[state.next].image" :alt="levels[state.next].name" /></div>
           <div class="arcade-actions">
-            <button class="arcade-button" :disabled="loading || state.over || state.won" @click="togglePause">{{ paused ? '继续' : '暂停' }}</button>
+            <button class="arcade-button" :disabled="loading || state.over" @click="togglePause">{{ paused ? '继续' : '暂停' }}</button>
             <button class="arcade-button primary" @click="restart">新一局</button>
           </div>
         </div>
@@ -202,22 +201,21 @@ onBeforeUnmount(() => {
             <p>{{ loadFailed ? '图片没加载出来' : '加载图片…' }}</p>
             <button v-if="loadFailed" class="arcade-button primary" @click="loadImages">重试</button>
           </div>
-          <div v-else-if="state.over || state.won || paused" class="arcade-result">
-            <h2>{{ state.won ? `合出大${name}了！` : state.over ? '堆满了' : '已暂停' }}</h2>
+          <div v-else-if="state.over || paused" class="arcade-result">
+            <h2>{{ state.over ? '堆满了' : '已暂停' }}</h2>
             <p v-if="!paused">得分 {{ state.score }}</p>
             <div class="arcade-actions">
-              <button v-if="state.won" class="arcade-button primary" @click="continuePlaying">继续玩</button>
-              <button v-else-if="paused" class="arcade-button primary" @click="togglePause">继续</button>
+              <button v-if="paused" class="arcade-button primary" @click="togglePause">继续</button>
               <button v-if="!paused" class="arcade-button" :class="{ primary: state.over }" @click="restart">再来一局</button>
             </div>
           </div>
         </div>
         <div class="drop-controls">
-          <input v-model.number="aim" type="range" :min="RADII[state.current] + 2" :max="WIDTH - RADII[state.current] - 2" aria-label="投放位置" :disabled="paused || loading || state.over || state.won" />
+          <input v-model.number="aim" type="range" :min="RADII[state.current] + 2" :max="WIDTH - RADII[state.current] - 2" aria-label="投放位置" :disabled="paused || loading || state.over" />
           <button class="arcade-button primary" :disabled="!state.ready || paused || loading || loadFailed" @click="drop">丢下去</button>
         </div>
         <p class="arcade-status" role="status" aria-live="polite">{{ loading ? '加载中' : paused ? '已暂停' : '点击投放，拖动后松手也可以。' }}</p>
-        <p class="sr-only" role="status" aria-live="polite">得分 {{ state.score }}。{{ state.won ? `合出大${name}了` : state.over ? '游戏结束' : '' }}</p>
+        <p class="sr-only" role="status" aria-live="polite">得分 {{ state.score }}。{{ state.over ? '游戏结束' : '' }}</p>
       </section>
       <aside class="arcade-notes">
         <div class="arcade-note">

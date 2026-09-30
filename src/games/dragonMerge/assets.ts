@@ -16,6 +16,7 @@ import frog5 from './images/frog-5.jpg'
 import frog6 from './images/frog-6.jpg'
 import frog7 from './images/frog-7.jpg'
 import frog8 from './images/frog-8.jpg'
+import { RADII } from './levels'
 
 export type DragonVariant = 'dragon' | 'frog'
 
@@ -26,26 +27,25 @@ export interface MergeLevel {
   image: string
 }
 
-const radii = [16, 22, 29, 37, 46, 56, 67, 79, 92] as const
-const colors = ['#ffedd1', '#ffe2cf', '#fff0b6', '#e4efc1', '#fce0e6', '#dceeed', '#dbebfb', '#e8def6', '#ffe8b9'] as const
+const colors = ['#ffedd1', '#ffe2cf', '#fff0b6', '#e4efc1', '#fce0e6', '#dceeed', '#dbebfb', '#e8def6', '#ffe8b9', '#ffdd91', '#f5bd66', '#eaa548', '#dc8a32'] as const
 
 function levels(images: string[], names: string[]): MergeLevel[] {
   return images.map((image, index) => ({
     name: names[index]!,
-    radius: radii[index]!,
+    radius: RADII[index]!,
     color: colors[index]!,
     image,
   }))
 }
 
 const dragonLevels = levels(
-  [dragon0, dragon1, dragon2, dragon3, dragon4, dragon5, dragon6, dragon7, dragon8],
-  ['呆呆龙', '委屈龙', '绿帽龙', '白眼龙', '吐舌龙', '圣诞龙', '背影龙', '躺平龙', '大奶龙'],
+  [dragon0, dragon1, dragon2, dragon3, dragon4, dragon5, dragon6, dragon7, dragon8, dragon8, dragon8, dragon8, dragon8],
+  ['呆呆龙', '委屈龙', '绿帽龙', '白眼龙', '吐舌龙', '圣诞龙', '背影龙', '躺平龙', '大奶龙', '超大奶龙', '巨型奶龙', '超级奶龙', '奶龙王'],
 )
 
 const frogLevels = levels(
-  [frog0, frog1, frog2, frog3, frog4, frog5, frog6, frog7, frog8],
-  ['呆呆蛙', '侧身蛙', '蹲蹲蛙', '倒立蛙', '杂技蛙', '飞踢蛙', '胖胖蛙', '西装蛙', '大奶蛙'],
+  [frog0, frog1, frog2, frog3, frog4, frog5, frog6, frog7, frog8, frog8, frog8, frog8, frog8],
+  ['呆呆蛙', '侧身蛙', '蹲蹲蛙', '倒立蛙', '杂技蛙', '飞踢蛙', '胖胖蛙', '西装蛙', '大奶蛙', '超大奶蛙', '巨型奶蛙', '超级奶蛙', '奶蛙王'],
 )
 
 export function getLevels(variant: DragonVariant): MergeLevel[] {
