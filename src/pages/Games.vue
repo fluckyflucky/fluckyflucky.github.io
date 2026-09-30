@@ -26,7 +26,8 @@ document.title = '小游戏 · 青い夏'
       >
         <div class="game-cover relative h-44 sm:h-48 overflow-hidden flex items-center justify-center" :style="{ '--cover-accent': game.accent ?? '#67e8f9' }">
           <div aria-hidden="true" class="cover-grid absolute inset-0" />
-          <div v-if="game.coverImages" class="cover-pieces relative flex items-center justify-center gap-3 group-hover:scale-105 transition-transform duration-300" aria-hidden="true">
+          <img v-if="game.coverImage" :src="game.coverImage" class="cover-art relative" alt="" loading="lazy" />
+          <div v-else-if="game.coverImages" class="cover-pieces relative flex items-center justify-center gap-3 group-hover:scale-105 transition-transform duration-300" aria-hidden="true">
             <img v-for="(src, index) in game.coverImages" :key="src" :src="src" alt="" :class="`cover-piece cover-piece-${index}`" loading="lazy" />
           </div>
           <span v-else class="relative text-6xl font-bold tracking-tight text-cyan-100 group-hover:scale-105 transition-transform duration-300">{{ game.coverText }}</span>
@@ -49,6 +50,7 @@ document.title = '小游戏 · 青い夏'
 
 <style scoped>
 .game-cover { background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--cover-accent) 16%, transparent), transparent 75%), #101e24; }
+.cover-art { width: min(86%, 300px); height: 148px; margin-top: 20px; object-fit: contain; }
 .cover-piece { object-fit: cover; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--cover-accent) 40%, transparent); box-shadow: 0 6px 20px rgb(0 0 0 / 0.2); }
 .cover-piece-0 { width: 54px; height: 54px; }
 .cover-piece-1 { width: 76px; height: 76px; }

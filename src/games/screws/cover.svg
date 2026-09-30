@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" fill="none">
+  <defs>
+    <linearGradient id="wood" x2="0" y2="1"><stop stop-color="#e4b67c"/><stop offset="1" stop-color="#ae7643"/></linearGradient>
+    <linearGradient id="teal" x2="0" y2="1"><stop stop-color="#93c6b8"/><stop offset="1" stop-color="#508c83"/></linearGradient>
+    <radialGradient id="metal" cx=".32" cy=".25" r=".8"><stop stop-color="#fff"/><stop offset=".5" stop-color="#c4d0d8"/><stop offset="1" stop-color="#637b89"/></radialGradient>
+    <g id="bolt"><circle cy="3" r="15" fill="#061016" opacity=".35"/><circle r="15" fill="url(#metal)" stroke="#eaf3f8" stroke-width="2"/><path d="M-7 0H7M0-7V7" stroke="#415765" stroke-width="4" stroke-linecap="round" transform="rotate(-22)"/></g>
+  </defs>
+  <g transform="translate(37 35) rotate(-7 118 58)">
+    <rect y="5" width="244" height="119" rx="20" fill="#06151c" opacity=".5"/>
+    <rect width="244" height="119" rx="20" fill="#e8d9bd" stroke="#fff" stroke-opacity=".3" stroke-width="2"/>
+    <path d="M10 23Q75 12 136 25T232 20M12 103Q98 89 172 103T232 99" stroke="#8c785a" stroke-opacity=".18" stroke-width="2"/>
+    <g fill="#635645" stroke="#fff" stroke-opacity=".4" stroke-width="2"><circle cx="23" cy="22" r="7"/><circle cx="222" cy="22" r="7"/><circle cx="23" cy="98" r="7"/><circle cx="222" cy="98" r="7"/></g>
+    <g transform="rotate(14 123 62)"><rect x="29" y="47" width="186" height="36" rx="13" fill="#182c30" opacity=".25"/><rect x="29" y="43" width="186" height="36" rx="13" fill="url(#wood)" stroke="#f9d7a1" stroke-width="2"/><path d="M63 52H179M69 69H174" stroke="#f6d8b0" stroke-opacity=".45" stroke-width="2"/><use href="#bolt" x="49" y="61"/><use href="#bolt" x="195" y="61"/></g>
+    <g transform="rotate(-40 124 61)"><rect x="49" y="50" width="150" height="36" rx="13" fill="#162b2b" opacity=".3"/><rect x="49" y="45" width="150" height="36" rx="13" fill="url(#teal)" stroke="#b9e4d5" stroke-width="2"/><path d="M83 54H165M86 72H162" stroke="#daf3e8" stroke-opacity=".4" stroke-width="2"/><use href="#bolt" x="69" y="63"/><use href="#bolt" x="179" y="63"/></g>
+  </g>
+  <g transform="translate(269 147) rotate(25)"><path d="M0 0V21M-5 9H5M-5 14H5M-4 19H4" stroke="#91a9b6" stroke-width="5" stroke-linecap="round"/><use href="#bolt"/></g>
+</svg>

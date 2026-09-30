@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" fill="none">
+  <defs><radialGradient id="ball" cx=".3" cy=".25" r=".8"><stop stop-color="#fff9d9"/><stop offset=".48" stop-color="#edc77b"/><stop offset="1" stop-color="#b77e36"/></radialGradient></defs>
+  <g transform="translate(57 10) rotate(5 104 80)">
+    <rect y="6" width="208" height="160" rx="19" fill="#05151d" opacity=".45"/>
+    <rect width="208" height="160" rx="19" fill="#2e4651" stroke="#729495" stroke-opacity=".4" stroke-width="2"/>
+    <path d="M28 28H180V132H104V80H28V132" stroke="#ecf0e6" stroke-width="24" stroke-linejoin="round" stroke-linecap="square"/>
+    <path d="M28 28H180V132H104" stroke="#83c9a7" stroke-width="24" stroke-linejoin="round"/>
+    <path d="M52 16V40M78 16V40M104 16V40M130 16V40M156 16V40M168 54H192M168 80H192M168 106H192M156 120V144M130 120V144" stroke="#5da884" stroke-opacity=".65" stroke-width="1.5"/>
+    <path d="M16 106H40M52 68V92M78 68V92M92 106H116" stroke="#d0d8cc" stroke-width="1.5"/>
+    <circle cx="104" cy="135" r="15" fill="#16372c" opacity=".4"/>
+    <circle cx="104" cy="132" r="15" fill="url(#ball)" stroke="#fff1c0" stroke-width="2"/>
+    <path d="M129 132H148M135 127L130 132L135 137" stroke="#dff5e5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

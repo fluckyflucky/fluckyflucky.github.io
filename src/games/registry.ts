@@ -1,4 +1,6 @@
 import type { Component } from 'vue'
+import screwsCover from './screws/cover.svg'
+import paintMazeCover from './paintMaze/cover.svg'
 import { fruits } from './match3/fruits'
 import dragonSmall from './dragonMerge/images/dragon-0.jpg'
 import dragonMedium from './dragonMerge/images/dragon-4.jpg'
@@ -14,6 +16,7 @@ export interface GameDefinition {
   category: string
   coverText: string
   coverImages?: string[]
+  coverImage?: string
   accent?: string
   controls: string
   props?: Record<string, unknown>
@@ -28,6 +31,7 @@ export const games: GameDefinition[] = [
     description: '挪开螺丝，拆掉木板。共 40 关。',
     category: '拆卸解谜',
     coverText: '拧螺丝',
+    coverImage: screwsCover,
     accent: '#c69056',
     controls: '点击螺丝，再点空孔',
     load: () => import('./screws/GameScrews.vue'),
@@ -38,6 +42,7 @@ export const games: GameDefinition[] = [
     description: '一滑到底，把迷宫里的路涂满。',
     category: '滑动解谜',
     coverText: '涂色迷宫',
+    coverImage: paintMazeCover,
     accent: '#89c8a6',
     controls: '方向键 / WASD · 手机滑动',
     load: () => import('./paintMaze/GamePaintMaze.vue'),
