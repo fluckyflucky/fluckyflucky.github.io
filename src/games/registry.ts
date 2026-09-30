@@ -1,6 +1,8 @@
 import type { Component } from 'vue'
 import screwsCover from './screws/cover.svg'
 import paintMazeCover from './paintMaze/cover.svg'
+import civilizationCover from './civilization/cover.svg'
+import game2048Cover from './game2048/cover.svg'
 import { fruits } from './match3/fruits'
 import dragonSmall from './dragonMerge/images/dragon-0.jpg'
 import dragonMedium from './dragonMerge/images/dragon-4.jpg'
@@ -53,6 +55,8 @@ export const games: GameDefinition[] = [
     description: '建城、研究、扩张。从开拓者到火星。',
     category: '回合策略',
     coverText: '文明',
+    coverImage: civilizationCover,
+    accent: '#9bba8a',
     controls: '点击操作 · 拖动地图',
     load: () => import('./civilization/GameCivilization.vue'),
   },
@@ -62,6 +66,8 @@ export const games: GameDefinition[] = [
     description: '滑动数字，合出 2048。',
     category: '数字益智',
     coverText: '2048',
+    coverImage: game2048Cover,
+    accent: '#efbc83',
     controls: '方向键 / WASD · 手机滑动',
     load: () => import('./game2048/Game2048.vue'),
   },
