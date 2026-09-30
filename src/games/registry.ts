@@ -28,6 +28,34 @@ export interface GameDefinition {
 // The lobby and player both read this list. Add a game here to give it a card and URL.
 export const games: GameDefinition[] = [
   {
+    id: 'poker',
+    title: '德州扑克',
+    description: '和机器人打一桌，带 27 奖金规则。',
+    category: '棋牌',
+    coverText: '♠ ♥',
+    accent: '#75ab8f',
+    controls: '点击操作 · 虚拟筹码',
+    load: () => import('./poker/GamePoker.vue'),
+  },
+  {
+    id: 'sudoku',
+    title: '数独',
+    description: '唯一解，可推理。轻松和标准两档。',
+    category: '数字益智',
+    coverText: '1 2 3',
+    controls: '点击填数 / 数字键',
+    load: () => import('./sudoku/GameSudoku.vue'),
+  },
+  {
+    id: 'mines',
+    title: '扫雷',
+    description: '99 雷，或 50×50 大盘。首点安全。',
+    category: '逻辑推理',
+    coverText: '⚑',
+    controls: '点击开格 · 右键 / 按钮标旗',
+    load: () => import('./mines/GameMines.vue'),
+  },
+  {
     id: 'screws',
     title: '拧螺丝',
     description: '挪开螺丝，拆掉木板。共 40 关。',
