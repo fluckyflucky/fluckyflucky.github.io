@@ -231,7 +231,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </div>
-        <p class="arcade-save-note">进度和最高分自动保存在这个浏览器。</p>
+        <p class="arcade-save-note">自动存档</p>
         <RouterLink :to="variant === 'frog' ? '/games/merge-dragon' : '/games/merge-frog'" class="variant-link">{{ variant === 'frog' ? '玩奶龙版 →' : '玩奶蛙版 →' }}</RouterLink>
       </aside>
     </div>

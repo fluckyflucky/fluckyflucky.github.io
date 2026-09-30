@@ -32,6 +32,7 @@ for (const [index, level] of levels.entries()) {
 }
 
 assert.equal(mazes.length, 10)
+assert.equal(new Set(mazes.map(m => JSON.stringify(m.floor))).size, 10, 'Levels must have distinct layouts')
 for (const [index, maze] of mazes.entries()) {
   assert.equal(reachablePaint(maze).size, maze.floor.length)
   let state = { position: maze.start, painted: [maze.start], moves: 0 }

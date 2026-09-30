@@ -201,9 +201,9 @@ function onKey(event: KeyboardEvent, index: number) {
           <p>交换相邻水果，让横排或竖排凑齐至少三个相同的水果。</p>
           <div class="fruit-example" aria-hidden="true"><img v-for="i in 3" :key="i" :src="fruits[0].image" alt="" /><span>→ 消除</span></div>
           <p>每局 30 步。只有成功消除才扣步数，连消有额外加分。</p>
-          <p>卡住了可以点提示，没有可消组合时会自动重新排列。</p>
+          <p>点提示找三连。无三连时自动洗牌。</p>
         </div>
-        <p class="arcade-save-note">进度和最高分自动保存在这个浏览器。</p>
+        <p class="arcade-save-note">自动存档</p>
       </aside>
     </div>
   </div>

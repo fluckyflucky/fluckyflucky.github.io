@@ -47,7 +47,7 @@ function random(seed: number) {
   return () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296 }
 }
 
-export function createMaze(level: number): Maze {
+export function createMaze(level: number, excluded: Set<string> = new Set()): Maze {
   const size = 7 + 2 * Math.floor(level / 3)
   for (let attempt = 0; attempt < 500; attempt++) {
     const rng = random(90210 + level * 7919 + attempt * 37)
@@ -61,7 +61,7 @@ export function createMaze(level: number): Maze {
       floor.add(p + dy / 2 * size + dx / 2); floor.add(p + dy * size + dx); stack.push(p + dy * size + dx)
     }
     const maze = { size, floor: [...floor].sort((a, b) => a - b), start }
-    if (paintableFromEveryStop(maze)) return maze
+    if (!excluded.has(JSON.stringify(maze.floor)) && paintableFromEveryStop(maze)) return maze
   }
   // Serpentine fallback is always paintable in wall-to-wall slides.
   const floor: number[] = []
@@ -71,7 +71,8 @@ export function createMaze(level: number): Maze {
   return { size, floor, start: size + 1 }
 }
 
-export const mazes = Array.from({ length: 10 }, (_, level) => createMaze(level))
+export const mazes: Maze[] = []
+for (let level = 0; level < 10; level++) mazes.push(createMaze(level, new Set(mazes.map(m => JSON.stringify(m.floor)))))
 
 export function move(maze: Maze, state: MazeState, direction: Direction): MazeState {
   const path = slide(maze, state.position, direction)

@@ -45,7 +45,11 @@ function keydown(event: KeyboardEvent) {
   if (direction && !(event.target instanceof HTMLButtonElement)) { event.preventDefault(); step(direction) }
 }
 let pointer: { x: number; y: number; id: number } | null = null
-function pointerdown(e: PointerEvent) { pointer = { x: e.clientX, y: e.clientY, id: e.pointerId }; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId) }
+function pointerdown(e: PointerEvent) {
+  if (won.value || (e.target instanceof Element && e.target.closest('button'))) return
+  pointer = { x: e.clientX, y: e.clientY, id: e.pointerId }
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+}
 function pointerup(e: PointerEvent) {
   if (!pointer || pointer.id !== e.pointerId) return
   const dx = e.clientX - pointer.x, dy = e.clientY - pointer.y; pointer = null
@@ -74,9 +78,9 @@ function pointerup(e: PointerEvent) {
         <p class="arcade-status" role="status">{{ won ? '过关了' : suggested ? `试试${arrows.find(a => a.direction === suggested)?.label}` : '一滑到底，碰到墙才能转弯。' }}</p>
       </div>
       <aside class="arcade-notes">
-        <div class="arcade-note"><h2>玩法</h2><p>滑动屏幕，或按方向键 / WASD。小球经过的路会染色，把所有白格涂满就过关。</p><p>不能在岔路口停下；先找能让你停住的墙。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="suggested = hint(maze, state)">给个提示</button></div>
+        <div class="arcade-note"><h2>玩法</h2><p>滑动屏幕，或按方向键 / WASD。小球撞墙才停，经过的路会染色。涂满所有白格就过关。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="suggested = hint(maze, state)">提示</button></div>
         <div class="puzzle-levels" aria-label="选择关卡"><button v-for="(_, i) in mazes" :key="i" class="arcade-button" :class="{ primary: i === level, completed: best[i] }" :disabled="i > unlocked" :aria-label="`第 ${i + 1} 关${best[i] ? '，已通过' : ''}`" :aria-current="i === level ? 'step' : undefined" @click="select(i)">{{ i + 1 }}<span v-if="best[i]">✓</span></button></div>
-        <p class="arcade-save-note">进度保存在这个浏览器。换设备不会同步。</p>
+        <p class="arcade-save-note">自动存档</p>
       </aside>
     </div>
   </section>
@@ -89,7 +93,7 @@ function pointerup(e: PointerEvent) {
 .maze-cell { background: #273a44; box-shadow: inset 0 0 0 1px #ffffff03; }
 .maze-cell.floor { background: #eff1e9; box-shadow: inset 0 0 0 1px #d8ded4; }
 .maze-cell.painted { background: #89c8a6; box-shadow: inset 0 0 0 1px #75b895; transition: background 180ms; }
-.maze-ball { position: absolute; padding: 13%; padding: calc(100% / 70); display: grid; place-items: center; transition: left 180ms ease-out, top 180ms ease-out; pointer-events: none; }
+.maze-ball { position: absolute; padding: calc(100% / 70); display: grid; place-items: center; transition: left 180ms ease-out, top 180ms ease-out; pointer-events: none; }
 .maze-ball span { width: 83%; height: 83%; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #fafef1, #ecbc5f 55%, #c88834); border: 2px solid #fff8; box-shadow: 0 3px 5px #1235; }
 .maze-pad { display: grid; grid-template-columns: repeat(3, 54px); grid-template-rows: repeat(2, 48px); justify-content: center; gap: 6px; margin-top: 16px; }
 .maze-pad button { font-size: 24px; padding: 0; }.maze-pad .up { grid-column: 2; }.maze-pad .left { grid-row: 2; grid-column: 1; }.maze-pad .down { grid-row: 2; grid-column: 2; }.maze-pad .right { grid-row: 2; grid-column: 3; }

@@ -219,7 +219,7 @@ function tileLabel(value: number) { return value >= 1e6 ? `2^${Math.log2(value)}
               <h2 class="text-3xl font-bold text-stone-100">{{ won ? '合出 2048 了！' : '这一局结束了' }}</h2>
               <p class="text-sm text-stone-300 mt-3">得分 {{ score }}</p>
               <div class="flex flex-wrap justify-center gap-2 mt-6">
-                <button v-if="won" class="game-button primary" @click="continuePlaying">继续挑战</button>
+                <button v-if="won" class="game-button primary" @click="continuePlaying">继续玩</button>
                 <button v-else-if="previous" class="game-button" @click="undo">撤回一步</button>
                 <button class="game-button" :class="{ primary: !won }" @click="restart">再来一局</button>
               </div>
@@ -231,7 +231,7 @@ function tileLabel(value: number) { return value >= 1e6 ? `2^${Math.log2(value)}
           <button v-for="item in directions" :key="item.direction" class="direction-button" :aria-label="item.label" :disabled="won || over" @click="buttonMove(item.direction)">{{ item.icon }}</button>
         </div>
         <p class="mt-4 text-center text-xs text-stone-500">方向键 / WASD · 手机滑动 · 点击箭头</p>
-        <p role="status" aria-live="polite" aria-atomic="true" class="sr-only">当前得分 {{ score }}，最高分 {{ best }}。{{ won ? '合出 2048 了，可以继续挑战。' : over ? '游戏结束，可以撤回或开始新一局。' : '' }}</p>
+        <p role="status" aria-live="polite" aria-atomic="true" class="sr-only">得分 {{ score }}，最高分 {{ best }}。{{ won ? '合出 2048 了。' : over ? '游戏结束。' : '' }}</p>
       </section>
 
       <aside class="game-notes">
@@ -243,7 +243,7 @@ function tileLabel(value: number) { return value >= 1e6 ? `2^${Math.log2(value)}
           </div>
           <p class="text-sm text-stone-400 leading-7">每次有效移动会出现一个 2 或 4。合出 2048 就赢了，无法移动时结束。</p>
         </div>
-        <p class="text-xs text-stone-500 leading-6 px-1 mt-5">进度和最高分自动保存在这个浏览器。</p>
+        <p class="text-xs text-stone-500 leading-6 px-1 mt-5">自动存档</p>
       </aside>
     </div>
   </div>

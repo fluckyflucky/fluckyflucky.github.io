@@ -83,9 +83,9 @@ function geometry(p: Plate) {
         </div>
         <p class="arcade-status" role="status">{{ won ? '过关了' : message }}</p>
       </div>
-      <aside class="arcade-notes"><div class="arcade-note"><h2>玩法</h2><p>点螺丝，移到露出来的空孔。木板上的螺丝都移走，木板就会掉下来。</p><p>被上层木板挡住的螺丝不能拧。移进别的木板孔里，会把那块木板重新钉住。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="showHint">给个提示</button></div>
+      <aside class="arcade-notes"><div class="arcade-note"><h2>玩法</h2><p>点螺丝，再点空孔。挪走木板上的螺丝，木板就会掉下来。</p><p>先拆挡住螺丝的木板。挪进别的木板孔里，会把那块板钉住。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="showHint">提示</button></div>
         <div class="puzzle-levels" aria-label="选择关卡"><button v-for="(_, i) in levels" :key="i" class="arcade-button" :class="{ primary: i === level, completed: best[i] }" :disabled="i > unlocked" :aria-label="`第 ${i + 1} 关${best[i] ? '，已通过' : ''}`" :aria-current="i === level ? 'step' : undefined" @click="select(i)">{{ i + 1 }}<span v-if="best[i]">✓</span></button></div>
-        <p class="arcade-save-note">进度保存在这个浏览器。换设备不会同步。</p>
+        <p class="arcade-save-note">自动存档</p>
       </aside>
     </div>
   </section>
