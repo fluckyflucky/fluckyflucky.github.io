@@ -58,7 +58,7 @@ export const games: GameDefinition[] = [
   {
     id: 'screws',
     title: '拧螺丝',
-    description: '挪开螺丝，拆掉木板。共 40 关。',
+    description: '挪开螺丝，拆掉木板。50 关，带高难叠板。',
     category: '拆卸解谜',
     coverText: '拧螺丝',
     coverImage: screwsCover,
@@ -69,7 +69,7 @@ export const games: GameDefinition[] = [
   {
     id: 'paint-maze',
     title: '涂色迷宫',
-    description: '一滑到底，把迷宫里的路涂满。',
+    description: '一滑到底，把迷宫里的路涂满。30 关。',
     category: '滑动解谜',
     coverText: '涂色迷宫',
     coverImage: paintMazeCover,

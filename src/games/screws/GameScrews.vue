@@ -9,7 +9,7 @@ import '../shared/puzzle-ui.css'
 
 const key = 'aoinatsu:screws:v2'
 const physicsSave = readSaved(key)
-const saved = readProgress(physicsSave ?? readSaved('aoinatsu:screws:v1'), levels.length, 10)
+const saved = readProgress(physicsSave ?? readSaved('aoinatsu:screws:v1'), levels.length, [40, 10])
 const level = ref(saved?.level ?? 0), unlocked = ref(saved?.unlocked ?? 0)
 const best = ref(physicsSave && saved ? saved.best : Array<number>(levels.length).fill(0))
 const puzzle = computed(() => levels[level.value])
@@ -44,6 +44,10 @@ function resume() {
     validState(puzzle.value, saved.state) ? saved.state : undefined)
   resumable.value = false; sync(); persist(); animate()
   message.value = '已继续上次。'
+}
+function startHard() {
+  unlocked.value = Math.max(unlocked.value, 40)
+  select(40)
 }
 function clickHole(hole: number) {
   if (won.value || !world.accessible(hole)) return
@@ -121,6 +125,7 @@ onBeforeUnmount(() => { disposed = true; cancelAnimationFrame(frame); persist();
         <p class="arcade-status" role="status">{{ won ? '过关了' : message }}</p>
       </div>
       <aside class="arcade-notes"><div class="arcade-note"><h2>玩法</h2><p>点螺丝，再点空孔。剩一颗时木板绕它摆动；全部拆掉才会下落。</p><p>等木板转开，露出下面的螺丝。木板孔和底板孔对齐时，也能重新钉住。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="showHint">提示</button></div>
+        <button class="arcade-button puzzle-hint" @click="startHard">挑战难关 · 第 41 关</button>
         <div class="puzzle-levels" aria-label="选择关卡"><button v-for="(_, i) in levels" :key="i" class="arcade-button" :class="{ primary: i === level, completed: best[i] }" :disabled="i > unlocked" :aria-label="`第 ${i + 1} 关${best[i] ? '，已通过' : ''}`" :aria-current="i === level ? 'step' : undefined" @click="select(i)">{{ i + 1 }}<span v-if="best[i]">✓</span></button></div>
         <p class="arcade-save-note">自动存档</p>
       </aside>

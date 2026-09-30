@@ -4,10 +4,11 @@ import { mazes, reachablePaint, paintableFromEveryStop, slide, directions, move,
 import { layouts as mazeLayouts } from '../src/games/paintMaze/levels.ts'
 import { readProgress } from '../src/games/shared/puzzleProgress.ts'
 
-assert.equal(levels.length, 40)
-assert.equal(new Set(levels.map(l => JSON.stringify(l.plates.map(p => [p.a, p.b]).sort((a,b) => a[0]-b[0] || a[1]-b[1])))).size, 40, 'Screw layouts must be distinct')
+assert.equal(levels.length, 50)
+assert.equal(new Set(levels.map(l => JSON.stringify(l.plates.map(p => [p.a, p.b]).sort((a,b) => a[0]-b[0] || a[1]-b[1])))).size, 50, 'Screw layouts must be distinct')
 for (const [index, level] of levels.entries()) {
   let state = freshState(level)
+  if (index >= 40) assert(level.plates.length >= 10, 'Hard screw levels require at least ten crossing boards')
   assert(validScrews(level, state))
   assert.equal(relocate(level, state, state.screws[0], state.screws[0]), null)
   assert.equal(relocate(level, state, 0, 1), null)
@@ -33,8 +34,8 @@ for (const [index, level] of levels.entries()) {
   console.log(`拧螺丝 ${index + 1}: ${state.moves} 步通关`)
 }
 
-assert.equal(mazes.length, 20)
-assert.equal(new Set(mazes.map(m => JSON.stringify([m.size, m.floor]))).size, 20, 'Levels must have distinct layouts')
+assert.equal(mazes.length, 30)
+assert.equal(new Set(mazes.map(m => JSON.stringify([m.size, m.floor]))).size, 30, 'Levels must have distinct layouts')
 for (const [index, maze] of mazes.entries()) {
   assert(mazeLayouts[index][1].every(row => row.length === maze.size), 'Maps must be square')
   assert.equal(reachablePaint(maze).size, maze.floor.length)
@@ -66,6 +67,10 @@ for (const [index, maze] of mazes.entries()) {
     for (const end of exits) if (!stops.has(end)) { stops.add(end); queue.push(end) }
   }
   assert(decisions >= 3, `Maze ${index + 1} needs multiple reachable wall-stop choices`)
+  if (index >= 20) {
+    assert(maze.size >= 17 && maze.floor.length >= 150, 'Hard mazes must provide substantial coverage')
+    assert(widestRoom >= 6 && decisions >= 30, 'Hard mazes combine broad rooms with many stopping choices')
+  }
   let state = { position: maze.start, painted: [maze.start], moves: 0 }
   let count = 0
   while (state.painted.length < maze.floor.length && count++ < 1000) {
@@ -82,6 +87,7 @@ for (const [index, maze] of mazes.entries()) {
     state = next
   }
   assert.equal(state.painted.length, maze.floor.length, `Maze ${index + 1} must be fully paintable`)
+  if (index >= 20) assert(state.moves >= 100, 'Hard mazes should require sustained route planning, not a handful of sweeps')
   const wallDirection = directions.find(d => !slide(maze, state.position, d).length)
   assert.equal(move(maze, state, wallDirection), state)
   assert(!validMaze(maze, { ...state, painted: [...state.painted, -1] }))
@@ -115,4 +121,19 @@ assert.deepEqual(expandedMazeSave.best.slice(10), Array(10).fill(0))
 assert.deepEqual(expandedMazeSave.state, previousMazeSave.state)
 assert(validMaze(mazes[9], expandedMazeSave.state))
 assert.deepEqual(readProgress(expandedMazeSave, 20, 10), expandedMazeSave)
+const fiftyScrewSave = readProgress(migrated, 50, [40, 10])
+assert(fiftyScrewSave)
+assert.equal(fiftyScrewSave.best.length, 50)
+assert.deepEqual(fiftyScrewSave.best.slice(0, 40), migrated.best)
+assert.deepEqual(fiftyScrewSave.state, migrated.state)
+assert(readProgress(oldSave, 50, [40, 10]))
+const thirtyMazeSave = readProgress(expandedMazeSave, 30, [20, 10])
+assert(thirtyMazeSave)
+assert.equal(thirtyMazeSave.best.length, 30)
+assert.deepEqual(thirtyMazeSave.best.slice(0, 20), expandedMazeSave.best)
+assert.deepEqual(thirtyMazeSave.state, expandedMazeSave.state)
+assert(readProgress(previousMazeSave, 30, [20, 10]))
+assert.equal(readProgress({ ...migrated, level: 39, unlocked: 39 }, 50, [40, 10]).unlocked, 39)
+assert.equal(readProgress({ ...expandedMazeSave, level: 19, unlocked: 19 }, 30, [20, 10]).level, 19)
+assert.equal(readProgress({ ...expandedMazeSave, best: Array(19).fill(0) }, 30, [20, 10]), null)
 console.log('关卡、不可达操作、提示、存档校验通过。')

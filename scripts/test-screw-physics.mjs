@@ -89,6 +89,7 @@ for (const [i, level] of levels.entries()) {
     assert(validPhysicsSave(level, world.snapshot()), `Invalid snapshot in level ${i + 1}`)
   }
   assert.equal(world.remaining, 0, `Physical level ${i + 1} must be completable`)
+  if (i >= 40) assert(world.moves >= 12, `Hard level ${i + 1} should require more than a few removals`)
   world.destroy()
 }
 console.log(`${levels.length} physical levels passed: fixed boards, pivot rotation, free fall, collisions and restore.`)

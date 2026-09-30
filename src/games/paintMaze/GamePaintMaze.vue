@@ -8,7 +8,7 @@ import '../shared/puzzle-ui.css'
 
 const key = 'aoinatsu:paint-maze:v2'
 const currentSave = readSaved(key)
-const saved = readProgress(currentSave ?? readSaved('aoinatsu:paint-maze:v1'), mazes.length, 10)
+const saved = readProgress(currentSave ?? readSaved('aoinatsu:paint-maze:v1'), mazes.length, [20, 10])
 const level = ref(saved?.level ?? 0), unlocked = ref(saved?.unlocked ?? 0)
 const best = ref(currentSave && saved ? saved.best : Array<number>(mazes.length).fill(0))
 const maze = computed(() => mazes[level.value])
@@ -36,6 +36,10 @@ function select(index: number) {
 function startAdvanced() {
   unlocked.value = Math.max(unlocked.value, 10)
   select(10)
+}
+function startHard() {
+  unlocked.value = Math.max(unlocked.value, 20)
+  select(20)
 }
 function step(direction: Direction) {
   if (won.value) return
@@ -85,6 +89,7 @@ function pointerup(e: PointerEvent) {
       <aside class="arcade-notes">
         <div class="arcade-note"><h2>玩法</h2><p>滑动屏幕，或按方向键 / WASD。小球撞墙才停，经过的路会染色。涂满所有白格就过关。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="suggested = hint(maze, state)">提示</button></div>
         <button class="arcade-button advanced-entry" @click="startAdvanced">从第 11 关开始</button>
+        <button class="arcade-button advanced-entry" @click="startHard">挑战难关 · 第 21 关</button>
         <div class="puzzle-levels" aria-label="选择关卡"><button v-for="(_, i) in mazes" :key="i" class="arcade-button" :class="{ primary: i === level, completed: best[i] }" :disabled="i > unlocked" :aria-label="`第 ${i + 1} 关${best[i] ? '，已通过' : ''}`" :aria-current="i === level ? 'step' : undefined" @click="select(i)">{{ i + 1 }}<span v-if="best[i]">✓</span></button></div>
         <p class="arcade-save-note">自动存档</p>
       </aside>
