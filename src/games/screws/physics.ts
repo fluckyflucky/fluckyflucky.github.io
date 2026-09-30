@@ -3,7 +3,7 @@ import { holes, type ScrewLevel, type ScrewState } from './logic.ts'
 
 const { Bodies, Body, Composite, Constraint, Engine, Collision, Sleeping } = Matter
 export interface PlatePose { x: number; y: number; angle: number; vx: number; vy: number; av: number; gone: boolean; pins: [number | null, number | null] }
-export interface ScrewPhysicsSave { screws: number[]; moves: number; plates: PlatePose[]; separated: string[] }
+export interface ScrewPhysicsSave { screws: number[]; moves: number; plates: PlatePose[]; separated: string[]; clearBolts?: string[] }
 export interface PlateView { i: number; x: number; y: number; angle: number; length: number; a: Matter.Vector; b: Matter.Vector }
 interface Piece { body: Matter.Body; span: number; pins: [number | null, number | null]; joints: Matter.Constraint[]; gone: boolean }
 
@@ -14,6 +14,8 @@ export class ScrewWorld {
   screws: number[]
   moves = 0
   private separated = new Set<string>()
+  private bolts = new Map<number, Matter.Body>()
+  private clearBolts = new Set<string>()
 
   constructor(level: ScrewLevel, saved?: ScrewPhysicsSave, legacy?: ScrewState) {
     this.level = level
@@ -21,6 +23,7 @@ export class ScrewWorld {
     this.moves = saved?.moves ?? legacy?.moves ?? 0
     this.engine.gravity.y = 1.7
     this.separated = new Set(saved?.separated ?? [])
+    this.clearBolts = new Set(saved?.clearBolts ?? [])
     level.plates.forEach((p, i) => {
       const a = holes[p.a], b = holes[p.b], span = Math.hypot(b.x - a.x, b.y - a.y)
       const pose = saved?.plates[i]
@@ -39,6 +42,7 @@ export class ScrewWorld {
         if (pose && !body.isStatic) { Body.setVelocity(body, { x: pose.vx, y: pose.vy }); Body.setAngularVelocity(body, pose.av) }
       }
     })
+    this.syncBolts()
     this.updateCollisions()
   }
 
@@ -75,6 +79,7 @@ export class ScrewWorld {
     for (let i = this.pieces.length - 1; i >= 0; i--) {
       const p = this.pieces[i]
       if (p.gone || !this.covers(p, point)) continue
+      if (this.screws.includes(hole) && this.clearBolts.has(`${i}:${hole}`)) return true
       return [0, 1].some(side => Math.hypot(this.point(p, side).x - point.x, this.point(p, side).y - point.y) < 11)
     }
     return true
@@ -98,11 +103,40 @@ export class ScrewWorld {
     // A sleeping board may have been resting on the support just unpinned.
     this.pieces.forEach(p => { if (!p.gone && !p.body.isStatic) Sleeping.set(p.body, false) })
     this.moves++
+    this.syncBolts()
     return true
+  }
+
+  private syncBolts() {
+    for (const [h, body] of this.bolts) if (!this.screws.includes(h)) {
+      Composite.remove(this.engine.world, body); this.bolts.delete(h)
+      this.pieces.forEach((_, i) => this.clearBolts.delete(`${i}:${h}`))
+    }
+    for (const h of this.screws) if (!this.bolts.has(h)) {
+      const body = Bodies.circle(holes[h].x, holes[h].y, 10, {
+        isStatic: true, friction: 0.3, restitution: 0,
+        collisionFilter: { category: 1 << 20, mask: 0 },
+      })
+      this.bolts.set(h, body); Composite.add(this.engine.world, body)
+    }
   }
 
   private updateCollisions() {
     this.pieces.forEach(p => { p.body.collisionFilter.mask = 0 })
+    // A board's own pins sit inside its drilled holes. Screws already
+    // covered by another depth layer become obstacles once that layer clears.
+    for (const [h, bolt] of this.bolts) {
+      bolt.collisionFilter.mask = 0
+      this.pieces.forEach((p, i) => {
+        if (p.gone || p.pins.includes(h)) return
+        const key = `${i}:${h}`
+        if (!Collision.collides(p.body, bolt)) this.clearBolts.add(key)
+        if (this.clearBolts.has(key)) {
+          bolt.collisionFilter.mask! |= p.body.collisionFilter.category!
+          p.body.collisionFilter.mask! |= bolt.collisionFilter.category!
+        }
+      })
+    }
     for (let i = 0; i < this.pieces.length; i++) for (let j = i + 1; j < this.pieces.length; j++) {
       const a = this.pieces[i], b = this.pieces[j], key = `${i}:${j}`
       if (a.gone || b.gone) continue
@@ -133,20 +167,29 @@ export class ScrewWorld {
   get remaining() { return this.pieces.filter(p => !p.gone).length }
   get active() { return this.pieces.some(p => !p.gone && !p.body.isStatic && !p.body.isSleeping) }
   hint(): [number, number] | null {
+    const destinations = holes.map((point, h) => ({ point, h })).filter(({ point, h }) => !this.screws.includes(h)
+      && this.pieces.every(p => p.gone || !this.covers(p, point))).sort((a, b) => a.point.y - b.point.y)
     for (let i = this.pieces.length - 1; i >= 0; i--) {
       const piece = this.pieces[i]
       if (piece.gone) continue
       for (const from of piece.pins) {
         if (from === null || !this.accessible(from)) continue
-        const to = holes.findIndex((point, h) => !this.screws.includes(h)
-          && this.pieces.every(p => p.gone || !this.covers(p, point)))
-        if (to >= 0) return [from, to]
+        if (destinations.length) return [from, destinations[0].h]
       }
+    }
+    // Detached boards can rest on parked screws: remove those supports too.
+    for (const from of [...this.screws].sort((a, b) => holes[b].y - holes[a].y)) {
+      if (!this.accessible(from)) continue
+      const bolt = this.bolts.get(from)!
+      const supporting = this.pieces.some((p, i) => !p.gone && !p.pins.includes(from)
+        && this.clearBolts.has(`${i}:${from}`) && Matter.Query.collides(bolt, [p.body]).length > 0)
+      const target = destinations.find(({ point }) => point.y < holes[from].y)
+      if (supporting && target) return [from, target.h]
     }
     return null
   }
   snapshot(): ScrewPhysicsSave {
-    return { screws: [...this.screws], moves: this.moves, separated: [...this.separated], plates: this.pieces.map(p => ({
+    return { screws: [...this.screws], moves: this.moves, separated: [...this.separated], clearBolts: [...this.clearBolts], plates: this.pieces.map(p => ({
       x: p.body.position.x, y: p.body.position.y, angle: p.body.angle, vx: p.body.velocity.x, vy: p.body.velocity.y,
       av: p.body.angularVelocity, pins: [...p.pins], gone: p.gone,
     })) }
@@ -167,4 +210,6 @@ export function validPhysicsSave(level: ScrewLevel, value: unknown): value is Sc
       && (!p.gone || p.pins.every(h => h === null)))
     && Array.isArray(s.separated) && s.separated.length <= level.plates.length ** 2
     && s.separated.every(k => typeof k === 'string' && /^\d+:\d+$/.test(k))
+    && (s.clearBolts === undefined || (Array.isArray(s.clearBolts) && s.clearBolts.length <= level.plates.length * holes.length
+      && s.clearBolts.every(k => typeof k === 'string' && /^\d+:\d+$/.test(k))))
 }

@@ -13,8 +13,8 @@ const saved = readProgress(physicsSave ?? readSaved('aoinatsu:screws:v1'), level
 const level = ref(saved?.level ?? 0), unlocked = ref(saved?.unlocked ?? 0)
 const best = ref(physicsSave && saved ? saved.best : Array<number>(levels.length).fill(0))
 const puzzle = computed(() => levels[level.value])
-let world = new ScrewWorld(puzzle.value, saved && validPhysicsSave(puzzle.value, saved.state) ? saved.state : undefined,
-  saved && validState(puzzle.value, saved.state) ? saved.state : undefined)
+const resumable = ref(!!saved && (validPhysicsSave(puzzle.value, saved.state) || validState(puzzle.value, saved.state)) && saved.state.moves > 0)
+let world = new ScrewWorld(puzzle.value)
 const state = ref({ screws: [...world.screws], moves: world.moves })
 const views = shallowRef(world.views)
 const accessibleHoles = ref(holes.map((_, h) => world.accessible(h)))
@@ -22,7 +22,7 @@ const remaining = ref(world.remaining)
 const selected = ref<number | null>(null), suggested = ref<[number, number] | null>(null)
 const history = ref<ScrewPhysicsSave[]>([]), message = ref('点一颗螺丝，再点空孔。')
 const won = computed(() => remaining.value === 0)
-function persist() { saveLocal(key, { level: level.value, unlocked: unlocked.value, best: best.value, state: world.snapshot() }) }
+function persist() { if (!resumable.value) saveLocal(key, { level: level.value, unlocked: unlocked.value, best: best.value, state: world.snapshot() }) }
 watch([level, unlocked, best], persist, { deep: true })
 watch(won, value => {
   if (!value) return
@@ -32,9 +32,18 @@ watch(won, value => {
 }, { immediate: true })
 function select(index: number) {
   if (index < 0 || index > unlocked.value) return
+  resumable.value = false
   level.value = index; world.destroy(); world = new ScrewWorld(puzzle.value); sync(); history.value = []; selected.value = null; suggested.value = null
   message.value = '点一颗螺丝，再点空孔。'
   persist(); animate()
+}
+function resume() {
+  if (!saved || !resumable.value) return
+  world.destroy()
+  world = new ScrewWorld(puzzle.value, validPhysicsSave(puzzle.value, saved.state) ? saved.state : undefined,
+    validState(puzzle.value, saved.state) ? saved.state : undefined)
+  resumable.value = false; sync(); persist(); animate()
+  message.value = '已继续上次。'
 }
 function clickHole(hole: number) {
   if (won.value || !world.accessible(hole)) return
@@ -47,6 +56,7 @@ function clickHole(hole: number) {
   if (selected.value === null) { message.value = '先选一颗螺丝。'; return }
   const previous = world.snapshot()
   if (!world.relocate(selected.value, hole)) { message.value = '这个孔刚被木板挡住了。'; return }
+  resumable.value = false
   history.value.push(previous); if (history.value.length > 100) history.value.shift()
   sync(); selected.value = null
   message.value = '螺丝挪好了。'
@@ -88,7 +98,7 @@ onBeforeUnmount(() => { disposed = true; cancelAnimationFrame(frame); persist();
     <header class="arcade-header"><h1 class="arcade-title">拧螺丝</h1><div class="arcade-stats"><div class="arcade-score"><span>关卡</span><strong>{{ level + 1 }} / {{ levels.length }}</strong></div><div class="arcade-score"><span>步数</span><strong>{{ state.moves }}</strong></div></div></header>
     <div class="arcade-layout">
       <div class="arcade-player">
-        <div class="arcade-toolbar"><p>{{ puzzle.name }} · 剩 {{ remaining }} 块</p><div class="arcade-actions"><button class="arcade-button" :disabled="!history.length" @click="undo">撤销</button><button class="arcade-button" @click="select(level)">重玩</button></div></div>
+        <div class="arcade-toolbar"><p>{{ puzzle.name }} · 剩 {{ remaining }} 块</p><div class="arcade-actions"><button v-if="resumable" class="arcade-button" @click="resume">继续上次</button><button class="arcade-button" :disabled="!history.length" @click="undo">撤销</button><button class="arcade-button" @click="select(level)">重玩</button></div></div>
         <div class="screw-stage" role="group" aria-label="螺丝木板">
           <svg viewBox="0 0 300 360" aria-hidden="true">
             <defs><pattern id="screw-grain" width="60" height="30" patternUnits="userSpaceOnUse"><path d="M0 8 Q20 4 60 9 M0 22 Q35 28 60 20" fill="none" stroke="#735638" stroke-opacity=".12" /></pattern></defs>

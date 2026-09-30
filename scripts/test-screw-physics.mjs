@@ -50,6 +50,34 @@ assert(falling.relocate(10, 18)); assert(falling.relocate(13, 19)); steps(fallin
 assert.equal(falling.remaining, 0, 'Removing the lower support lets both boards fall')
 falling.destroy()
 
+const boltFixture = { name: 'Screw stops a board', plates: [{ a: 2, b: 5, color: '#c90' }], screws: [2, 5, 10, 13] }
+const blocked = new ScrewWorld(boltFixture)
+let boltContacts = 0
+Matter.Events.on(blocked.engine, 'collisionStart', e => { boltContacts += e.pairs.filter(p => p.bodyA.circleRadius || p.bodyB.circleRadius).length })
+assert(blocked.relocate(2, 0)); assert(blocked.relocate(5, 1)); steps(blocked, 240)
+assert(boltContacts > 0, 'Parked screws must be physical obstacles, not just drawings')
+assert(blocked.views[0].y > 200 && blocked.views[0].y < 225, 'The board must rest above the screw heads')
+assert.equal(blocked.remaining, 1)
+const blockedRestore = new ScrewWorld(boltFixture, blocked.snapshot())
+steps(blockedRestore, 120)
+assert(blockedRestore.views[0].y < 225, 'Restoring must retain screw collision state')
+assert(blocked.accessible(10) && blocked.accessible(13), 'Supporting screws must remain removable')
+assert(blocked.relocate(10, 18)); assert(blocked.relocate(13, 19)); steps(blocked, 240)
+assert.equal(blocked.remaining, 0, 'Removing the screw obstacles releases the board')
+blocked.destroy(); blockedRestore.destroy()
+const swingBlocked = new ScrewWorld({ ...levels[0], screws: [6, 9, 13] })
+assert(swingBlocked.relocate(6, 0)); steps(swingBlocked, 240)
+assert(swingBlocked.views[0].angle > -80 && swingBlocked.views[0].angle < -40, 'A swinging board must stop against a screw instead of passing through')
+assert(Math.hypot(swingBlocked.views[0].b.x - holes[9].x, swingBlocked.views[0].b.y - holes[9].y) < 1, 'Screw collisions must not pull out the pivot')
+swingBlocked.destroy()
+for (const level of levels) {
+  const fresh = new ScrewWorld(level)
+  assert.equal(fresh.moves, 0)
+  assert.deepEqual(fresh.screws, level.screws)
+  assert(fresh.pieces.every(p => p.pins.every(h => h !== null)), 'Every fresh board starts with both screws')
+  fresh.destroy()
+}
+
 // Let gravity act for a full second after every move: do not validate the
 // old static puzzle by ripping out all screws before physics can respond.
 for (const [i, level] of levels.entries()) {
