@@ -15,6 +15,7 @@ const navItems = [
   { text: '夏日记忆', path: '/thoughts' },
   { text: '图库', path: '/images' },
   { text: '工具箱', path: '/tools' },
+  { text: '小游戏', path: '/games' },
 ]
 
 const isActive = (path: string) => {

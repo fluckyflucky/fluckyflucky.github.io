@@ -22,6 +22,8 @@ const routes = [
   { path: '/tools/download-calc', name: 'tool-download-calc', component: ToolDownloadCalc },
   { path: '/tools/:slug', name: 'tool', component: MarkdownPage, props: (route: RouteLocationNormalized) => ({ category: 'tools', slug: route.params.slug }) },
   { path: '/jmdict', name: 'jmdict', component: JMdictSearch },
+  { path: '/games', name: 'games', component: () => import('../pages/Games.vue') },
+  { path: '/games/:id', name: 'game', component: () => import('../pages/GamePage.vue') },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: MarkdownPage, props: { category: '', slug: '404' } },
 ]
 

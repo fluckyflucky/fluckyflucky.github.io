@@ -29,6 +29,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('node_modules') && id.includes('matter-js')) {
+            return 'game-physics'
+          }
           if (id.includes('node_modules')) {
             return 'vendor'
           }
