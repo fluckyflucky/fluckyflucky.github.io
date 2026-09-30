@@ -33,13 +33,26 @@ for (const [index, level] of levels.entries()) {
   console.log(`拧螺丝 ${index + 1}: ${state.moves} 步通关`)
 }
 
-assert.equal(mazes.length, 10)
-assert.equal(new Set(mazes.map(m => JSON.stringify(m.floor))).size, 10, 'Levels must have distinct layouts')
+assert.equal(mazes.length, 20)
+assert.equal(new Set(mazes.map(m => JSON.stringify([m.size, m.floor]))).size, 20, 'Levels must have distinct layouts')
 for (const [index, maze] of mazes.entries()) {
   assert(mazeLayouts[index][1].every(row => row.length === maze.size), 'Maps must be square')
   assert.equal(reachablePaint(maze).size, maze.floor.length)
   assert(paintableFromEveryStop(maze), 'Every reachable stop must still have routes to the remaining tiles')
   const floor = new Set(maze.floor)
+  assert.equal(mazeLayouts[index][1].join('').split('S').length - 1, 1, 'Exactly one start')
+  assert(maze.floor.every(p => p % maze.size > 0 && p % maze.size < maze.size - 1 && p >= maze.size && p < maze.size * (maze.size - 1)), 'Closed outer walls')
+  const squares = Array(maze.size ** 2).fill(0)
+  let widestRoom = 0
+  for (let p = 0; p < squares.length; p++) if (floor.has(p)) {
+    squares[p] = 1 + Math.min(squares[p - 1] ?? 0, squares[p - maze.size] ?? 0, squares[p - maze.size - 1] ?? 0)
+    widestRoom = Math.max(widestRoom, squares[p])
+  }
+  if (index >= 10) {
+    assert(widestRoom >= 4, `Maze ${index + 1} must contain a real open room, not only corridors`)
+    assert(maze.floor.length >= 80, 'Advanced levels need room for multiple sweeps')
+  }
+  if (index === 19) assert(widestRoom >= 7, 'Final level needs an uninterrupted large clearing')
   const degree = p => [p - 1, p + 1, p - maze.size, p + maze.size].filter(n => floor.has(n)).length
   const junctions = maze.floor.filter(p => degree(p) >= 3).length
   const loops = maze.floor.reduce((sum, p) => sum + degree(p), 0) / 2 - maze.floor.length + 1
@@ -74,7 +87,7 @@ for (const [index, maze] of mazes.entries()) {
   assert(!validMaze(maze, { ...state, painted: [...state.painted, -1] }))
   assert(!validMaze(maze, { ...state, painted: [...state.painted, state.position] }))
   assert(!validMaze(maze, { ...state, position: -1 }))
-  console.log(`涂色迷宫 ${index + 1}: ${junctions} 个岔路，${loops} 个环，${decisions} 个选择点，${state.moves} 步通关`)
+  console.log(`涂色迷宫 ${index + 1}: ${decisions} 个停点选择，最大空地 ${widestRoom}×${widestRoom}，提示路线 ${state.moves} 步`)
 }
 
 assert.equal(readProgress(null, 10), null)
@@ -92,4 +105,14 @@ assert.deepEqual(migrated.state, oldSave.state)
 assert(validScrews(levels[9], migrated.state))
 assert.deepEqual(readProgress(migrated, 40, 10), migrated)
 assert.equal(readProgress({ ...oldSave, unlocked: 11 }, 40, 10), null)
+const previousMazeSave = { level: 9, unlocked: 9, best: Array(10).fill(23), state: { position: mazes[9].start, painted: [mazes[9].start], moves: 0 } }
+const expandedMazeSave = readProgress(previousMazeSave, 20, 10)
+assert(expandedMazeSave)
+assert.equal(expandedMazeSave.level, 9)
+assert.equal(expandedMazeSave.unlocked, 9)
+assert.deepEqual(expandedMazeSave.best.slice(0, 10), previousMazeSave.best)
+assert.deepEqual(expandedMazeSave.best.slice(10), Array(10).fill(0))
+assert.deepEqual(expandedMazeSave.state, previousMazeSave.state)
+assert(validMaze(mazes[9], expandedMazeSave.state))
+assert.deepEqual(readProgress(expandedMazeSave, 20, 10), expandedMazeSave)
 console.log('关卡、不可达操作、提示、存档校验通过。')
