@@ -10,8 +10,8 @@ watchEffect(() => { document.title = `${game.value?.title ?? '游戏未找到'} 
 </script>
 
 <template>
-  <div class="relative z-10 max-w-3xl mx-auto">
-    <RouterLink to="/games" class="inline-flex items-center gap-2 text-sm text-stone-400 hover:text-cyan-300 transition-colors mb-7 rounded focus-visible:outline-2 focus-visible:outline-cyan-400 focus-visible:outline-offset-4">
+  <div class="relative z-10 mx-auto" :class="game?.id === 'civilization' ? 'max-w-none' : 'max-w-3xl'">
+    <RouterLink to="/games" class="inline-flex items-center gap-2 text-sm text-stone-400 hover:text-cyan-300 transition-colors rounded focus-visible:outline-2 focus-visible:outline-cyan-400 focus-visible:outline-offset-4" :class="game?.id === 'civilization' ? 'mb-3 min-h-11' : 'mb-7'">
       <span aria-hidden="true">←</span> 小游戏
     </RouterLink>
     <template v-if="game && player">

@@ -139,7 +139,7 @@ const sideNavGroup = computed(() => {
 
     <!-- Main content -->
     <main class="flex-1">
-      <div class="max-w-[1440px] mx-auto px-4 py-8 md:py-12">
+      <div class="max-w-[1440px] mx-auto px-4" :class="route.path === '/games/civilization' ? 'py-3 md:py-4' : 'py-8 md:py-12'">
         <div v-if="showSideNav" class="flex gap-10 justify-center">
           <div class="hidden md:block pt-1">
             <div class="sticky top-20">
@@ -155,7 +155,7 @@ const sideNavGroup = computed(() => {
             </div>
           </div>
         </div>
-        <div v-else class="max-w-4xl mx-auto">
+        <div v-else class="mx-auto" :class="route.path === '/games/civilization' ? 'max-w-[1320px]' : 'max-w-4xl'">
           <slot />
         </div>
       </div>

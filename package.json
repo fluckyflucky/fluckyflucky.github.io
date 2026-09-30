@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
+    "test:civilization": "node scripts/test-civilization.mjs && node scripts/test-civilization-fidelity.mjs",
+    "civilization:audit": "node scripts/audit-civilization.mjs",
+    "civilization:release-check": "pnpm test:civilization && pnpm build && pnpm civilization:audit",
     "jmdict:rebuild": "node --experimental-strip-types scripts/rebuild-jmdict-shards.ts",
     "jmdict:rebuild:3": "pnpm jmdict:rebuild 3"
   },

@@ -86,7 +86,7 @@ export const games: GameDefinition[] = [
     coverImage: civilizationCover,
     accent: '#9bba8a',
     controls: '点击操作 · 拖动地图',
-    load: () => import('./civilization/GameCivilization.vue'),
+    load: () => import('./civilization/CivilizationGame.vue'),
   },
   {
     id: '2048',
