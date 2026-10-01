@@ -3,7 +3,7 @@ import { moduleUrl } from "./civilization-test-module.mjs";
 const w = await import(moduleUrl("src/games/civilization/world.ts"));
 const c = await import(moduleUrl("src/games/civilization/catalog.ts"));
 const saves = await import(moduleUrl("src/games/civilization/saves.ts"));
-const legacy = await import(moduleUrl("src/games/civilization/engine.ts"));
+import { readFileSync } from 'node:fs';
 let passed = 0;
 function test(name, fn) {
   fn();
@@ -15,6 +15,7 @@ const setup = (options = {}) => {
     seed: 42,
     size: "compact",
     difficulty: "relaxed",
+    cityStateCount: 2,
     ...options,
   });
   assert(
@@ -48,7 +49,7 @@ test("research catalog is a complete acyclic dependency graph", () => {
 test("new maps have three major starts and two real city states", () => {
   for (const size of ["compact", "standard"])
     for (let seed = 1; seed <= 15; seed++) {
-      const s = w.create({ seed, size });
+      const s = w.create({ seed, size, cityStateCount:2 });
       assert(saves.valid(s));
       assert.equal(s.cities.length, 4);
       assert(
@@ -170,25 +171,50 @@ test("faith begins at astrology, no theology/religion circular unlock", () => {
   city.buildings.push("holy");
   n.faith = 60;
   n.great.prophet = 40;
+  assert(!w.foundReligion(s),'a holy site and points are not a recruited prophet');
+  assert(w.pantheon(s,'crafts'));
+  assert(w.recruitProphet(s));
   assert(w.foundReligion(s));
   assert(n.religion);
-  assert.equal(n.faith, 0);
+  assert.equal(n.faith, 35,'only the pantheon costs faith; founding does not');
   assert.equal(city.religion, 0);
 });
 test("old saves migrate without destroying legacy data", () => {
-  const s = legacy.create(42);
-  assert(
-    legacy.found(
-      s,
-      s.units.find((u) => u.owner === 0 && u.type === "settler"),
-    ),
-  );
-  for (let i = 0; i < 5; i++) legacy.nextTurn(s);
-  const result = saves.migrate(clone(s));
+  // Captured from the original v1 engine: seed 42, founded city, five turns.
+  const s = JSON.parse(readFileSync(new URL('./fixtures/civilization-v1.json',import.meta.url),'utf8'));
+  const original=clone(s);
+  const result = saves.migrate(s);
   assert(result);
   assert.equal(result.turn, s.turn);
   assert.equal(result.cities.length, s.cities.length);
+  assert.deepEqual(s,original);
+  assert.equal(result.nations[0].gold,s.nations[0].gold);
+  assert.equal(result.nations[0].great.science,s.great);
+  assert.deepEqual(result.units.map(u=>u.id),s.units.map(u=>u.id));
+  assert.deepEqual(result.cities.map(c=>[c.id,c.pop]),s.cities.map(c=>[c.id,c.pop]));
   assert(saves.valid(result));
+});
+test("damaged v1 saves are rejected without mutating the original", () => {
+  const fixture=JSON.parse(readFileSync(new URL('./fixtures/civilization-v1.json',import.meta.url),'utf8'));
+  for(const change of [s=>s.units[0].type='fake',s=>s.tiles.pop(),s=>s.nations=null]) {
+    const damaged=clone(fixture);change(damaged);
+    const original=clone(damaged);
+    assert.equal(saves.migrate(damaged),null);
+    assert.deepEqual(damaged,original);
+  }
+});
+test("artist recruitment spends only culture points and rejects repeat requests", () => {
+  const s=setup(), n=s.nations[0];
+  n.great.culture=79;n.great.science=200;
+  const before=clone(s);
+  assert(!w.recruitArtist(s));assert.deepEqual(s,before);
+  n.great.culture=85;
+  assert(w.recruitArtist(s));
+  assert.equal(n.great.culture,5);assert.equal(n.great.science,200);
+  assert.equal(n.tourism,before.nations[0].tourism+80);
+  assert.equal(n.greatPeopleEarned,(before.nations[0].greatPeopleEarned??0)+1);
+  const after=clone(s);assert(!w.recruitArtist(s));assert.deepEqual(s,after);
+  assert(saves.valid(s));
 });
 test("invalid saves are rejected, including NaN, unknown items and bad references", () => {
   const s = setup();
@@ -329,6 +355,7 @@ test("faith-only units cannot be queued as ordinary production", () => {
   n.faith = 10000;
   n.civic.push("theology");
   city.buildings.push("holy", "shrine", "temple");
+  city.religion=0;city.pressure[0]=100;
   s.units = s.units.filter((u) => u.tile !== city.tile);
   assert(!w.enqueue(s, city, "missionary"));
   assert(w.purchase(s, city, "missionary"));
@@ -418,6 +445,90 @@ test("melee land units cannot enter water through combat before embarkation", ()
   s.nations[0].tech.push("shipbuilding");
   assert(w.combatPreview(s, u, to));
 });
+test('variable AI counts and random civilizations generate valid reproducible starts',()=>{
+  for (const size of ['compact','standard']) for (let aiCount=1;aiCount<=5;aiCount++) for (let seed=1;seed<=20;seed++) {
+    const opts={size,aiCount,seed,civilization:'random',cityStateCount:2},s=w.create(opts);
+    assert(saves.valid(s),`${size}/${aiCount}/${seed}`);
+    assert.equal(s.nations.filter(n=>n.kind==='major').length,aiCount+1);
+    assert.equal(s.cities.length,aiCount+2);
+    assert(w.canFound(s,s.units.find(u=>u.owner===0&&u.type==='settler')));
+    for (const n of s.nations) assert.equal(n.tourismAgainst.length,aiCount+1);
+    for (const city of s.cities) assert.equal(city.pressure.length,aiCount+1);
+    if(seed===1)assert.deepEqual(s,w.create(opts));
+  }
+  assert.throws(()=>w.create({aiCount:0}));assert.throws(()=>w.create({aiCount:6}));
+});
+test('legacy default saves keep participant IDs while malformed variable-player saves are rejected',()=>{
+  const old=setup();delete old.options.aiCount;
+  for(const n of old.nations){delete n.aiStrategy;delete n.explored;}
+  const raw=JSON.stringify(old);assert(saves.valid(old));assert.equal(JSON.stringify(saves.migrate(old)),raw);
+  const s=setup({aiCount:5});
+  for(const change of [x=>x.options.aiCount=4,x=>x.nations[0].tourismAgainst.pop(),x=>x.cityStates[0].envoys.pop(),x=>x.cities[0].pressure.pop(),x=>x.nations[1].aiStrategy='unknown',x=>x.nations[1].explored=[-1]]){
+    const bad=clone(s);change(bad);assert(!saves.valid(bad));assert.equal(saves.migrate(bad),null);
+  }
+});
+test('first contact records both participants and gives each the writing boost',()=>{
+  const s=setup();s.units=[];
+  const tile=s.cities.find(c=>c.owner===0).tile,next=w.neighbors(s,tile)[0];s.tiles[next].terrain='grass';
+  w.spawn(s,0,'warrior',tile);w.spawn(s,1,'warrior',next);
+  for(const owner of [0,1]){s.nations[owner].met=[];s.nations[owner].boosts=s.nations[owner].boosts.filter(id=>id!=='writing');delete s.nations[owner].researchProgress.writing;}
+  w.reveal(s);
+  for(const owner of [0,1]){assert(s.nations[owner].met.includes(1-owner));assert(s.nations[owner].boosts.includes('writing'));}
+  const progress=s.nations[1].researchProgress.writing;w.reveal(s);assert.equal(s.nations[1].researchProgress.writing,progress);
+});
+test('AI research follows different strategy paths without bypassing prerequisites',()=>{
+  for(const [strategy,expected] of [['science','writing'],['military','animals']]) {
+    const s=setup(),n=s.nations[1];n.aiStrategy=strategy;n.tech=['pottery'];n.civic=['laws'];n.research='';
+    w.computerTurn(s,1);assert.equal(n.research,expected);assert(w.researchAvailable(n,n.research));assert(saves.valid(s));
+  }
+});
+test('known AI rivals can declare war on each other but respect friendship and treaties',()=>{
+  let declarations=0;
+  for(let seed=1;seed<=12;seed++){
+    const s=setup({seed,difficulty:'hard'}),n=s.nations[1];s.turn=60;n.aiStrategy='military';n.met=[2];s.nations[2].met=[1];
+    const enemy=s.units.find(u=>u.owner===2);enemy.hp=5;
+    w.computerTurn(s,1);if(w.relation(s,1,2).status==='war'){declarations++;assert(s.nations[2].boosts.includes('defensivetactics'));assert(!n.boosts.includes('defensivetactics'));}
+    for(const status of ['friend','peace']){
+      const safe=setup({seed,difficulty:'hard'});safe.turn=60;safe.nations[1].aiStrategy='military';safe.nations[1].met=[2];safe.units.find(u=>u.owner===2).hp=5;
+      const r=w.relation(safe,1,2);r.status=status;r.until=80;w.computerTurn(safe,1);assert.equal(r.status,status);
+    }
+  }
+  assert(declarations>0,'simulation must produce an AI-vs-AI declaration, not just player-focused wars');
+});
+test('AI combat attacks a visible rival and retreats when critically wounded',()=>{
+  const s=setup();s.units=[];
+  const tile=s.cities.find(c=>c.owner===1).tile,next=w.neighbors(s,tile)[0];
+  for(const i of [tile,...w.neighbors(s,tile)]){s.tiles[i].terrain='grass';s.tiles[i].baseTerrain='grass';s.tiles[i].hills=false;s.tiles[i].feature='';}
+  const attacker=w.spawn(s,1,'tank',tile),victim=w.spawn(s,2,'warrior',next);
+  w.relation(s,1,2).status='war';w.computerTurn(s,1);
+  assert(victim.hp<100,'AI must actually resolve combat, not only declare war');assert(attacker.acted);assert.equal(attacker.moves,0);assert(attacker.hp>0);assert(saves.valid(s));
+  const retreat=setup();retreat.units=[];
+  const home=retreat.cities.find(c=>c.owner===1).tile,enemyTile=w.neighbors(retreat,home)[0];
+  for(const i of [home,...w.neighbors(retreat,home)]){retreat.tiles[i].terrain='grass';retreat.tiles[i].baseTerrain='grass';retreat.tiles[i].hills=false;retreat.tiles[i].feature='';}
+  const wounded=w.spawn(retreat,1,'tank',home),enemy=w.spawn(retreat,2,'tank',enemyTile);wounded.hp=20;
+  w.relation(retreat,1,2).status='war';w.computerTurn(retreat,1);
+  assert.equal(enemy.hp,100,'wounded AI must not attempt a suicidal attack');assert.equal(wounded.hp,20);assert.notEqual(wounded.tile,home);assert(saves.valid(retreat));
+});
+test('headless AI-vs-AI games with 1–5 opponents remain saveable through expansion and combat',()=>{
+  for(let aiCount=1;aiCount<=5;aiCount++){
+    const s=w.create({seed:91+aiCount,aiCount,civilization:'random',size:'compact',difficulty:'hard'}),same=clone(s);
+    for(let turn=0;turn<65;turn++){
+      w.computerTurn(s,0);w.nextTurn(s);w.computerTurn(same,0);w.nextTurn(same);
+      assert(saves.valid(s),`AI count ${aiCount}, turn ${s.turn}`);
+    }
+    assert.deepEqual(s,same,'saved RNG state must determine strategy decisions reproducibly');
+    assert(s.nations.slice(0,aiCount+1).every(n=>n.tech.length>0));
+    assert(s.nations.slice(0,aiCount+1).some(n=>n.explored.length>40));
+  }
+});
+test('sixth-player religion and all-capital victory use the actual participant count',()=>{
+  const s=setup({aiCount:5}),n=s.nations[5],city=s.cities.find(c=>c.owner===5);
+  city.buildings.push('holy');n.great.prophet=40;n.faith=60;assert(w.pantheon(s,'crafts',5));assert(w.recruitProphet(s,5));assert(w.foundReligion(s,5));assert.equal(typeof n.religion,'string');assert.equal(city.religion,5);assert(saves.valid(s));
+  const conquer=setup({aiCount:5});for(const city of conquer.cities)city.owner=0;
+  w.checkVictory(conquer);assert.equal(conquer.winner?.type,'domination');
+  const notAll=setup({aiCount:5});for(const city of notAll.cities.filter(c=>c.capital>=0&&c.capital<3))city.owner=0;
+  w.checkVictory(notAll);assert.equal(notAll.winner,null);
+});
 console.log(
-  `\n${passed} Civilization checks passed. ${c.techs.length} techs, ${c.civics.length} civics, ${c.items.length} projects.`,
+  `\n${passed} Civilization checks passed. ${c.techs.length} techs, ${c.civics.length} civics, ${c.items.filter(d=>!d.greatPerson).length} production items and ${c.items.filter(d=>d.greatPerson).length} recruit-only unit.`,
 );

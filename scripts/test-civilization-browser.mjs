@@ -3,11 +3,14 @@ import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { moduleUrl } from './civilization-test-module.mjs';
+const rules=await import(moduleUrl('src/games/civilization/world.ts'));
+const saveRules=await import(moduleUrl('src/games/civilization/saves.ts'));
 const url=process.env.CIV_TEST_URL ?? 'http://127.0.0.1:4181/#/games/civilization';
 const executablePath=existsSync(chromium.executablePath()) ? chromium.executablePath() : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const browser=await chromium.launch({headless:true,executablePath});
 try {
-  for(const width of [375,768,1024,1440]) {
+  for(const width of (process.env.CIV_TEST_WIDTHS?.split(',').map(Number) ?? [375,768,1024,1440])) {
     const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===375}),page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     await page.goto(url);
@@ -31,6 +34,48 @@ try {
     await page.getByRole('button',{name:'市政',exact:true}).click();
     assert.equal(await page.locator('.research-node').count(),61);
     await page.getByRole('button',{name:'地图',exact:true}).click();
+    const yieldButton=page.getByRole('button',{name:'显示地块产出',exact:true});
+    const centerButton=page.getByRole('button',{name:'定位当前单位或城市',exact:true});
+    assert.equal(await centerButton.getAttribute('aria-pressed'),null,'recenter is an action, not a toggle');
+    const mapTip=page.getByRole('tooltip');
+    const pressed=await yieldButton.getAttribute('aria-pressed');
+    if(width===375) {
+      const touch=await context.newCDPSession(page);
+      for(const [button,explanation] of [[yieldButton,/粮食.*生产力.*金币/],[centerButton,/不.*移动|不.*消耗/]]) {
+        await button.scrollIntoViewIfNeeded();
+        const cameraBefore=await page.locator('.world-scroll').evaluate(e=>({x:e.scrollLeft,y:e.scrollTop}));
+        const unitsBefore=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).units);
+        const b=await button.boundingBox(),x=b.x+b.width/2,y=b.y+b.height/2;
+        await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+        await page.waitForTimeout(650);
+        await mapTip.waitFor();assert.match(await mapTip.innerText(),explanation);
+        await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        await page.waitForTimeout(100);
+        assert.equal(await yieldButton.getAttribute('aria-pressed'),pressed,'long press must not activate the map layer');
+        assert.deepEqual(await page.locator('.world-scroll').evaluate(e=>({x:e.scrollLeft,y:e.scrollTop})),cameraBefore,'long press must not recenter the map');
+        assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).units),unitsBefore,'help must not change units');
+        await page.keyboard.press('Escape');
+      }
+      const b=await yieldButton.boundingBox(),x=b.x+b.width/2,y=b.y+b.height/2;
+      await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+      await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+25,y}]});
+      await page.waitForTimeout(650);
+      assert.equal(await mapTip.isVisible(),false,'moving the finger cancels long press');
+      await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      assert.equal(await yieldButton.getAttribute('aria-pressed'),pressed,'dragging must not activate the button');
+      await touch.detach();
+      await yieldButton.tap();
+    } else {
+      await yieldButton.hover();await mapTip.waitFor();
+      assert.match(await mapTip.innerText(),/粮食.*生产力.*金币/);
+      await page.keyboard.press('Escape');await yieldButton.click();
+    }
+    assert.notEqual(await yieldButton.getAttribute('aria-pressed'),pressed,'short click toggles the layer');
+    if(pressed==='true')await yieldButton.click();
+    await page.keyboard.press('Escape');
+    await page.locator('.yield-legend').waitFor();
+    assert.match(await page.locator('.yield-legend').innerText(),/粮食.*生产力.*金币/s);
+    if(process.env.CIV_SCREENSHOT_DIR) await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`map-${width}.png`),fullPage:true});
     await page.getByRole('button',{name:'下一回合',exact:true}).click();
     const confirm=page.getByRole('button',{name:'直接结束回合',exact:true});
     await confirm.waitFor({state:'visible'});
@@ -80,10 +125,17 @@ try {
     assert.match(await tooltip.innerText(),/战斗力|经验/);
     await page.keyboard.press('Escape');
     await page.locator('.page-heading h2').click();
+    // Blur and pointerleave may arrive together. Both must share one dismiss timer.
+    await policyHelp.dispatchEvent('pointerleave');
+    await policyHelp.dispatchEvent('blur');
     await policyHelp.hover();
     await tooltip.waitFor();
     await policyHelp.click(); // Pin so pointer movement into the tooltip can be read.
-    await tooltip.hover();
+    assert.equal(await policyHelp.getAttribute('aria-expanded'),'true');
+    await page.waitForTimeout(50);
+    assert.equal(await policyHelp.getAttribute('aria-expanded'),'true');
+    const readableBox=await tooltip.boundingBox();assert(readableBox);
+    await page.mouse.move(readableBox.x+readableBox.width/2,readableBox.y+readableBox.height/2);
     await page.waitForTimeout(180);
     assert(await tooltip.isVisible());
     await page.locator('.page-heading h2').click();
@@ -144,6 +196,126 @@ try {
     assert(!overflow,`page overflow at ${width}px`);
     assert.deepEqual(errors,[],`runtime errors at ${width}px`);
     console.log(`✓ ${width}px: founding, full trees, government/policies, turn, autosave/reload, victory progress and non-destructive v2 migration`);
+    await context.close();
+  }
+  for(const width of [375,1440]) for(const aiCount of [1,5]) {
+    const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===375}),page=await context.newPage();
+    await page.goto(url);
+    await page.getByLabel('你的文明',{exact:true}).selectOption('random');
+    await page.getByLabel('AI 数量',{exact:true}).selectOption(String(aiCount));
+    const cityStateCount=aiCount===5?6:3;
+    await page.getByLabel('城邦数量',{exact:true}).selectOption(String(cityStateCount));
+    await page.getByLabel('随机种子',{exact:true}).fill('browser-random-42');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'new game setup fits mobile');
+    if(process.env.CIV_SCREENSHOT_DIR) await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`setup-${width}-${aiCount}.png`),fullPage:true});
+    await page.getByRole('button',{name:'建立新世界',exact:true}).click();
+    await page.getByRole('button',{name:'建立城市',exact:true}).click();
+    await page.waitForTimeout(500);
+    const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
+    assert.equal(state.options.aiCount,aiCount);assert.equal(state.options.civilization,'random');
+    assert.equal(state.nations.filter(n=>n.kind==='major').length,aiCount+1);
+    assert.equal(state.options.cityStateCount,cityStateCount);
+    assert.equal(state.nations.length,aiCount+cityStateCount+2);
+    assert(state.nations.every(n=>n.tourismAgainst.length===aiCount+1));
+    await page.reload();
+    await page.getByRole('button',{name:'外交',exact:true}).click();
+    assert.equal(await page.locator('.diplomacy-grid > article').count(),aiCount+cityStateCount);
+    for(const article of await page.locator('.diplomacy-grid > article').all()) {
+      if((await article.locator('h3').innerText())==='未知城邦') {
+        assert.equal(await article.locator('button').count(),0,'unknown city states reveal no type, bonus or action');
+        assert((await article.boundingBox()).height<100,'unknown city-state cards stay compact');
+      }
+    }
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'expanded diplomacy fits mobile');
+    if(process.env.CIV_SCREENSHOT_DIR) await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`diplomacy-${width}-${aiCount}.png`),fullPage:true});
+    if(width===375 && aiCount===1) {
+      const religious=structuredClone(state),n=religious.nations[0],city=religious.cities.find(c=>c.owner===0);
+      n.religion='Test';n.faith=1000;city.religion=0;city.pressure[0]=100;city.buildings.push('holy','shrine');religious.options.speed='normal';
+      religious.units=religious.units.filter(u=>u.tile!==city.tile);
+      assert(!n.civic.includes('theology'),'missionary must not depend on theology');
+      await page.addInitScript(s=>localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s)),religious);
+      await page.reload();
+      const missionary=page.locator('.build-catalog article').filter({hasText:'传教士'});await missionary.waitFor();
+      assert.match(await missionary.locator('.build-price').innerText(),/仅信仰购买.*150/);
+      assert(!await missionary.getByRole('button',{name:'加入队列',exact:true}).count());
+      await missionary.getByRole('button',{name:'信仰 150',exact:true}).tap();await page.waitForTimeout(500);
+      const bought=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
+      assert.equal(bought.nations[0].faith,850);assert.equal(bought.units.find(u=>u.type==='missionary' && u.owner===0).charges,3);
+      console.log('✓ mobile missionary: shrine unlock without theology, faith-only price and actual purchase');
+    }
+    console.log(`✓ ${width}px: random civilization, ${aiCount} AI, reload and dynamic diplomacy`);
+    await context.close();
+  }
+  for(const width of [375,1440]) {
+    const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===375});
+    const fixture=rules.create({seed:42,size:'compact',speed:'normal',cityStateCount:3});
+    rules.found(fixture,fixture.units.find(u=>u.owner===0 && u.type==='settler'));
+    const city=fixture.cities.find(c=>c.owner===0),at=rules.neighbors(fixture,city.tile)[0],nation=fixture.nations[0];
+    fixture.units=fixture.units.filter(u=>u.tile!==at);
+    Object.assign(fixture.tiles[at],{terrain:'grass',baseTerrain:'grass',feature:'',hills:false,resource:'',improvement:'',district:'holy',territory:city.id,owner:0});
+    city.buildings.push('holy','shrine');nation.tech.push('astrology');nation.faith=25;nation.great.prophet=60;
+    assert(saveRules.valid(fixture));
+    await context.addInitScript(s=>{if(!localStorage.getItem('aoinatsu:civilization:v3'))localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s));},fixture);
+    const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);
+    await page.getByRole('button',{name:'信仰',exact:true}).click();
+    await page.getByRole('button',{name:'工匠之神 · 25',exact:true}).click();
+    await page.getByRole('button',{name:'招募大预言家',exact:true}).click();
+    await page.getByLabel('信徒信条',{exact:true}).selectOption('choral');
+    await page.getByLabel('创始人信条',{exact:true}).selectOption('tithe');
+    await page.getByRole('button',{name:'信徒信条效果',exact:true}).click();
+    assert.match(await page.getByRole('tooltip').innerText(),/祠堂.*文化/);
+    await page.keyboard.press('Escape');
+    await page.getByRole('button',{name:'创立宗教',exact:true}).click();await page.waitForTimeout(500);
+    const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
+    assert(saveRules.valid(saved));assert.equal(saved.nations[0].faith,0);assert(saved.nations[0].religion);assert.deepEqual(saved.nations[0].beliefs,['choral','tithe']);
+    assert.equal(saved.nations[0].greatPeopleEarned,1);assert(!saved.units.some(u=>u.type==='prophet'));assert.equal(saved.cities.find(c=>c.owner===0).religion,0);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'religion controls fit mobile');
+    assert.equal(await page.getByRole('button',{name:'创立宗教',exact:true}).count(),0,'founding removes obsolete actions');
+    assert.equal(await page.getByRole('button',{name:'信徒信条效果',exact:true}).count(),0,'founding removes draft-only help');
+    assert.equal(await page.locator('.religion-beliefs > div').count(),2);
+    assert((await page.locator('.faith-card').boundingBox()).height<300,'founded religion does not retain blank recruitment space');
+    if(process.env.CIV_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`found-religion-${width}.png`),fullPage:true});
+    await page.reload();await page.getByRole('button',{name:'信仰',exact:true}).click();
+    assert.match(await page.locator('.faith-card').innerText(),/合唱圣歌.*什一税/s);assert.deepEqual(errors,[]);
+    console.log(`✓ ${width}px: pantheon, physical prophet, unique beliefs, no extra faith charge and reload`);
+    await context.close();
+  }
+  const gp=await import(moduleUrl('src/games/civilization/great-people.ts'));
+  let hypatiaSeed=1;
+  while(gp.currentScientist(rules.create({seed:hypatiaSeed})).id!=='hypatia')hypatiaSeed++;
+  for(const width of [375,768,1024,1440]) {
+    const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===375});
+    const fixture=rules.create({seed:hypatiaSeed,size:'compact',speed:'normal',cityStateCount:3});
+    rules.found(fixture,fixture.units.find(u=>u.owner===0&&u.type==='settler'));
+    const city=fixture.cities.find(c=>c.owner===0),at=rules.neighbors(fixture,city.tile)[0];
+    fixture.units=fixture.units.filter(u=>u.tile!==at);
+    Object.assign(fixture.tiles[at],{terrain:'grass',baseTerrain:'grass',feature:'',hills:false,resource:'',improvement:'',district:'campus',territory:city.id,owner:0,pillaged:false});
+    city.buildings.push('campus');fixture.nations[0].tech.push('writing');fixture.nations[0].great.science=65;
+    assert(saveRules.valid(fixture));
+    await context.addInitScript(s=>{if(!localStorage.getItem('aoinatsu:civilization:v3'))localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s));},fixture);
+    const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);
+    await page.getByRole('button',{name:'信仰',exact:true}).click();
+    assert.match(await page.locator('.scientist-card').innerText(),/希帕蒂娅.*65 \/ 60/s);
+    await page.getByRole('button',{name:'科学家能力',exact:true}).click();assert.match(await page.getByRole('tooltip').innerText(),/图书馆.*\+1 科技/);await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+    const button=page.getByRole('button',{name:'招募科学家',exact:true});assert((await button.boundingBox()).height>=44);
+    await button.click();await page.waitForTimeout(350);
+    let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
+    assert(saveRules.valid(saved));assert.equal(saved.nations[0].great.science,5);assert.equal(saved.scientistRecruits[0].person,'hypatia');assert(!saved.cities.find(c=>c.owner===0).buildings.includes('library'),'recruiting is not activation');
+    await page.getByRole('button',{name:'城市',exact:true}).click();await page.locator('.unit-roster button').filter({hasText:'希帕蒂娅'}).click();
+    await page.locator('.unit-panel').waitFor();assert.match(await page.locator('.unit-panel h2').innerText(),/希帕蒂娅/);
+    assert(await page.getByRole('button',{name:'使用能力',exact:true}).isDisabled());
+    await page.getByRole('button',{name:'移动',exact:true}).click();
+    await page.locator(`[data-tile="${at}"] polygon`).first().click();
+    await page.getByRole('button',{name:'使用能力',exact:true}).waitFor();assert(await page.getByRole('button',{name:'使用能力',exact:true}).isEnabled());
+    await page.getByRole('button',{name:'科学家能力',exact:true}).click();assert.match(await page.getByRole('tooltip').innerText(),/图书馆/);await page.keyboard.press('Escape');
+    if(process.env.CIV_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`scientist-${width}.png`),fullPage:true});
+    await page.getByRole('button',{name:'使用能力',exact:true}).click();await page.waitForTimeout(350);
+    saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
+    assert(saveRules.valid(saved));assert(saved.cities.find(c=>c.owner===0).buildings.includes('library'));assert.deepEqual(saved.nations[0].scientistEffects,['hypatia']);assert(!saved.units.some(u=>u.person==='hypatia'));
+    await page.reload();await page.waitForTimeout(250);const loaded=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
+    assert.deepEqual(loaded.scientistRecruits,saved.scientistRecruits);assert.deepEqual(loaded.nations[0].scientistEffects,['hypatia']);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
+    console.log(`✓ ${width}px: scientist recruitment, named unit, physical movement, actual library activation and reload`);
     await context.close();
   }
 } finally {await browser.close();}

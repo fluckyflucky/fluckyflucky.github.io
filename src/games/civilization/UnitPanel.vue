@@ -21,9 +21,15 @@ import {
   active,
   combatPreview,
   strength,
+  foundReligion,
+  religionCity,
   hasPolicy,
   cost,
+  activateScientist,
+  scientistReason,
 } from "./world";
+import { scientistById } from './great-people';
+import CivHelp from './CivHelp.vue';
 import { distance } from "./hex";
 import CivIcon from "./CivIcon.vue";
 const props = defineProps<{
@@ -89,7 +95,7 @@ function fortify() {
           >等级 {{ unit.level }} ·
           {{ d.domain === "sea" ? "海上单位" : "陆地单位" }}</small
         >
-        <h2>{{ d.name }}</h2>
+        <h2>{{ scientistById(unit.person)?.name ?? d.name }}</h2>
       </div>
       <span class="movement-badge"
         >{{ unit.moves }} /
@@ -232,6 +238,15 @@ function fortify() {
         移动至城市中心的一格范围内。
       </p></template
     >
+    <template v-if="unit.type==='prophet'">
+      <p class="hint">在己方圣地创立宗教。信仰面板可选择信条。</p>
+      <button :disabled="!n.pantheon || !religionCity(state,unit.owner) || !active(state)" @click="action(()=>foundReligion(state,unit.owner),'宗教已创立')">创立宗教 · 自动选择未占用信条</button>
+    </template>
+    <template v-if="unit.type==='scientist'">
+      <div class="inspector-title"><h3>大科学家</h3><CivHelp label="科学家能力" :text="scientistById(unit.person)?.description??''" /></div>
+      <p v-if="scientistReason(state,unit)" class="hint">{{ scientistReason(state,unit) }}</p>
+      <button class="primary wide" :disabled="!!scientistReason(state,unit)" @click="action(()=>activateScientist(state,unit),'科学家已使用能力')">{{ unit.person==='abu_al_qasim_al_zahrawi'?'退隐':'使用能力' }}</button>
+    </template>
     <template v-if="d.strength"
       ><div class="unit-commands">
         <button
@@ -286,10 +301,10 @@ function fortify() {
         >
         <div class="combat-numbers">
           <div>
-            <span>造成伤害</span><strong>−{{ preview.damage }}</strong>
+            <span>造成伤害</span><strong>{{ preview.damageMin }}–{{ preview.damageMax }}</strong>
           </div>
           <div>
-            <span>受到反击</span><strong>−{{ preview.retaliation }}</strong>
+            <span>受到反击</span><strong>{{ preview.retaliationMin }}–{{ preview.retaliationMax }}</strong>
           </div>
         </div>
         <p v-if="preview.city?.walls" class="hint">

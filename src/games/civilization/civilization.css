@@ -1141,6 +1141,7 @@
   gap: 8px;
 }
 .diplomacy-grid > article {
+  align-self: start;
   padding: 12px;
   background: #263d2f;
   border: 1px solid #587453;
@@ -1195,7 +1196,14 @@
   grid-template-columns: 1fr 1.4fr;
   gap: 12px;
 }
+.belief-fields {margin-top:10px;}
+.religion-beliefs {display:grid;gap:4px;margin-top:8px;}
+.religion-beliefs > div {display:flex;align-items:center;gap:6px;min-height:32px;}
+.pantheon-choices {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+.pantheon-choices > div {display:flex;gap:4px;align-items:center;min-width:0;}
+.pantheon-choices > div > button:first-child {flex:1;min-width:0;padding:6px;font-size:13px;}
 .faith-card {
+  align-self: start;
   border: 1px solid #738266;
   border-radius: 11px;
   padding: 14px;
@@ -1206,13 +1214,18 @@
   color: #e3d8b6;
 }
 .faith-card h3 {
-  font-size: 22px;
+  font-size: 18px;
   font-family: serif;
-  margin: 12px 0 8px;
+  margin: 10px 0 4px;
 }
 .faith-card p {
   font-size: 13px;
-  margin: 12px 0;
+  margin: 6px 0;
+}
+.faith-card > p {
+  display:flex;
+  align-items:center;
+  gap:6px;
 }
 .faith-card .meter {
   margin-top: 10px;
@@ -1233,7 +1246,10 @@
 }
 .great-card > div {
   flex: 1;
+  min-width: 0;
 }
+.scientist-card > button {flex-shrink: 0;}
+.scientist-card p {margin: 4px 0;}
 .great-card h3 {
   margin: 0 0 6px;
   font-size: 17px;
@@ -1568,8 +1584,11 @@
 .setup-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
+.setup-civilization-info {display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 10px;background:#263e30;border:1px solid #576e50;border-radius:7px;}
+.setup-civilization-info > span {flex:1;font-size:14px;}
+.setup-civilization-info > svg {flex-shrink:0;color:#dec58b;}
 .setup-fields label {
   display: flex;
   flex-direction: column;
@@ -1590,7 +1609,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 12px;
 }
 .setup-actions .primary {
   min-width: 190px;
@@ -1951,7 +1970,7 @@
     gap: 12px 10px;
   }
   .setup-fields label {
-    font-size: 11px;
+    font-size: 13px;
   }
   .setup-fields input,
   .setup-fields select {

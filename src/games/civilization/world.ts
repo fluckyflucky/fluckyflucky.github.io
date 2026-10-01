@@ -16,8 +16,13 @@ import {
 } from "./catalog";
 import { distance, neighbors, random } from "./hex";
 import { satisfiedBoosts } from './boosts';
+import { majorIds, civilizedIds, barbarianOwner, aiStrategy } from './participants';
+import { cityStateRoster, cityStateYields, envoyBonus, suzerain, hasSuzerainBonus, influenceRate, civicEnvoyRewards } from './city-states';
+export { suzerain, influenceRate } from './city-states';
+import { pantheons, availableBeliefs, beliefs, cityBelief, activeReligiousBuildings, founderYield } from './religion';
+import { currentScientist, scientistCost, scientistById, scientistBuildingBonus, scientistPoints } from './great-people';
+export { currentScientist, scientistCost, scientistPoints } from './great-people';
 import {
-  BARBARIAN,
   type State,
   type Tile,
   type Unit,
@@ -31,6 +36,8 @@ export type { State, Tile, Unit, City, Options, Nation } from "./model";
 export const info = (id: string) => itemMap[id];
 export const defaultOptions = (): Options => ({
   civilization: "china",
+  aiCount: 2,
+  cityStateCount: 3,
   size: "standard",
   difficulty: "standard",
   speed: "quick",
@@ -51,9 +58,13 @@ export function relation(s: State, a: number, b: number) {
     (r) => r.a === Math.min(a, b) && r.b === Math.max(a, b),
   )!;
 }
-export const atWar = (s: State, a: number, b: number) =>
-  a !== b &&
-  (a === BARBARIAN || b === BARBARIAN || relation(s, a, b)?.status === "war");
+export function atWar(s:State,a:number,b:number) {
+  if(a===b) return false;
+  if(a===barbarianOwner(s) || b===barbarianOwner(s) || relation(s,a,b)?.status==='war') return true;
+  const sa=s.cityStates.find(cs=>cs.owner===a), sb=s.cityStates.find(cs=>cs.owner===b);
+  const allyA=sa?suzerain(s,sa):a, allyB=sb?suzerain(s,sb):b;
+  return allyA!==null && allyB!==null && allyA!==allyB && relation(s,allyA,allyB)?.status==='war';
+}
 export const ownCities = (s: State, o = 0) =>
   s.cities.filter((c) => c.owner === o);
 export const government = (n: Nation) =>
@@ -61,9 +72,31 @@ export const government = (n: Nation) =>
 export const hasPolicy = (n: Nation, id: string) => n.policies.includes(id) && policyAvailable(n,id);
 export const specialtyDistricts = (c: City) => c.buildings.filter(id=>info(id).kind==='district' && !['aqueduct','dam','canal','spaceport','neighborhood'].includes(id)).length;
 const hasDistrict = (c: City) => c.buildings.some(id=>info(id).kind==='district');
-export function cost(s: State, id: string) {
+export function districtDiscount(s: State, id: string, owner = 0) {
+  const n = s.nations[owner];
+  const special = (d: Item) => d.kind === 'district' && !['aqueduct','dam','canal','spaceport','neighborhood'].includes(d.id);
+  if (!special(info(id))) return 1;
+  const unlocked = items.filter(d => special(d) && (!d.unlock || n.tech.includes(d.unlock) || n.civic.includes(d.unlock))).length;
+  const cities = ownCities(s, owner);
+  // Discounts refresh on research completion, not each construction completion.
+  const completed = n.districtDiscountBasis ?? cities.reduce((v,c) => v + specialtyDistricts(c), 0);
+  const placed = cities.reduce((v,c) => v + Number(c.buildings.includes(id)) + Number(c.districtPlacements?.[id]!==undefined || c.queue.some(j=>j.item===id)), 0);
+  return unlocked > 1 && completed >= unlocked && placed < completed / unlocked ? 0.6 : 1;
+}
+export function cost(s: State, id: string, city?: City) {
   const d = info(id);
+  if (d.kind === 'district' && id !== 'spaceport') {
+    const at=city?.districtPlacements?.[id], locked=at===undefined ? undefined : city?.productionCosts?.[`${id}:${at}`];
+    if(locked!==undefined) return locked;
+    const owner = city?.owner ?? 0, n = s.nations[owner];
+    const progress = Math.max(n.tech.length / techs.length, n.civic.length / civics.length);
+    return Math.floor(d.cost * speedMultiplier(s) * (1 + 9 * progress) * districtDiscount(s,id,owner));
+  }
   return Math.round(d.cost * speedMultiplier(s));
+}
+export function jobCost(s: State, c: City, j: Job) {
+  // Old v3 queues were priced at the base cost. Preserve that contract when loading.
+  return c.productionCosts?.[jobKey(j)] ?? Math.round(info(j.item).cost * speedMultiplier(s));
 }
 export const speedMultiplier = (s: State) => s.options.speed === 'normal' ? 1 : 2 / 3;
 export function researchCost(s: State, n: Nation, d: Research) {
@@ -86,7 +119,7 @@ function nation(
   kind: Nation["kind"] = "major",
   name = "",
 ): Nation {
-  const c = civilizations.find((c) => c.id === civ) ?? civilizations[0];
+  const c = civilizations.find((c) => c.id === civ)!;
   return {
     name: name || c.name,
     civ,
@@ -117,12 +150,24 @@ function nation(
     tourismAgainst: [0, 0, 0],
     space: { launched: false, distance: 0, speed: 1 },
     barbarianKills: 0,
+    districtDiscountBasis: 0,
+    greatPeopleEarned: 0,
+    eraScore: 0,
+    influence: 0,
+    beliefs: [],
+    prophetRecruited: false,
+    pantheonGift: false,
   };
 }
 export function create(options: Partial<Options> = {}): State {
   const o = { ...defaultOptions(), ...options };
-  const width = o.size === "compact" ? 18 : 24,
-    height = o.size === "compact" ? 12 : 16;
+  if (!Number.isInteger(o.aiCount) || o.aiCount! < 1 || o.aiCount! > 5) throw Error('AI数量需在1–5之间');
+  if (!Number.isInteger(o.cityStateCount) || o.cityStateCount! < 2 || o.cityStateCount! > 6) throw Error('城邦数量需在2–6之间');
+  if (o.civilization !== 'random' && !civilizations.some(c => c.id === o.civilization)) throw Error('未知文明');
+  const majors = o.aiCount! + 1;
+  const states=o.cityStateCount!, participants=majors+states;
+  const width = o.size === "compact" ? (participants > 6 ? 24 : 18) : (majors > 4 ? 32 : 24),
+    height = o.size === "compact" ? (participants > 6 ? 16 : 12) : (majors > 4 ? 22 : 16);
   const s: State = {
     version: 3,
     seed: o.seed >>> 0,
@@ -206,18 +251,29 @@ export function create(options: Partial<Options> = {}): State {
         naturalWonder: false,
       });
     }
-  const civOrder = [
-    o.civilization,
-    ...civilizations.map((c) => c.id).filter((id) => id !== o.civilization),
-  ];
-  s.nations = civOrder.map((c) => nation(c));
-  s.nations.push(
-    nation("", "state", "日内瓦"),
-    nation("", "state", "库马西"),
-    nation("", "barbarian", "蛮族"),
-  );
-  for (let a = 0; a < 5; a++)
-    for (let b = a + 1; b < 5; b++)
+  const playerCiv = o.civilization === 'random' ? civilizations[Math.floor(random(s) * civilizations.length)].id : o.civilization;
+  const pool = civilizations.map(c => c.id).filter(id => id !== playerCiv);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(random(s) * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const civOrder = [playerCiv, ...pool, playerCiv, ...pool].slice(0, majors);
+  const repeats = new Map<string, number>(), colors = ['','#cb7868','#73b8bf','#b291c9','#ccad66','#81b38a'];
+  s.nations = civOrder.map((c, owner) => {
+    const n = nation(c), repeat = (repeats.get(c) ?? 0) + 1;
+    repeats.set(c, repeat);
+    if (repeat > 1) n.name += ` ${repeat}`;
+    if (owner) {
+      n.color = colors[owner];
+      n.aiStrategy = (['expansion','science','culture','military'] as const)[Math.floor(random(s) * 4)];
+    }
+    n.tourismAgainst = Array(majors).fill(0);
+    return n;
+  });
+  s.nations.push(...cityStateRoster.slice(0,states).map(row=>nation('', 'state',row.name)),nation('', 'barbarian','蛮族'));
+  for (const n of s.nations) n.tourismAgainst = Array(majors).fill(0);
+  for (let a = 0; a < participants; a++)
+    for (let b = a + 1; b < participants; b++)
       s.relations.push({
         a,
         b,
@@ -228,13 +284,21 @@ export function create(options: Partial<Options> = {}): State {
         delegation: false,
       });
   const starts = [
-    [3, 3],
-    [width - 5, 4],
-    [Math.floor(width * 0.56), height - 4],
-    [4, height - 4],
-    [width - 3, height - 2],
+    [3, 3], [width - 5, 3], [Math.floor(width / 2), 3],
+    [3, height - 4], [width - 5, height - 4], [Math.floor(width / 2), height - 4],
+    [3, Math.floor(height / 2)], [width - 3, Math.floor(height / 2)],
   ];
-  for (let owner = 0; owner < 5; owner++) {
+  if (height < 16) starts.splice(6);
+  if (states!==2) {
+    starts.length=0;
+    for(let r=3;r<height-2;r+=5) for(let q=3;q<width-2;q+=5) starts.push([q,r]);
+  }
+  for (let i = starts.length - 1; i > 0; i--) {
+    const j = Math.floor(random(s) * (i + 1));
+    [starts[i], starts[j]] = [starts[j], starts[i]];
+  }
+  starts.splice(participants);
+  for (let owner = 0; owner < participants; owner++) {
     const [q, r] = starts[owner],
       tile = r * width + q;
     s.tiles[tile].terrain = "grass";
@@ -259,11 +323,11 @@ export function create(options: Partial<Options> = {}): State {
         s.units.find((u) => u.owner === owner)!,
       );
     spawn(s, owner, "warrior", ns[0]);
-    if (owner > 2)
+    if (owner >= majors)
       s.cityStates.push({
         owner,
-        type: owner === 3 ? "science" : "culture",
-        envoys: [0, 0, 0],
+        type: cityStateRoster[owner-majors].type,
+        envoys: Array(majors).fill(0),
       });
   }
   for (const t of s.tiles) {
@@ -285,7 +349,7 @@ export function create(options: Partial<Options> = {}): State {
     if (candidates.length) {
       const { t, i } = candidates[Math.floor(random(s) * candidates.length)];
       t.camp = true;
-      spawn(s, BARBARIAN, "warrior", i);
+      spawn(s, barbarianOwner(s), "warrior", i);
     }
   }
   reveal(s);
@@ -333,22 +397,32 @@ export function visibleTiles(s: State, o = 0) {
   return result;
 }
 export function reveal(s: State) {
-  const seen = visibleTiles(s);
-  for (const i of seen) s.tiles[i].seen = true;
-  const n = s.nations[0];
-  for (const c of s.cities)
-    if (c.owner !== 0 && seen.has(c.tile) && !n.met.includes(c.owner)) {
-      n.met.push(c.owner);
-      if (c.owner < 3) {
-        s.nations[c.owner].met.push(0);
-        boost(s, 0, "writing");
+  for (const owner of civilizedIds(s)) {
+    const seen = visibleTiles(s, owner), n = s.nations[owner];
+    n.explored = [...new Set([...(n.explored ?? []), ...seen])];
+    if (owner === 0) for (const i of seen) s.tiles[i].seen = true;
+    const encountered = new Set([...s.cities, ...s.units].filter(e => e.owner !== owner && s.nations[e.owner].kind !== 'barbarian' && seen.has(e.tile)).map(e => e.owner));
+    for (const other of encountered) {
+      if (!n.met.includes(other)) {
+        const stateOwner=n.kind==='state'?owner:s.nations[other].kind==='state'?other:-1;
+        const major=n.kind==='major'?owner:s.nations[other].kind==='major'?other:-1;
+        if(stateOwner>=0 && major>=0 && !majorIds(s).some(o=>s.nations[o].met.includes(stateOwner))) {
+          const cs=s.cityStates.find(cs=>cs.owner===stateOwner);
+          if(cs) cs.envoys[major]++;
+        }
+        n.met.push(other);
+        if (!s.nations[other].met.includes(owner)) {
+          s.nations[other].met.push(owner);
+          if (n.kind === 'major') boost(s,other,'writing');
+          if (other === 0) event(s,`遇见${n.name}`);
+        }
+        if (s.nations[other].kind === 'major') boost(s, owner, 'writing');
+        if (owner === 0) event(s, `遇见${s.nations[other].name}`);
       }
-      event(s, `遇见${s.nations[c.owner].name}`);
     }
-  if (n.met.filter((o) => o === 3 || o === 4).length >= 3)
-    boost(s, 0, "philosophy");
-  if ([...seen].some((i) => s.tiles[i].naturalWonder))
-    boost(s, 0, "astrology");
+    if (n.met.filter(o => s.nations[o].kind === 'state').length >= 3) boost(s, owner, 'philosophy');
+    if ([...seen].some(i => s.tiles[i].naturalWonder)) boost(s, owner, 'astrology');
+  }
 }
 export function boost(s: State, owner: number, id: string) {
   const n = s.nations[owner];
@@ -405,10 +479,12 @@ export function found(s: State, u: Unit) {
     buildings: n.civ === "rome" && n.kind === "major" ? ["monument"] : [],
     queue: [{ item: "monument", tile: -1 }],
     invested: {},
+    productionCosts: {},
+    districtPlacements: {},
     border: 0,
     focus: "balanced",
     religion: -1,
-    pressure: [0, 0, 0],
+    pressure: Array(majorIds(s).length).fill(0),
     attacked: false,
   };
   if (c.buildings.includes("monument")) c.queue = [];
@@ -457,6 +533,11 @@ export function tileYield(s: State, t: Tile, o = 0): Yield {
     if (t.improvement==='mine') y.production += 1 + (n.tech.includes('apprentice') ? 1 : 0) + (n.tech.includes('industry') ? 1 : 0);
     if (t.improvement==='lumber') y.production += 2;
     if (t.improvement==='oilwell') y.production += 2;
+    if (t.improvement && t.improvement===resources[t.resource]?.improvement && resourceVisible(n,t) && resources[t.resource]?.type==='strategic' && n.pantheon==='crafts') {y.production++;y.faith++;}
+    if (t.improvement==='fishery' && n.pantheon==='sea') y.production++;
+    if (t.improvement==='pasture' && n.pantheon==='sky') y.culture++;
+    if (t.improvement==='plantation' && n.pantheon==='festivals') y.culture++;
+    if (t.improvement==='quarry' && n.pantheon==='stone') y.faith+=2;
     if (t.improvement === "pasture") {
       y.food++;
       y.production++;
@@ -476,10 +557,11 @@ export function workedTiles(s: State, c: City) {
   return s.tiles
     .map((t, i) => ({ t, i }))
     .filter(
-      ({ t }) =>
+      ({ t, i }) =>
         t.territory === c.id &&
         t.city < 0 &&
         !t.district &&
+        !Object.values(c.districtPlacements ?? {}).includes(i) &&
         t.terrain !== "mountain" &&
         distance(t, s.tiles[c.tile]) <= 3,
     )
@@ -506,14 +588,14 @@ export function palaceCity(s: State, owner: number) {
   return s.nations[owner].kind==='major' ? cities.find(c=>c.capital===owner) ?? cities[0] : undefined;
 }
 export function foreignTourists(s: State, owner: number) {
-  return s.nations[owner].tourismAgainst.reduce((total, value, target)=>total + (target===owner ? 0 : Math.floor(value/(200*3*speedMultiplier(s)))),0);
+  return s.nations[owner].tourismAgainst.reduce((total, value, target)=>total + (target===owner ? 0 : Math.floor(value/(200*majorIds(s).length*speedMultiplier(s)))),0);
 }
 export function domesticTourists(s: State, owner: number) {
-  const visiting = s.nations.slice(0,3).reduce((sum,n,target)=>sum+(target===owner ? 0 : Math.floor(n.tourismAgainst[owner]/(200*3*speedMultiplier(s)))),0);
+  const visiting = majorIds(s).reduce((sum,target)=>sum+(target===owner ? 0 : Math.floor(s.nations[target].tourismAgainst[owner]/(200*majorIds(s).length*speedMultiplier(s)))),0);
   return Math.max(0, Math.floor(s.nations[owner].totalCulture/(100*speedMultiplier(s))) - visiting);
 }
 export function cultureTarget(s: State, owner: number) {
-  return Math.max(0, ...s.nations.slice(0,3).map((_,o)=>o===owner ? 0 : domesticTourists(s,o))) + 1;
+  return Math.max(0, ...majorIds(s).map(o=>o===owner ? 0 : domesticTourists(s,o))) + 1;
 }
 export function adjacency(s: State, id: string, tile: number) {
   const t = s.tiles[tile],
@@ -561,6 +643,8 @@ export function amenities(s: State, c: City) {
         .map((t) => t.resource),
     ).size;
   return (
+    (hasSuzerainBonus(s,c.owner,'桑给巴尔') && ownCities(s,c.owner).slice().sort((a,b)=>b.pop-a.pop || a.id-b.id).slice(0,6).some(city=>city.id===c.id) ? 2 : 0) +
+    (cityBelief(s,c,'zen') && specialtyDistricts(c)>=2 ? 1 : 0) +
     (palaceCity(s,c.owner)?.id === c.id ? 2 : 0) +
     Math.floor(
       (luxury * Math.min(4, ownCities(s, c.owner).length)) /
@@ -596,11 +680,13 @@ export function yields(s: State, c: City) {
     const d = info(b),
       tile = s.tiles.findIndex((t) => t.territory === c.id && t.district === b);
     if (tile >= 0 && s.tiles[tile].pillaged) continue;
+    if (['shrine','temple'].includes(b) && !activeReligiousBuildings(s,c).includes(b)) continue;
+    if (['library','university','lab'].includes(b) && s.tiles.some(t=>t.territory===c.id && t.district==='campus' && t.pillaged)) continue;
     for (const [k, v] of Object.entries(d.yields ?? {})) {
       const campusTile=s.tiles.findIndex(t=>t.territory===c.id && t.district==='campus');
       const rational = k==='science' && ['library','university','lab'].includes(b) && hasPolicy(n,'rational')
         ? (c.pop>=15 ? 0.5 : 0) + (campusTile>=0 && adjacency(s,'campus',campusTile)>=4 ? 0.5 : 0) : 0;
-      y[k as keyof Yield] += v * (1+rational);
+      y[k as keyof Yield] += (v + (k==='science' ? scientistBuildingBonus(s,c.owner,b) : 0)) * (1+rational);
     }
     if (tile >= 0) {
       const key =
@@ -619,8 +705,14 @@ export function yields(s: State, c: City) {
         || b==='commercial' && (hasPolicy(n,'towncharters') || hasPolicy(n,'economicunion'))
         || b==='harbor' && (hasPolicy(n,'navalinfra') || hasPolicy(n,'economicunion'));
       y[key] += adjacency(s, b, tile) * (double ? 2 : 1);
+      if (b==='holy' && cityBelief(s,c,'work')) y.production+=adjacency(s,b,tile)*(double?2:1);
+      if (b==='holy' && c.hildegard) y.science+=adjacency(s,b,tile)*(double?2:1);
     }
   }
+  const religiousBuildings=activeReligiousBuildings(s,c);
+  if(cityBelief(s,c,'choral')) y.culture+=religiousBuildings.reduce((v,id)=>v+(info(id).yields?.faith??0),0);
+  if(cityBelief(s,c,'feed')) y.food+=religiousBuildings.length*3;
+  if(cityBelief(s,c,'divine')) y.faith+=c.buildings.filter(id=>info(id).kind==='wonder').length*4;
   if (n.government==='autocracy' && hasPalace) for (const key of ['food','production','gold','science','culture','faith'] as const) y[key]++;
   if (hasPolicy(n,'godking') && hasPalace) {y.faith++;y.gold++;}
   if (n.government==='digital') y.culture+=specialtyDistricts(c)*2;
@@ -639,6 +731,8 @@ export function yields(s: State, c: City) {
     const source=s.cities.find(city=>city.id===route.from);
     if (source && democraticTrade(s,source,c)) {y.food+=4;y.production+=4;}
   }
+  const csYield=cityStateYields(s,c);
+  for(const k of Object.keys(y) as (keyof Yield)[]) y[k]+=csYield[k];
   const happy = amenities(s, c) - Math.floor((c.pop - 1) / 2),
     mult =
       happy >= 5 ? 1.2 : happy >= 3 ? 1.1 : happy <= -5 ? 0.7 : happy <= -3 ? 0.8 : happy < 0 ? 0.9 : 1;
@@ -655,9 +749,9 @@ export function yields(s: State, c: City) {
     // Governor-dependent production is not granted until governors exist.
     y.science *= 1.1;
   }
-  if (n.pantheon === "fertility") y.food += 1;
-  if (n.pantheon === "crafts") y.production += 1;
+  if (hasSuzerainBonus(s,c.owner,'日内瓦') && !civilizedIds(s).some(owner=>owner!==c.owner && atWar(s,c.owner,owner))) y.science*=1.15;
   let housing =
+    (cityBelief(s,c,'feed') ? religiousBuildings.length*2 : 0) +
     baseHousing(s, c) + (hasPalace ? 1 : 0) +
     c.buildings.reduce((v, b) => v + (info(b).housing ?? 0), 0) +
     (n.government==='republic' && hasDistrict(c) ? 1 : 0) +
@@ -673,7 +767,8 @@ export function yields(s: State, c: City) {
   const growing =
     Math.max(0, y.food - c.pop * 2) *
     (housing <= c.pop ? 0.25 : housing < c.pop + 2 ? 0.5 : 1) *
-    (happy >= 5 ? 1.2 : happy >= 3 ? 1.1 : happy <= -5 ? 0 : happy <= -3 ? 0.7 : happy < 0 ? 0.85 : 1);
+    (happy >= 5 ? 1.2 : happy >= 3 ? 1.1 : happy <= -5 ? 0 : happy <= -3 ? 0.7 : happy < 0 ? 0.85 : 1) *
+    (n.pantheon==='fertility'?1.1:1);
   return {
     ...y,
     housing,
@@ -689,21 +784,19 @@ export function totals(s: State, o = 0) {
     const v = yields(s, c);
     for (const k of Object.keys(y) as (keyof Yield)[]) y[k] += v[k];
   }
+  const founder=founderYield(s,o);
+  for(const k of Object.keys(y) as (keyof Yield)[]) y[k]+=founder[k];
   const n=s.nations[o], discount=hasPolicy(n,'levee')?2:hasPolicy(n,'conscription')?1:0;
   y.gold -= s.units.filter(u=>u.owner===o).reduce((v,u)=>v+Math.max(0,(info(u.type).maintenance??0)-discount),0);
-  for (const cs of s.cityStates) {
-    const env = cs.envoys[o] ?? 0,
-      key = cs.type === "science" ? "science" : "culture";
-    if (env >= 1 && ownCities(s, cs.owner).length)
-      y[key] +=
-        (env >= 6 ? 6 : env >= 3 ? 3 : 1);
-  }
   return y;
 }
 export function placementReason(s: State, c: City, id: string, tile: number) {
   const t = s.tiles[tile];
   if (!t || t.territory !== c.id) return "需要本城领土";
   if (t.city >= 0 || t.district) return "地块已被占用";
+  const locked=c.districtPlacements?.[id];
+  if(locked!==undefined && locked!==tile) return '区域已放置，不能更换地块';
+  if(s.cities.some(city=>Object.entries(city.districtPlacements??{}).some(([kind,at])=>at===tile && (city.id!==c.id || kind!==id)))) return '地块已有区域建设';
   if (s.cities.some((other) => other.queue.some((j) => j.tile === tile)))
     return "地块已有建设计划";
   if (distance(t, s.tiles[c.tile]) > 3) return "离城市中心不能超过三格";
@@ -728,6 +821,7 @@ export function buildReason(s: State, c: City, id: string, queued = false) {
   const d = info(id),
     n = s.nations[c.owner];
   if (!d) return "未知项目";
+  if (d.greatPerson) return '只能在伟人面板招募';
   if (!active(s)) return "游戏已结束";
   if (d.unlock && !n.tech.includes(d.unlock) && !n.civic.includes(d.unlock))
     return `需要${[...techs, ...civics].find((t) => t.id === d.unlock)?.name}`;
@@ -755,21 +849,11 @@ export function buildReason(s: State, c: City, id: string, queued = false) {
     return "需要沿海城市";
   if (id === "watermill" && !s.tiles[c.tile].river) return "需要临河城市";
   if (id === "missionary" && !n.religion) return "先创立宗教";
+  if (id === 'missionary' && c.religion !== c.owner) return '需要本城信奉你的宗教';
   if (d.kind === "wonder" && s.cities.some((c) => c.buildings.includes(id)))
     return "已被其他城市建成";
   if (d.kind === "district" && !["spaceport", "neighborhood", "aqueduct", "dam", "canal"].includes(id)) {
-    const count =
-      c.buildings.filter(
-        (b) =>
-          info(b).kind === "district" &&
-          !["spaceport", "neighborhood", "aqueduct", "dam", "canal"].includes(b),
-      ).length +
-      c.queue.filter(
-        (j) =>
-          j.item !== id &&
-          info(j.item).kind === "district" &&
-          !["spaceport", "neighborhood", "aqueduct", "dam", "canal"].includes(j.item),
-      ).length;
+    const count = new Set([...c.buildings,...Object.keys(c.districtPlacements??{}),...c.queue.map(j=>j.item)].filter(b=>b!==id && info(b).kind==='district' && !['spaceport','neighborhood','aqueduct','dam','canal'].includes(b))).size;
     if (count >= 1 + Math.floor((c.pop - 1) / 3))
       return "人口不足以支持更多区域";
   }
@@ -784,7 +868,16 @@ export function enqueue(s: State, c: City, id: string, tile = -1) {
     placementReason(s, c, id, tile)
   )
     return false;
-  c.queue.push({ item: id, tile });
+  const job = { item: id, tile }, key = jobKey(job);
+  c.productionCosts ??= {};
+  // Removing/reordering a queue does not erase the investment or its locked price.
+  c.productionCosts[key] ??= Object.hasOwn(c.invested,key)
+    ? Math.round(d.cost * speedMultiplier(s)) : cost(s,id,c);
+  if(d.kind==='district') {
+    c.districtPlacements ??={};c.districtPlacements[id]=tile;
+    s.tiles[tile].improvement='';
+  }
+  c.queue.push(job);
   return true;
 }
 export const jobKey = (j: Job) => `${j.item}:${j.tile}`;
@@ -793,6 +886,7 @@ export function productionRate(s: State, c: City, id: string) {
     d = info(id);
   let bonus=0;
   if (d.kind==='wonder') {
+    if (hasSuzerainBonus(s,c.owner,'布鲁塞尔')) bonus+=0.15;
     if (n.government==='autocracy') bonus+=0.1;
     if (hasPolicy(n,'skyscrapers') || hasPolicy(n,'gothic') && (d.era??99)<=3 || hasPolicy(n,'labor') && (d.era??99)<=1) bonus+=0.15;
   }
@@ -808,7 +902,10 @@ export function productionRate(s: State, c: City, id: string) {
   }
   if (id==='walls' && hasPolicy(n,'limes')) bonus+=1;
   if (n.civ==='egypt' && ['wonder','district'].includes(d.kind) && s.tiles[c.queue.find(j=>j.item===id)?.tile ?? -1]?.river) bonus+=0.15;
-  return yields(s,c).production*(1+bonus);
+  const csProduction=d.kind==='unit'?envoyBonus(s,c,'military'):['wonder','building','district'].includes(d.kind)?envoyBonus(s,c,'industrial'):0;
+  const output=yields(s,c), happy=output.happy;
+  const mult=happy>=5?1.2:happy>=3?1.1:happy<=-5?0.7:happy<=-3?0.8:happy<0?0.9:1;
+  return (output.production+csProduction*mult)*(1+bonus);
 }
 export function spawnTile(s: State, c: City, d: Item) {
   return [
@@ -836,6 +933,7 @@ function complete(s: State, c: City, j: Job) {
     t.district = j.item;
     t.improvement = "";
     t.pillaged = false;
+    if(d.kind==='district') delete c.districtPlacements?.[j.item];
   }
   if (d.kind === "unit") {
     const at = spawnTile(s, c, d);
@@ -874,7 +972,8 @@ function complete(s: State, c: City, j: Job) {
 }
 export function purchasePrice(s: State, c: City, id: string) {
   const d=info(id),n=s.nations[c.owner];
-  return Math.round(cost(s,id)*(d.faithBuy?2:4)*(d.faithBuy && n.government==='theocracy'?0.85:!d.faithBuy && n.government==='democracy'?0.75:1));
+  const base = d.faithBuy ? (d.faithCost ?? d.cost * 2) * speedMultiplier(s) : cost(s,id) * 4;
+  return Math.round(base*(d.faithBuy && n.government==='theocracy'?0.85:!d.faithBuy && n.government==='democracy'?0.75:1));
 }
 export function purchase(s: State, c: City, id: string) {
   const d = info(id),
@@ -924,7 +1023,7 @@ export function advance(s: State, o: number, civic: boolean, amount: number) {
     list = civic ? civics : techs;
   for (let limit = 0; limit < list.length; limit++) {
     if (!researchAvailable(n, n[key], civic))
-      n[key] = list.find((d) => researchAvailable(n, d.id, civic))?.id ?? "";
+      n[key] = o ? aiResearch(s, o, civic) : list.find((d) => researchAvailable(n, d.id, civic))?.id ?? "";
     const d = list.find((d) => d.id === n[key]);
     if (!d) return;
     n.researchProgress[d.id] = (n.researchProgress[d.id] ?? 0) + amount;
@@ -934,24 +1033,26 @@ export function advance(s: State, o: number, civic: boolean, amount: number) {
     amount = n.researchProgress[d.id] - requirement;
     n.researchProgress[d.id] = requirement;
     done.push(d.id);
+    n.districtDiscountBasis = ownCities(s,o).reduce((v,c) => v + specialtyDistricts(c), 0);
     if (civic) {
       n.policies=n.policies.map(id=>id && policyAvailable(n,id)?id:null);
-      n.envoys += d.id === "diplomatic" ? 2 : 1;
+      n.envoys += civicEnvoyRewards[d.sourceId ?? ''] ?? 0;
       n.policyFree = true;
       if (d.id === "laws" && !n.policies.some(Boolean))
         n.policies = ["discipline", "planning"];
     }
     if (o === 0)
       event(s, `${civic ? "市政" : "科技"}完成：${d.name}`, "research");
-    n[key] = list.find((d) => researchAvailable(n, d.id, civic))?.id ?? "";
+    n[key] = o ? aiResearch(s, o, civic) : list.find((d) => researchAvailable(n, d.id, civic))?.id ?? "";
   }
 }
 export function configureGovernment(
   s: State,
   id: string,
   chosen: (string | null)[],
+  owner = 0,
 ) {
-  const n = s.nations[0],
+  const n = s.nations[owner],
     g = governments.find((g) => g.id === id);
   if (
     !g ||
@@ -1127,13 +1228,13 @@ export function strength(
   return (
     ((!defending && info(u.type).range ? info(u.type).bombardStrength ?? info(u.type).rangedStrength : info(u.type).strength) ?? 0) +
     u.level * 4 +
-    (hasPolicy(n, "discipline") && against === BARBARIAN ? 5 : 0) +
+    (hasPolicy(n, "discipline") && against === barbarianOwner(s) ? 5 : 0) +
     (n.government === "oligarchy" && ['melee','anticavalry','naval'].includes(info(u.type).unitClass??'') ? 4 : 0) +
     (n.government==='fascism' ? 5 : n.government==='digital' ? -3 : 0) -
     (info(u.type).domain !== "sea" && s.tiles[u.tile].terrain === "water"
       ? 10
       : 0) -
-    (100 - u.hp) * 0.05 +
+    Math.round((100 - u.hp) / 10) +
     (defending &&
     (s.tiles[u.tile].terrain === "hill" || s.tiles[u.tile].terrain === "forest")
       ? 3
@@ -1175,35 +1276,38 @@ export function combatPreview(s: State, u: Unit, i: number) {
     defense = enemy
       ? strength(s, enemy, u.owner, true)
       : 25 + city!.pop + era(s.nations[owner]) * 3 + (city!.walls > 0 ? 12 : 0);
-  const damage = Math.min(
-    90,
-    Math.max(8, Math.round(30 * Math.exp((attack - defense) / 25))),
-  );
+  const base = 30 * Math.exp((attack - defense) / 25);
+  const damage = Math.max(1, Math.round(base));
+  const damageMin = Math.max(1, Math.round(base * 0.8)), damageMax = Math.max(1, Math.round(base * 1.2));
   const retaliation =
     info(u.type).range || (enemy && !info(enemy.type).strength)
       ? 0
-      : Math.min(
-          75,
-          Math.max(8, Math.round(30 * Math.exp((defense - attack) / 25))),
-        );
-  return { enemy, city, owner, damage, retaliation, attack, defense };
+      : Math.max(1, Math.round(30 * Math.exp((defense - attack) / 25)));
+  const retaliationBase = retaliation ? 30 * Math.exp((defense - attack) / 25) : 0;
+  return { enemy, city, owner, damage, damageMin, damageMax, retaliation,
+    retaliationMin: retaliation ? Math.max(1,Math.round(retaliationBase * 0.8)) : 0,
+    retaliationMax: retaliation ? Math.max(1,Math.round(retaliationBase * 1.2)) : 0, attack, defense };
 }
 export function attack(s: State, u: Unit, i: number) {
   if (!active(s)) return false;
   const p = combatPreview(s, u, i);
   if (!p) return false;
+  // Preview is read-only. Only a legal attack consumes the persisted RNG sequence.
+  p.damage = Math.max(1,Math.round(30 * Math.exp((p.attack-p.defense)/25) * (0.8 + random(s)*0.4)));
+  if (p.retaliation) p.retaliation = Math.max(1,Math.round(30 * Math.exp((p.defense-p.attack)/25) * (0.8 + random(s)*0.4)));
   u.hp -= p.retaliation;
-  u.xp += 2 * (1+(s.nations[u.owner].government==='oligarchy'?0.2:0)) * (u.type==='scout' && hasPolicy(s.nations[u.owner],'survey')?2:1);
+  u.xp += 2 * (1+(s.nations[u.owner].government==='oligarchy'?0.2:0)) * (u.type==='scout' && hasPolicy(s.nations[u.owner],'survey')?2:1) * (hasSuzerainBonus(s,u.owner,'喀布尔')?2:1);
   u.moves = 0;
   u.acted = true;
   u.fortified = false;
   if (p.enemy) {
     p.enemy.hp -= p.damage;
+    if(displaceGreatPerson(s,p.enemy) && !info(u.type).range && u.hp>0 && !p.city) u.tile=i;
     if (p.enemy.hp <= 0) {
       s.units = s.units.filter((v) => v.id !== p.enemy!.id);
       s.nations[u.owner].kills++;
       if (u.type==='slinger') boost(s, u.owner, "archery");
-      if (p.enemy.owner===BARBARIAN) {
+      if (p.enemy.owner===barbarianOwner(s)) {
         s.nations[u.owner].barbarianKills++;
         if (s.nations[u.owner].barbarianKills>=3) boost(s,u.owner,'bronze');
       }
@@ -1230,7 +1334,7 @@ export function attack(s: State, u: Unit, i: number) {
       if (info(u.type).domain !== "sea") u.tile = i;
       s.routes = s.routes.filter((r) => r.from !== c.id && r.to !== c.id);
       event(s, `${s.nations[u.owner].name}攻占${c.name}`, "combat");
-      if (old < 5 && u.owner < 5) relation(s, old, u.owner).opinion -= 20;
+      if (old !== barbarianOwner(s) && u.owner !== barbarianOwner(s)) relation(s, old, u.owner).opinion -= 20;
     }
   }
   if (u.owner === 0)
@@ -1244,6 +1348,13 @@ export function attack(s: State, u: Unit, i: number) {
   checkVictory(s);
   return true;
 }
+function displaceGreatPerson(s:State,u:Unit) {
+  if(u.hp>0 || !info(u.type).greatPerson) return false;
+  const refuge=ownCities(s,u.owner).slice().sort((a,b)=>distance(s.tiles[a.tile],s.tiles[u.tile])-distance(s.tiles[b.tile],s.tiles[u.tile])).map(c=>spawnTile(s,c,info(u.type))).find(at=>at!==undefined);
+  if(refuge===undefined) return false;
+  u.tile=refuge;u.hp=100;u.moves=0;
+  return true;
+}
 export function cityAttack(s: State, c: City, i: number) {
   const u = s.units.find((u) => u.tile === i && atWar(s, u.owner, c.owner));
   if (
@@ -1255,11 +1366,12 @@ export function cityAttack(s: State, c: City, i: number) {
   )
     return false;
   u.hp -= Math.max(
-    10,
+    1,
     Math.round(
-      30 * Math.exp((30 + c.pop - strength(s, u, c.owner, true)) / 25),
+      30 * Math.exp((30 + c.pop - strength(s, u, c.owner, true)) / 25) * (0.8 + random(s) * 0.4),
     ),
   );
+  displaceGreatPerson(s,u);
   c.attacked = true;
   s.units = s.units.filter((u) => u.hp > 0);
   return true;
@@ -1456,12 +1568,15 @@ export function tradeYield(s: State, from: City, to: City) {
   if (domestic && hasPolicy(n,'collectivization')) {y.food+=4;y.production+=2;}
   if (!domestic && hasPolicy(n,'tradeconfederation')) {y.science++;y.culture++;}
   if (democraticTrade(s,from,to)) {y.food+=4;y.production+=4;}
+  if (!domestic && cityBelief(s,from,'community') && from.buildings.includes('holy')) y.gold+=2*(1+activeReligiousBuildings(s,from).length);
+  if (s.nations[to.owner].kind==='state' && hasSuzerainBonus(s,from.owner,'库马西')) {
+    y.culture+=specialtyDistricts(from)*2;y.gold+=specialtyDistricts(from);
+  }
   return y;
 }
 export function democraticTrade(s: State, from: City, to: City) {
   const cs=s.cityStates.find(cs=>cs.owner===to.owner);
-  if (s.nations[from.owner].government!=='democracy' || !cs || (cs.envoys[from.owner]??0)<3) return false;
-  return cs.envoys.every((count,owner)=>owner===from.owner || count<cs.envoys[from.owner]);
+  return s.nations[from.owner].government==='democracy' && !!cs && suzerain(s,cs)===from.owner;
 }
 export function tradeTargets(s: State, u: Unit) {
   const source = s.cities.find((c) => c.tile === u.tile && c.owner === u.owner);
@@ -1527,6 +1642,19 @@ export function establishTrade(s: State, u: Unit, to: number) {
   if (!u.owner) event(s, `${from.name} → ${c.name}贸易路线开始`);
   return true;
 }
+function declareWar(s: State, attacker: number, target: number) {
+  const r = relation(s,attacker,target);
+  if (!active(s) || !r || r.status !== 'peace' || s.turn < r.until) return false;
+  r.status='war';r.since=s.turn;r.opinion-=30;
+  const cs=s.cityStates.find(cs=>cs.owner===target);
+  if(cs && s.nations[attacker].kind==='major') cs.envoys[attacker]=0;
+  if (s.nations[target].kind === 'major') boost(s,target,'defensivetactics');
+  s.routes=s.routes.filter(route => {
+    const a=s.cities.find(c=>c.id===route.from),b=s.cities.find(c=>c.id===route.to);
+    return !!a && !!b && !atWar(s,a.owner,b.owner);
+  });
+  return true;
+}
 export function diplomacy(
   s: State,
   target: number,
@@ -1536,15 +1664,7 @@ export function diplomacy(
     r = relation(s, 0, target);
   if (!active(s) || !r || !n.met.includes(target)) return false;
   if (action === "war") {
-    if (r.status !== "peace" || s.turn < r.until) return false;
-    r.status = "war";
-    r.since = s.turn;
-    r.opinion -= 30;
-    s.routes = s.routes.filter((route) => {
-      const a = s.cities.find((c) => c.id === route.from),
-        b = s.cities.find((c) => c.id === route.to);
-      return !!a && !!b && !atWar(s, a.owner, b.owner);
-    });
+    if (!declareWar(s,0,target)) return false;
     event(s, `向${s.nations[target].name}宣战`, "combat");
   }
   if (action === "peace") {
@@ -1570,45 +1690,74 @@ export function diplomacy(
   }
   return true;
 }
-export function sendEnvoy(s: State, target: number) {
+export function sendEnvoy(s: State, target: number, owner=0) {
   const cs = s.cityStates.find((c) => c.owner === target),
-    n = s.nations[0];
+    n = s.nations[owner];
   if (
     !active(s) ||
     !cs ||
     !n.envoys ||
     !n.met.includes(target) ||
-    atWar(s, 0, target)
+    atWar(s, owner, target) || !ownCities(s,target).length || n.kind!=='major'
   )
     return false;
   n.envoys--;
-  cs.envoys[0]+=hasPolicy(n,'league') && cs.envoys[0]===0?2:1;
+  cs.envoys[owner]+=hasPolicy(n,'league') && cs.envoys[owner]===0?2:1;
   return true;
 }
-export function pantheon(s: State, id: string) {
-  const n = s.nations[0];
+export function pantheon(s: State, id: string, owner=0) {
+  const n = s.nations[owner];
   if (
     !active(s) ||
     n.pantheon ||
     n.faith < 25 ||
-    !["fertility", "crafts"].includes(id)
+    n.kind!=='major' || !pantheons.some(p=>p.id===id) || s.nations.some(other=>other.pantheon===id)
   )
     return false;
   n.faith -= 25;
   n.pantheon = id;
-  boost(s,0,'mysticism');
+  if(id==='fertility') {n.pantheonGift=true;deliverPantheonGift(s,owner);}
+  boost(s,owner,'mysticism');
   return true;
 }
-export function foundReligion(s: State, o = 0) {
-  const n = s.nations[o],
-    city = ownCities(s, o).find((c) => c.buildings.includes("holy"));
-  if (!active(s) || n.religion || n.great.prophet < 40 || n.faith < 60 || !city)
-    return false;
-  n.great.prophet -= 40;
-  n.faith -= 60;
-  n.religion = ["日月之道", "永恒之火", "尼罗河信仰"][o];
-  city.pressure[o] += 100;
-  city.religion = o;
+function deliverPantheonGift(s:State,owner:number) {
+  const n=s.nations[owner],capital=palaceCity(s,owner);
+  if (!n.pantheonGift || !capital) return;
+  const at=spawnTile(s,capital,info('builder'));
+  if(at!==undefined) {spawn(s,owner,'builder',at);n.pantheonGift=false;}
+}
+export const religionLimit=(s:State)=>Math.min(majorIds(s).length,s.options.size==='compact'?3:5);
+export const prophetCost=(s:State)=>Math.ceil(60*speedMultiplier(s));
+export function recruitProphet(s:State,owner=0) {
+  const n=s.nations[owner],city=ownCities(s,owner).find(c=>c.buildings.includes('holy'));
+  const reserved=majorIds(s).filter(o=>s.nations[o].religion || s.nations[o].prophetRecruited).length;
+  if(!active(s) || n.kind!=='major' || n.religion || n.prophetRecruited || reserved>=religionLimit(s) || n.great.prophet<prophetCost(s) || !city) return false;
+  const holy=s.tiles.findIndex((t,i)=>t.territory===city.id && t.district==='holy' && !s.units.some(u=>u.tile===i));
+  const at=holy>=0 ? holy : spawnTile(s,city,info('prophet'));
+  if(at===undefined) return false;
+  n.great.prophet-=prophetCost(s);n.prophetRecruited=true;n.greatPeopleEarned=(n.greatPeopleEarned??0)+1;
+  spawn(s,owner,'prophet',at);
+  if(!owner) event(s,'大预言家已招募。前往圣地创立宗教。');
+  return true;
+}
+export function religionCity(s:State,owner=0) {
+  return ownCities(s,owner).find(c=>c.buildings.includes('holy') && s.units.some(u=>u.owner===owner && u.type==='prophet' && u.moves>0 &&
+    (s.tiles[u.tile].territory===c.id && s.tiles[u.tile].district==='holy' || u.tile===c.tile && !s.tiles.some(t=>t.territory===c.id && t.district==='holy'))));
+}
+export function foundReligion(s: State, o = 0, chosen?: string[]) {
+  const n=s.nations[o],city=religionCity(s,o);
+  const selection=chosen ?? ['follower','founder'].map(type=>availableBeliefs(s,type as 'follower'|'founder')[0]?.id??'');
+  const allowed=selection.length===2 && new Set(selection).size===2 && selection.filter(id=>beliefs.some(b=>b.id===id&&b.type==='follower')).length===1 &&
+    selection.every(id=>beliefs.some(b=>b.id===id) && !s.nations.some(other=>other.beliefs?.includes(id)));
+  if(!active(s) || n.kind!=='major' || n.religion || !n.pantheon || !city || !allowed || majorIds(s).filter(o=>s.nations[o].religion).length>=religionLimit(s)) return false;
+  const prophet=s.units.find(u=>u.owner===o && u.type==='prophet' && u.moves>0 && (s.tiles[u.tile].territory===city.id && s.tiles[u.tile].district==='holy' || u.tile===city.tile));
+  if(!prophet) return false;
+  s.units=s.units.filter(u=>u.id!==prophet.id);n.prophetRecruited=true;n.beliefs=[...selection];
+  n.religion = n.name !== civilizations.find(c=>c.id===n.civ)?.name
+    ? `${n.name}信仰` : ({china:'日月之道',rome:'永恒之火',egypt:'尼罗河信仰'} as Record<string,string>)[n.civ] ?? `${n.name}信仰`;
+  for(const own of ownCities(s,o).filter(c=>c.id===city.id || c.buildings.includes('holy'))) {
+    own.pressure[o]=Math.max(100,own.pressure.reduce((a,b)=>a+b,0)*2);own.religion=o;
+  }
   boost(s, o, "theology");
   if (!o) event(s, `${n.religion}创立`);
   return true;
@@ -1625,7 +1774,7 @@ export function spread(s: State, u: Unit, to: number) {
     distance(s.tiles[u.tile], s.tiles[c.tile]) > 1
   )
     return false;
-  for (let i = 0; i < 3; i++) if (i !== u.owner) c.pressure[i] *= 0.65;
+  for (const i of majorIds(s)) if (i !== u.owner) c.pressure[i] *= 0.65;
   c.pressure[u.owner] += 70;
   updateReligion(c);
   u.charges--;
@@ -1639,51 +1788,116 @@ function updateReligion(c: City) {
     max = Math.max(...c.pressure);
   c.religion = total > 30 && max >= total * 0.5 ? c.pressure.indexOf(max) : -1;
 }
-export function recruit(s: State, kind: "science" | "culture") {
-  const n = s.nations[0];
-  if (!active(s) || n.great[kind] < 80 || !ownCities(s).length) return false;
-  n.great[kind] -= 80;
-  if (kind === "science") {
-    boost(s,0,'education');
-    advance(s, 0, false, 100);
-    event(s, "大科学家贡献 100 科技", "research");
-  } else {
-    boost(s,0,'humanism');
-    n.tourism += 80;
-    advance(s, 0, true, 60);
-    event(s, "大艺术家带来 80 旅游和 60 文化", "research");
-  }
+export function recruitScientist(s:State,owner=0) {
+  const n=s.nations[owner],person=currentScientist(s),price=scientistCost(s);
+  if(!active(s) || !n || n.kind!=='major' || !person || n.great.science<price) return false;
+  const city=palaceCity(s,owner)??ownCities(s,owner)[0];
+  if(!city) return false;
+  const at=spawnTile(s,city,info('scientist'));
+  if(at===undefined) return false;
+  const u=spawn(s,owner,'scientist',at);u.person=person.id;u.charges=1;
+  n.great.science-=price;n.greatPeopleEarned=(n.greatPeopleEarned??0)+1;
+  (s.scientistRecruits??=[]).push({person:person.id,owner});
+  boost(s,owner,'education');checkBoosts(s,owner);
+  event(s,`${n.name}招募了${person.name}`,'research');
   return true;
 }
+export function scientistReason(s:State,u:Unit) {
+  const p=scientistById(u.person),t=s.tiles[u.tile];
+  if(!active(s)) return '对局已结束';
+  if(!s.units.includes(u) || u.type!=='scientist' || !p || u.charges!==1) return '不是可用的科学家';
+  if(!u.moves) return '没有剩余移动力';
+  if(t.terrain==='water' || t.terrain==='mountain') return '需要陆地';
+  if(p.site==='land') return '';
+  if(t.owner!==u.owner || t.district!==p.site || t.pillaged || !s.cities.some(c=>c.id===t.territory && c.owner===u.owner && c.buildings.includes(p.site))) return `前往己方未被劫掠的${p.site==='holy'?'圣地':'学院'}`;
+  return '';
+}
+function randomResearchBoosts(s:State,owner:number,count:number,eras:number[],civic=false) {
+  const n=s.nations[owner],list=(civic?civics:techs).filter(d=>d.boost && eras.includes(d.era??0) && !n.boosts.includes(d.id) && !(civic?n.civic:n.tech).includes(d.id));
+  for(let k=0;k<count && list.length;k++) {
+    const i=Math.floor(random(s)*list.length),[d]=list.splice(i,1);boost(s,owner,d.id);
+  }
+}
+function scientistFreeBuilding(c:City,id:string) {
+  if(!c.buildings.includes(id)) c.buildings.push(id);
+  // A free building must not leave an already-completed production item queued.
+  c.queue=c.queue.filter(j=>j.item!==id);
+  delete c.invested[`${id}:-1`];delete c.productionCosts?.[`${id}:-1`];
+}
+export function activateScientist(s:State,u:Unit) {
+  if(scientistReason(s,u)) return false;
+  const p=scientistById(u.person)!,n=s.nations[u.owner],c=s.cities.find(c=>c.id===s.tiles[u.tile].territory);
+  switch(p.id) {
+    case 'euclid':boost(s,u.owner,'mathematics');randomResearchBoosts(s,u.owner,1,[2]);break;
+    case 'aryabhata':randomResearchBoosts(s,u.owner,3,[1,2]);break;
+    case 'hypatia':scientistFreeBuilding(c!,'library');break;
+    case 'hildegard_of_bingen':c!.hildegard=true;n.faith+=100*speedMultiplier(s);break;
+    case 'omar_khayyam':randomResearchBoosts(s,u.owner,2,[2,3]);randomResearchBoosts(s,u.owner,1,[2,3],true);break;
+    case 'abu_al_qasim_al_zahrawi':randomResearchBoosts(s,u.owner,1,[2,3]);break;
+    case 'galileo_galilei':advance(s,u.owner,false,250*speedMultiplier(s)*neighbors(s,u.tile).filter(i=>s.tiles[i].terrain==='mountain').length);break;
+    case 'isaac_newton':scientistFreeBuilding(c!,'library');scientistFreeBuilding(c!,'university');break;
+    case 'emilie_du_chatelet':randomResearchBoosts(s,u.owner,3,[3,4]);break;
+  }
+  (n.scientistEffects??=[]).push(p.id);
+  s.units=s.units.filter(v=>v.id!==u.id);
+  checkBoosts(s,u.owner);event(s,`${p.name}已使用能力`,'research');
+  return true;
+}
+export function recruitArtist(s: State) {
+  const n = s.nations[0];
+  if (!active(s) || n.great.culture < 80 || !ownCities(s).length) return false;
+  n.great.culture -= 80;
+  n.greatPeopleEarned = (n.greatPeopleEarned ?? 0) + 1;
+  boost(s,0,'humanism');
+  n.tourism += 80;
+  advance(s, 0, true, 60);
+  event(s, "大艺术家带来 80 旅游和 60 文化", "research");
+  checkBoosts(s,0);
+  return true;
+}
+export function scoreBreakdown(s: State, o: number) {
+  const n = s.nations[o], cities = ownCities(s,o);
+  return {
+    civics: n.civic.length * 3,
+    empire: cities.reduce((v,c) => v + 5 + c.pop + 2 /* city-center district */ + Number(palaceCity(s,o)?.id===c.id) + c.buildings.reduce((b,id) => b + (info(id).kind==='district' ? 2 : info(id).kind==='building' ? 1 : 0),0),0),
+    greatPeople: (n.greatPeopleEarned ?? 0) * 5,
+    religion: n.religion ? 10 + s.cities.filter(c => c.owner!==o && c.religion===o).length * 2 : 0,
+    technologies: n.tech.length * 2,
+    wonders: cities.reduce((v,c) => v + c.buildings.filter(id=>info(id).kind==='wonder').length * 15,0),
+    era: n.eraScore ?? 0,
+  };
+}
 export function score(s: State, o: number) {
-  const n = s.nations[o];
-  return (
-    n.tech.length * 5 +
-    n.civic.length * 5 +
-    ownCities(s, o).reduce(
-      (v, c) =>
-        v +
-        20 +
-        c.pop * 3 +
-        c.buildings.filter((b) => info(b).kind === "wonder").length * 15,
-      0,
-    )
-  );
+  return Object.values(scoreBreakdown(s,o)).reduce((v,x)=>v+x,0);
+}
+export function scoreRanking(s: State) {
+  const tie = (o: number) => {
+    const n=s.nations[o], cs=ownCities(s,o), breakdown=scoreBreakdown(s,o);
+    return [score(s,o), n.civic.length, cs.length,
+      cs.reduce((v,c)=>v+1+c.buildings.filter(id=>info(id).kind==='district').length,0),
+      cs.reduce((v,c)=>v+c.pop,0), n.greatPeopleEarned??0, breakdown.religion,
+      n.tech.length, breakdown.wonders];
+  };
+  return majorIds(s).sort((a,b) => {
+    const av=tie(a),bv=tie(b);
+    for (let i=0;i<av.length;i++) if (av[i]!==bv[i]) return bv[i]-av[i];
+    return a-b;
+  });
 }
 export function checkVictory(s: State) {
   if (s.winner) return;
   const capitals = s.cities.filter((c) => c.capital >= 0);
-  for (let o = 0; o < 3; o++) {
+  for (const o of majorIds(s)) {
     const n = s.nations[o],
       cities = ownCities(s, o);
     let type: "science" | "culture" | "domination" | "religion" | null = null;
     if (n.space.launched && n.space.distance >= 50) type = "science";
     else if (foreignTourists(s,o) >= cultureTarget(s,o)) type = "culture";
-    else if (capitals.length === 3 && capitals.every((c) => c.owner === o))
+    else if (capitals.length === majorIds(s).length && capitals.every((c) => c.owner === o))
       type = "domination";
     else if (
       n.religion &&
-      [0, 1, 2].every((owner) => {
+      majorIds(s).every((owner) => {
         const cs = ownCities(s, owner);
         return (
           !cs.length ||
@@ -1704,8 +1918,7 @@ export function checkVictory(s: State) {
   )
     s.winner = { owner: 0, type: "defeat" };
   if (s.turn >= turnLimit(s) && !s.winner) {
-    const scores = [0, 1, 2].map((o) => score(s, o));
-    s.winner = { owner: scores.indexOf(Math.max(...scores)), type: "score" };
+    s.winner = { owner: scoreRanking(s)[0], type: "score" };
   }
 }
 export function pending(s: State) {
@@ -1718,17 +1931,24 @@ export function pending(s: State) {
 export function nextTurn(s: State) {
   if (!active(s)) return;
   // Player commands happen before this. AI gets the same movement/production rules.
-  for (let o = 1; o < 5; o++) computer(s, o);
+  for (const o of civilizedIds(s).filter(o => o !== 0)) computerTurn(s, o);
   barbarians(s);
-  for (let o = 0; o < 5; o++) {
+  for (const o of civilizedIds(s)) {
     const n = s.nations[o],
       t = totals(s, o);
     n.gold = Math.max(0, n.gold + t.gold);
     n.faith += t.faith;
     n.tourism += t.tourism;
     n.totalCulture += t.culture;
+    deliverPantheonGift(s,o);
+    if (n.kind==='major') {
+      const rate=influenceRate(n);
+      n.influence=(n.influence??0)+rate.perTurn;
+      const threshold=Math.ceil(rate.threshold*speedMultiplier(s));
+      while(n.influence>=threshold) {n.influence-=threshold;n.envoys+=rate.reward;}
+    }
     if (n.space.launched) n.space.distance += n.space.speed;
-    if (o < 3) for (let target=0; target<3; target++) {
+    if (s.nations[o].kind === 'major') for (const target of majorIds(s)) {
       if (target===o || !ownCities(s,target).length || !n.met.includes(target)) continue;
       const trade = s.routes.some(r=>r.owner===o && s.cities.find(c=>c.id===r.to)?.owner===target);
       n.tourismAgainst[target] += t.tourism * (1 + (trade ? 0.25 : 0) + (trade && hasPolicy(n,'online') ? 0.5 : 0));
@@ -1783,8 +2003,9 @@ export function nextTurn(s: State) {
           const key = jobKey(j);
           c.invested[key] =
             (c.invested[key] ?? 0) + productionRate(s, c, j.item);
-          if (c.invested[key] >= cost(s, j.item) && complete(s, c, j)) {
+          if (c.invested[key] >= jobCost(s, c, j) && complete(s, c, j)) {
             delete c.invested[key];
+            delete c.productionCosts?.[key];
             c.queue.shift();
           }
         }
@@ -1812,16 +2033,15 @@ export function nextTurn(s: State) {
       }
       const oracle = c.buildings.includes("oracle") ? 2 : 1,
         gov = n.government === "republic" ? 1.15 : 1;
-      n.great.science +=
-        (c.buildings.includes("campus") ? 1 : 0) * oracle * gov;
+      n.great.science += scientistPoints(s,c);
       n.great.culture +=
         (c.buildings.includes("theater") ? 1 : 0) * oracle * gov;
-      n.great.prophet +=
+      if (!n.religion && !n.prophetRecruited) n.great.prophet +=
         (c.buildings.includes("holy") ? 1 : 0) +
         (c.buildings.includes("shrine") ? 1 : 0);
-      n.great.prophet += n.government==='republic' ? ((c.buildings.includes('holy')?1:0)+(c.buildings.includes('shrine')?1:0))*0.15 : 0;
+      if (!n.religion && !n.prophetRecruited) n.great.prophet += n.government==='republic' ? ((c.buildings.includes('holy')?1:0)+(c.buildings.includes('shrine')?1:0))*0.15 : 0;
     }
-    if (hasPolicy(n, "revelation")) n.great.prophet += 2;
+    if (hasPolicy(n, "revelation") && !n.religion && !n.prophetRecruited) n.great.prophet += 2;
     if (hasPolicy(n,'inspiration')) n.great.science+=2*(n.government==='republic'?1.15:1);
     // Separate Great Writers are not implemented; do not substitute generic culture points.
     advance(s, o, false, t.science);
@@ -1872,21 +2092,52 @@ export function nextTurn(s: State) {
       r.opinion = Math.min(30, r.opinion + 1);
   }
   for (const u of s.units) {
-    if (!u.acted)
-      u.hp = Math.min(100, u.hp + (s.tiles[u.tile].owner === u.owner ? 15 : 8));
+    if (!u.acted) {
+      const medic=s.units.some(v=>v.owner===u.owner && v.type==='scientist' && v.person==='abu_al_qasim_al_zahrawi' && distance(s.tiles[v.tile],s.tiles[u.tile])<=1);
+      const retired=info(u.type).domain!=='sea' && s.nations[u.owner].scientistEffects?.includes('abu_al_qasim_al_zahrawi');
+      u.hp = Math.min(100, u.hp + (s.tiles[u.tile].owner === u.owner ? 15 : 8) + (medic?20:0) + (retired?5:0));
+    }
     u.moves = (info(u.type).moves ?? 2) + (hasPolicy(s.nations[u.owner],'logistics') && s.tiles[u.tile].owner===u.owner ? 1 : 0);
     u.acted = false;
     if (u.fortified) u.moves = 0;
   }
   s.cities.forEach((c) => (c.attacked = false));
   if (s.turn % 5 === 0)
-    s.history.push({ turn: s.turn, scores: [0, 1, 2].map((o) => score(s, o)) });
+    s.history.push({ turn: s.turn, scores: majorIds(s).map((o) => score(s, o)) });
   s.history = s.history.slice(-60);
   reveal(s);
   checkVictory(s);
 }
 function checkBoosts(s: State, owner: number) {
   for (const id of satisfiedBoosts(s, owner)) boost(s, owner, id);
+}
+function aiResearch(s: State, owner: number, civic: boolean) {
+  const n = s.nations[owner], strategy = aiStrategy(n, owner), list = civic ? civics : techs,
+    done = civic ? n.civic : n.tech;
+  const goals = civic
+    ? strategy === 'culture' ? ['drama','philosophy','humanism','culturalheritage','socialmedia']
+      : strategy === 'military' ? ['craft','military','philosophy','mercenaries','nationalism','totalitarianism']
+      : ['empire','philosophy','feudal','exploration','democracy']
+    : strategy === 'military' ? ['archery','ironworking','machinery','gunpowder','ballistics','combustion']
+      : strategy === 'culture' ? ['writing','construction','printing','flight','computers']
+      : strategy === 'expansion' ? ['pottery','mining','writing','currency','apprentice','education','industry','rocketry']
+      : ['writing','education','apprentice','chemistry','rocketry','satellites','nanotechnology'];
+  const pathToGoal = new Set<string>();
+  function visit(id: string) {
+    if (done.includes(id) || pathToGoal.has(id)) return;
+    pathToGoal.add(id);
+    list.find(r => r.id === id)?.requires.forEach(visit);
+  }
+  const goal = goals.find(id => !done.includes(id));
+  if (goal) visit(goal);
+  return list.filter(d => researchAvailable(n, d.id, civic)).map(d => ({id:d.id,
+    value: (pathToGoal.has(d.id) ? 60 : 0) + (n.boosts.includes(d.id) ? 12 : 0)
+      + 15 * (n.researchProgress[d.id] ?? 0) / researchCost(s,n,d)
+      - researchCost(s,n,d) * 0.015 + random(s) * 3,
+  })).sort((a,b) => b.value - a.value)[0]?.id ?? '';
+}
+function armyPower(s: State, owner: number) {
+  return s.units.filter(u => u.owner === owner).reduce((v,u) => v + Math.max(info(u.type).strength ?? 0, info(u.type).rangedStrength ?? 0) * u.hp / 100, 0);
 }
 function chooseBuild(s: State, c: City) {
   const o = c.owner,
@@ -1896,10 +2147,16 @@ function chooseBuild(s: State, c: City) {
     war = s.relations.some(
       (r) => (r.a === o || r.b === o) && r.status === "war",
     );
+  const strategy = aiStrategy(n,o);
   let choices = items.filter((d) => !buildReason(s, c, d.id) && !d.faithBuy);
   if (n.kind === "state") choices = choices.filter((d) => d.id !== "settler");
   const value = (d: Item) => {
     let v = 5 + random(s) * 3;
+    if (strategy === 'science' && ['campus','library','university','lab','spaceport'].includes(d.id)) v += 24;
+    if (strategy === 'culture' && ['theater','amphitheater','museum','monument'].includes(d.id)) v += 24;
+    if (strategy === 'expansion' && ['builder','granary','commercial','market'].includes(d.id)) v += 14;
+    if (strategy === 'military' && ['encampment','walls'].includes(d.id)) v += 18;
+    if (d.id === 'scout') v += s.turn < 60 && !us.some(u => u.type === 'scout') && n.kind === 'major' ? 34 : -60;
     if (d.id === "granary") v += c.pop >= yields(s, c).housing - 1 ? 40 : 10;
     if (d.id === "monument") v += 18;
     if (d.id === "campus") v += 25;
@@ -1914,7 +2171,7 @@ function chooseBuild(s: State, c: City) {
     if (d.id === "walls") v += war ? 35 : 12;
     if (d.id === "settler")
       v +=
-        cs.length < 3 && !us.some((u) => u.type === "settler") && s.turn > 12
+        cs.length < (strategy === 'expansion' ? 5 : 3) && !us.some((u) => u.type === "settler") && !cs.some(city => city.queue.some(j => j.item === 'settler')) && s.turn > 12
           ? 60
           : -60;
     if (d.id === "builder")
@@ -1942,7 +2199,7 @@ function chooseBuild(s: State, c: City) {
       v +=
         us.filter((u) => info(u.type).strength).length <
         cs.length * (war ? 3 : 1.5)
-          ? (war ? 40 : 22) + d.strength * 0.3
+          ? (war ? 40 : 22) + Math.max(d.strength, d.rangedStrength ?? 0) * 0.3 + (strategy === 'military' ? 18 : 0)
           : -35;
     if (d.kind === "project" && !d.repeat) v += 70;
     if (d.repeat) v -= 5;
@@ -1964,58 +2221,74 @@ function chooseBuild(s: State, c: City) {
     } else if (enqueue(s, c, d.id)) return;
   }
 }
-function computer(s: State, o: number) {
+export function computerTurn(s: State, o: number) {
+  if (!active(s) || !s.nations[o] || s.nations[o].kind === 'barbarian') return;
   const n = s.nations[o],
     cs = ownCities(s, o);
-  if (!cs.length) return;
+  const visible = visibleTiles(s,o), strategy = aiStrategy(n,o);
+  // Newly created settlers can participate in headless AI-vs-AI matches too.
+  if (!cs.length) {
+    const settler = s.units.find(u => u.owner === o && u.type === 'settler');
+    if (settler && canFound(s,settler)) found(s,settler);
+    return;
+  }
   if (n.kind === "major") {
     const gov = [...governments]
       .reverse()
       .find((g) => n.civic.includes(g.unlock));
     if (gov) {
-      n.government = gov.id;
       const used = new Set<string>();
-      n.policies = gov.slots.map((slot) => {
+      const selected = gov.slots.map((slot) => {
         const p = [...policies]
           .reverse()
           .find(
             (p) =>
-              policyAvailable(n,p[0]) &&
+              policyAvailable({...n,government:gov.id},p[0]) &&
               (slot === "wild" || p[3] === slot) &&
               !used.has(p[0]),
           );
         if (p) used.add(p[0]);
         return p?.[0] ?? null;
       });
+      if (n.government !== gov.id || JSON.stringify(n.policies) !== JSON.stringify(selected)) configureGovernment(s,gov.id,selected,o);
     }
     for (const cstate of s.cityStates)
-      if (n.envoys > 0) {
-        cstate.envoys[o]+=hasPolicy(n,'league') && cstate.envoys[o]===0?2:1;
-        n.envoys--;
+      if (n.envoys > 0 && n.met.includes(cstate.owner) && ownCities(s,cstate.owner).length) {
+        sendEnvoy(s,cstate.owner,o);
       }
-    if (!n.religion) foundReligion(s, o);
-    const enemy = s.nations[0],
-      r = relation(s, 0, o),
-      power = s.units
-        .filter((u) => u.owner === o)
-        .reduce((v, u) => v + (info(u.type).strength ?? 0), 0),
-      playerPower = s.units
-        .filter((u) => u.owner === 0)
-        .reduce((v, u) => v + (info(u.type).strength ?? 0), 0);
-    if (
-      s.turn > 35 &&
-      s.turn % 15 === 0 &&
-      r.status === "peace" &&
-      s.turn >= r.until &&
-      r.opinion < 10 &&
-      enemy.met.includes(o) &&
-      power > playerPower * (s.options.difficulty === "hard" ? 1 : 1.5) &&
-      random(s) < (s.options.difficulty === "relaxed" ? 0.08 : 0.35)
-    ) {
-      r.status = "war";
-      r.since = s.turn;
-      event(s, `${n.name}宣战`, "combat");
+    if (!n.pantheon && n.faith>=25) {
+      const free=pantheons.find(p=>!s.nations.some(other=>other.pantheon===p.id));
+      if(free) pantheon(s,free.id,o);
     }
+    if (!n.religion) {recruitProphet(s,o);foundReligion(s,o);}
+    recruitScientist(s,o);
+    // Evaluate known rivals, not just the human; treaties and friendship still apply.
+    const power = armyPower(s,o);
+    const rivals = majorIds(s).filter(other => other !== o && n.met.includes(other) && ownCities(s,other).length)
+      .map(other => ({other, r:relation(s,o,other), power:armyPower(s,other)}))
+      .sort((a,b) => a.power - b.power);
+    for (const rival of rivals) {
+      const r = rival.r;
+      if (r.status === 'war' && rival.other !== 0 && s.turn-r.since >= 15 && power < rival.power * 0.55) {
+        r.status='peace';r.until=s.turn+10;r.opinion=-5;
+        event(s,`${n.name}与${s.nations[rival.other].name}停战`);
+      }
+    }
+    const target = rivals.find(x => x.r.status === 'peace' && s.turn >= x.r.until && x.r.opinion < 10 && power > x.power * (strategy === 'military' ? 1.1 : 1.5));
+    const chance = s.options.difficulty === 'relaxed' ? 0.08 : strategy === 'military' ? 0.65 : 0.3;
+    if (target && s.turn > 35 && s.turn % 15 === 0 && !rivals.some(x => x.r.status === 'war') && random(s) < chance) {
+      declareWar(s,o,target.other);
+      event(s,`${n.name}向${s.nations[target.other].name}宣战`,'combat');
+    }
+    if (n.religion && n.faith >= 150 && s.units.filter(u => u.owner===o && u.type==='missionary').length < 2) {
+      const religiousCity = cs.find(c => !buildReason(s,c,'missionary'));
+      if (religiousCity) purchase(s,religiousCity,'missionary');
+    }
+    const focus: City['focus'] = strategy === 'expansion' ? 'food' : strategy === 'military' || strategy === 'science' ? 'production' : 'balanced';
+    for (const c of cs) c.focus=focus;
+    // Preserve partially researched projects instead of changing goals every turn.
+    if (!n.research || !(n.researchProgress[n.research] > 0)) n.research=aiResearch(s,o,false);
+    if (!n.culture || !(n.researchProgress[n.culture] > 0)) n.culture=aiResearch(s,o,true);
   }
   for (const c of cs) {
     if (c.queue.length < 1) chooseBuild(s, c);
@@ -2030,7 +2303,12 @@ function computer(s: State, o: number) {
   }
   for (const u of [...s.units.filter((u) => u.owner === o)]) {
     if (!s.units.some((v) => v.id === u.id)) continue;
+    const threats = s.units.filter(enemy => atWar(s,o,enemy.owner) && visible.has(enemy.tile) && info(enemy.type).strength && distance(s.tiles[enemy.tile],s.tiles[u.tile]) <= 3);
     if (u.hp < 45) {
+      if (threats.length) {
+        const safe = [...reachable(s,u).keys()].map(tile => ({tile,value:Math.min(...threats.map(e => distance(s.tiles[tile],s.tiles[e.tile]))) * 10 + (s.tiles[tile].owner === o ? 5 : 0)})).sort((a,b) => b.value-a.value)[0];
+        if (safe && safe.value > Math.min(...threats.map(e => distance(s.tiles[u.tile],s.tiles[e.tile]))) * 10) move(s,u,safe.tile);
+      }
       u.fortified = false;
       continue;
     }
@@ -2073,7 +2351,7 @@ function computer(s: State, o: number) {
         .map((t, i) => ({ t, i }))
         .filter(
           ({ t, i }) =>
-            t.owner < 0 &&
+            visible.has(i) && t.owner < 0 &&
             !["water", "mountain"].includes(t.terrain) &&
             s.cities.every((c) => distance(t, s.tiles[c.tile]) >= 4) &&
             passable(s, u, i),
@@ -2093,6 +2371,7 @@ function computer(s: State, o: number) {
         }))
         .sort((a, b) => b.v - a.v);
       if (sites.length) aiMoveToward(s, u, sites[0].i);
+      else aiExplore(s,u);
       continue;
     }
     if (u.type === "builder") {
@@ -2122,10 +2401,19 @@ function computer(s: State, o: number) {
       if (candidates.length) aiMoveToward(s, u, candidates[0].i);
       continue;
     }
-    if (info(u.type).strength) {
+    if (u.type === 'missionary') {
+      const targets = s.cities.filter(c => visible.has(c.tile) && c.religion !== o && !atWar(s,o,c.owner));
+      const close = targets.find(c => distance(s.tiles[c.tile],s.tiles[u.tile]) <= 1);
+      if (close && spread(s,u,close.id)) continue;
+      targets.sort((a,b) => distance(s.tiles[a.tile],s.tiles[u.tile])-distance(s.tiles[b.tile],s.tiles[u.tile]));
+      if (targets.length) aiMoveToward(s,u,targets[0].tile);
+      else aiExplore(s,u);
+      continue;
+    }
+  if (info(u.type).strength) {
       const targets = s.tiles
-        .map((_, i) => ({ i, p: combatPreview(s, u, i) }))
-        .filter((x) => x.p)
+        .map((_, i) => ({ i, p: visible.has(i) ? combatPreview(s, u, i) : null }))
+        .filter((x) => x.p && (x.p.retaliation < u.hp - 8 || x.p.damage >= (x.p.enemy?.hp ?? 201)) && x.p.damage >= x.p.retaliation * 0.75)
         .sort(
           (a, b) =>
             b.p!.damage - b.p!.retaliation - (a.p!.damage - a.p!.retaliation),
@@ -2134,7 +2422,7 @@ function computer(s: State, o: number) {
         attack(s, u, targets[0].i);
         continue;
       }
-      const enemies = s.cities.filter((c) => atWar(s, o, c.owner));
+      const enemies = s.cities.filter((c) => visible.has(c.tile) && atWar(s, o, c.owner));
       if (enemies.length) {
         enemies.sort(
           (a, b) =>
@@ -2146,6 +2434,34 @@ function computer(s: State, o: number) {
       }
       if (upgradeTo(s, u) && upgrade(s, u)) continue;
     }
+    if(u.type==='scientist') {
+      const p=scientistById(u.person);
+      if(p?.id!=='galileo_galilei' && activateScientist(s,u)) continue;
+      const candidates=s.tiles.map((t,i)=>({t,i})).filter(({t,i})=>t.terrain!=='mountain' && t.terrain!=='water' && !t.pillaged &&
+        (p?.site==='land' ? t.owner===o : t.owner===o && t.district===p?.site) && !s.units.some(v=>v.id!==u.id && v.tile===i));
+      candidates.sort((a,b)=>p?.id==='galileo_galilei'
+        ? neighbors(s,b.i).filter(i=>s.tiles[i].terrain==='mountain').length-neighbors(s,a.i).filter(i=>s.tiles[i].terrain==='mountain').length || distance(a.t,s.tiles[u.tile])-distance(b.t,s.tiles[u.tile])
+        : distance(a.t,s.tiles[u.tile])-distance(b.t,s.tiles[u.tile]));
+      for(const target of candidates) {
+        const route=path(s,u,target.i,(s.width+s.height)*2,true);
+        if(!route.length) continue;
+        followPath(s,u,route);
+        if(u.tile===target.i) activateScientist(s,u);
+        break;
+      }
+      continue;
+    }
+    if (u.type==='prophet') {
+      if(foundReligion(s,o)) continue;
+      const holy=s.tiles.findIndex((t,i)=>t.owner===o && t.district==='holy' && !s.units.some(v=>v.id!==u.id && v.tile===i));
+      if(holy>=0) {
+        const route=path(s,u,holy,(s.width+s.height)*2,true);
+        followPath(s,u,route);
+        foundReligion(s,o);
+      }
+      continue;
+    }
+    if (n.kind === 'major') {aiExplore(s,u);continue;}
     const near = cs.reduce(
       (a, c) =>
         distance(s.tiles[c.tile], s.tiles[u.tile]) <
@@ -2162,6 +2478,26 @@ function computer(s: State, o: number) {
     }
   }
 }
+function aiExplore(s: State, u: Unit) {
+  const visited = new Set(s.nations[u.owner].explored ?? []), targets = [...reachable(s,u).keys()], visible = visibleTiles(s,u.owner);
+  const enemies = s.units.filter(e=>atWar(s,u.owner,e.owner) && visible.has(e.tile) && info(e.type).strength);
+  const rated = targets.map(tile => ({tile, value:
+    neighbors(s,tile).filter(i => !visited.has(i)).length * 5
+    + (s.tiles[tile].village ? 12 : 0) + random(s) * 3
+    - enemies.filter(e => distance(s.tiles[tile],s.tiles[e.tile]) <= 2).length * 15,
+  })).sort((a,b) => b.value-a.value);
+  if (rated.length) move(s,u,rated[0].tile);
+}
+function followPath(s: State, u: Unit, route: number[]) {
+  let spent = 0, destination = u.tile;
+  for (let k = 1; k < route.length; k++) {
+    spent += movementCost(s, u, route[k - 1], route[k]);
+    if (spent > u.moves) break;
+    destination = route[k];
+    if (zone(s, u, destination) && u.type !== 'scout') break;
+  }
+  return destination !== u.tile && move(s, u, destination);
+}
 function aiMoveToward(s: State, u: Unit, target: number) {
   if (u.tile === target) return;
   // Route around obstacles instead of oscillating against a mountain ridge.
@@ -2176,15 +2512,7 @@ function aiMoveToward(s: State, u: Unit, target: number) {
   for (const goal of goals.slice(0, 3)) {
     const route = path(s, u, goal, (s.width + s.height) * 2, true);
     if (route.length < 2) continue;
-    let spent = 0,
-      destination = u.tile;
-    for (let k = 1; k < route.length; k++) {
-      spent += movementCost(s, u, route[k - 1], route[k]);
-      if (spent > u.moves) break;
-      destination = route[k];
-      if (zone(s, u, destination) && u.type !== "scout") break;
-    }
-    if (destination !== u.tile && move(s, u, destination)) return;
+    if (followPath(s, u, route)) return;
   }
   const candidates = [...reachable(s, u).keys()].sort(
     (a, b) =>
@@ -2194,17 +2522,17 @@ function aiMoveToward(s: State, u: Unit, target: number) {
   if (candidates.length) move(s, u, candidates[0]);
 }
 function barbarians(s: State) {
-  for (const u of [...s.units.filter((u) => u.owner === BARBARIAN)]) {
+  for (const u of [...s.units.filter((u) => u.owner === barbarianOwner(s))]) {
     const targets = s.tiles
       .map((_, i) => ({ i, p: combatPreview(s, u, i) }))
-      .filter((x) => x.p && x.p.owner < 3)
+      .filter((x) => x.p && s.nations[x.p.owner].kind === 'major')
       .sort((a, b) => b.p!.damage - a.p!.damage);
     if (targets.length) {
       attack(s, u, targets[0].i);
       continue;
     }
     const city = s.cities
-      .filter((c) => c.owner < 3)
+      .filter((c) => s.nations[c.owner].kind === 'major')
       .sort(
         (a, b) =>
           distance(s.tiles[a.tile], s.tiles[u.tile]) -
@@ -2225,7 +2553,7 @@ function barbarians(s: State) {
           ? 20
           : 14) ===
       0 &&
-    s.units.filter((u) => u.owner === BARBARIAN).length < 8
+    s.units.filter((u) => u.owner === barbarianOwner(s)).length < 8
   ) {
     for (let i = 0; i < s.tiles.length; i++)
       if (s.tiles[i].camp) {
@@ -2235,7 +2563,7 @@ function barbarians(s: State) {
             !["water", "mountain"].includes(s.tiles[k].terrain),
         );
         if (at !== undefined)
-          spawn(s, BARBARIAN, s.turn > 70 ? "archer" : "warrior", at);
+          spawn(s, barbarianOwner(s), s.turn > 70 ? "archer" : "warrior", at);
       }
   }
 }

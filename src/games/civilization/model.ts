@@ -1,4 +1,3 @@
-import type { PolicyType } from "./catalog";
 export type Terrain =
   "grass" | "plain" | "forest" | "hill" | "mountain" | "water" | "desert";
 export interface Tile {
@@ -34,6 +33,7 @@ export interface Unit {
   level: number;
   fortified: boolean;
   acted: boolean;
+  person?: string;
 }
 export interface Job {
   item: string;
@@ -53,17 +53,22 @@ export interface City {
   buildings: string[];
   queue: Job[];
   invested: Record<string, number>;
+  productionCosts?: Record<string, number>;
+  districtPlacements?: Record<string, number>;
   border: number;
   focus: Focus;
   religion: number;
   pressure: number[];
   attacked: boolean;
+  hildegard?: boolean;
 }
 export interface Nation {
   name: string;
   civ: string;
   color: string;
   kind: "major" | "state" | "barbarian";
+  aiStrategy?: 'expansion' | 'science' | 'culture' | 'military';
+  explored?: number[];
   gold: number;
   faith: number;
   tech: string[];
@@ -88,6 +93,14 @@ export interface Nation {
   tourismAgainst: number[];
   space: { launched: boolean; distance: number; speed: number };
   barbarianKills: number;
+  districtDiscountBasis?: number;
+  greatPeopleEarned?: number;
+  eraScore?: number;
+  influence?: number;
+  beliefs?: string[];
+  prophetRecruited?: boolean;
+  pantheonGift?: boolean;
+  scientistEffects?: string[];
 }
 export interface Relation {
   a: number;
@@ -108,11 +121,13 @@ export interface Route {
 }
 export interface CityState {
   owner: number;
-  type: "science" | "culture";
+  type: "science" | "culture" | "trade" | "industrial" | "military" | "religious";
   envoys: number[];
 }
 export interface Options {
   civilization: string;
+  aiCount?: number;
+  cityStateCount?: number;
   size: "compact" | "standard";
   difficulty: "relaxed" | "standard" | "hard";
   speed: "quick" | "normal";
@@ -146,7 +161,6 @@ export interface State {
   log: GameEvent[];
   winner: Victory | null;
   continued: boolean;
+  scientistRecruits?: {person:string;owner:number}[];
   history: { turn: number; scores: number[] }[];
 }
-export const BARBARIAN = 5;
-export type Slot = PolicyType;

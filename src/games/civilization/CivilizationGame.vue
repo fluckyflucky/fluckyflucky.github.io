@@ -13,6 +13,10 @@ import CityPanel from "./CityPanel.vue";
 import UnitPanel from "./UnitPanel.vue";
 import CivIcon from "./CivIcon.vue";
 import CivHelp from './CivHelp.vue';
+import { majorIds, aiStrategy, aiStrategyNames } from './participants';
+import { cityStateTypes, cityStateHelp, cityStateRoster, suzerain, influenceRate } from './city-states';
+import { pantheons, beliefs, availableBeliefs } from './religion';
+import { scientistById } from './great-people';
 import {
   create,
   defaultOptions,
@@ -25,18 +29,28 @@ import {
   nextTurn,
   pending,
   era,
-  cost,
+  jobCost,
   jobKey,
   yields,
   government,
   configureGovernment,
   relation,
+  atWar,
   diplomacy,
   sendEnvoy,
   tradeCapacity,
   pantheon,
   foundReligion,
-  recruit,
+  recruitProphet,
+  prophetCost,
+  religionLimit,
+  religionCity,
+  recruitArtist,
+  recruitScientist,
+  currentScientist,
+  scientistCost,
+  scientistPoints,
+  hasPolicy,
   score,
   buyTile,
   cityAttack,
@@ -104,6 +118,9 @@ const options = ref<Options>({ ...defaultOptions(), ...state.value.options }),
   warnUnfinished = ref(true),
   policyDraft = ref<(string | null)[]>([]),
   governmentDraft = ref("chief");
+const majorNations = computed(() => state.value.nations.filter(n=>n.kind==='major'));
+const followerBelief=ref(''),founderBelief=ref('');
+const setupCivilization = computed(() => civilizations.find(c=>c.id===options.value.civilization));
 const expanded = ref(false);
 let previousOverflow = "";
 watch(expanded, (value) => {
@@ -365,6 +382,7 @@ function startGame() {
       seed = (Math.imul(seed, 31) + ch.charCodeAt(0)) >>> 0;
   }
   state.value = create({ ...options.value, seed });
+  followerBelief.value='';founderBelief.value='';
   autoAllowed.value = true;
   started.value = true;
   setup.value = false;
@@ -377,7 +395,7 @@ function startGame() {
   persist();
 }
 function newSetup() {
-  options.value = { ...state.value.options };
+  options.value = { ...defaultOptions(), ...state.value.options };
   setup.value = true;
 }
 function governmentChange() {
@@ -475,20 +493,20 @@ const progress = computed(() => [
     icon: "sword",
     value: state.value.cities.filter((c) => c.capital >= 0 && c.owner === 0)
       .length,
-    max: 3,
-    description: "占领三个文明的原始首都",
+    max: majorNations.value.length,
+    description: "占领所有文明的原始首都",
   },
   {
     name: "宗教",
     icon: "faith",
-    value: [0, 1, 2].filter((o) => {
+    value: majorIds(state.value).filter((o) => {
       const cs = ownCities(state.value, o);
       return (
         cs.length > 0 &&
         cs.filter((c) => c.religion === 0).length > cs.length / 2
       );
     }).length,
-    max: 3,
+    max: majorNations.value.length,
     description: "创立宗教，使每个文明过半城市信奉它",
   },
 ]);
@@ -757,7 +775,7 @@ const tabs = [
                   {{ Math.round(viewedUnit.hp) }}
                 </p>
                 <button
-                  v-if="viewedUnit.owner > 0 && viewedUnit.owner < 5"
+                  v-if="viewedUnit.owner > 0 && state.nations[viewedUnit.owner].kind !== 'barbarian'"
                   @click="tab = '外交'"
                 >
                   查看外交关系
@@ -875,7 +893,7 @@ const tabs = [
                   <strong>{{ info(c.queue[0].item).name }}</strong
                   ><span
                     >{{ Math.floor(c.invested[jobKey(c.queue[0])] ?? 0) }} /
-                    {{ cost(state, c.queue[0].item) }}</span
+                    {{ jobCost(state, c, c.queue[0]) }}</span
                   >
                   <div class="meter">
                     <i
@@ -884,7 +902,7 @@ const tabs = [
                           Math.min(
                             100,
                             ((c.invested[jobKey(c.queue[0])] ?? 0) /
-                              cost(state, c.queue[0].item)) *
+                              jobCost(state, c, c.queue[0])) *
                               100,
                           ) + '%',
                       }"
@@ -921,7 +939,7 @@ const tabs = [
               >
                 <CivIcon :name="info(u.type).icon" />
                 <div>
-                  <strong>{{ info(u.type).name }}</strong
+                  <strong>{{ scientistById(u.person)?.name ?? info(u.type).name }}</strong
                   ><small
                     >生命 {{ Math.round(u.hp) }} ·
                     {{ u.fortified ? "驻守中" : u.moves + " 移动力" }}</small
@@ -994,11 +1012,11 @@ const tabs = [
                 <p class="kicker">DIPLOMACY</p>
                 <h2>文明与城邦</h2>
               </div>
-              <span>可派遣使者 {{ nation.envoys }}</span>
+              <span>使者 {{ nation.envoys }} · 影响力 {{ (nation.influence ?? 0).toFixed(0) }} / {{ Math.ceil(influenceRate(nation).threshold * (state.options.speed==='normal'?1:2/3)) }}</span>
             </div>
             <div class="diplomacy-grid">
               <article
-                v-for="(n, o) in state.nations.slice(1, 3)"
+                v-for="(n, o) in majorNations.slice(1)"
                 :key="n.name"
                 :style="{ '--nation-color': n.color }"
               >
@@ -1018,6 +1036,7 @@ const tabs = [
                     {{ ownCities(state, o + 1).length }} 座城市 ·
                     {{ eras[era(n)] }} · {{ n.tech.length }} 科技
                   </p>
+                  <p>AI 偏好 · {{ aiStrategyNames[aiStrategy(n,o+1)] }}</p>
                   <div class="diplomatic-actions">
                     <button
                       :disabled="
@@ -1061,7 +1080,6 @@ const tabs = [
                     </button>
                   </div></template
                 >
-                <p v-else>探索地图，接近城市后建立联系。</p>
               </article>
               <article v-for="cs in state.cityStates" :key="cs.owner">
                 <div class="card-title diplomatic-title">
@@ -1072,17 +1090,20 @@ const tabs = [
                       : "未知城邦"
                   }}
                 </h3>
-                <CivHelp :label="`城邦使者收益 ${cs.owner}`" :text="`本版简化收益：1 / 3 / 6 使者提供 +1 / +3 / +6 ${cs.type === 'science' ? '科技' : '文化'}。`" />
+                <CivHelp v-if="nation.met.includes(cs.owner)" :label="`城邦使者收益 ${cs.owner}`" :text="cityStateHelp(cs.type) + '\n宗主：至少3使者且独占最多。' + (cityStateRoster.find(row=>row.name===state.nations[cs.owner].name)?.bonus ?? '')" />
                 </div>
+                <template v-if="nation.met.includes(cs.owner)">
                 <p>
-                  {{ cs.type === "science" ? "科技" : "文化" }}城邦 · 使者
+                  {{ cityStateTypes[cs.type] }}城邦 · 使者
                   {{ cs.envoys[0] }}
+                  · 宗主 {{ suzerain(state,cs)===null ? '无' : state.nations[suzerain(state,cs)!].name }}
                 </p>
                 <button
                   :disabled="
                     !nation.envoys ||
                     !nation.met.includes(cs.owner) ||
                     !ownCities(state, cs.owner).length ||
+                    atWar(state,0,cs.owner) ||
                     !active(state)
                   "
                   @click="
@@ -1095,6 +1116,7 @@ const tabs = [
                 >
                   派遣一名使者
                 </button>
+                </template>
               </article>
             </div>
             <h3>
@@ -1135,81 +1157,92 @@ const tabs = [
                 <div class="card-title">
                   <CivIcon name="faith" :size="24" />
                   <h3>{{ nation.religion || "尚未创立宗教" }}</h3>
-                  <CivHelp label="本版宗教规则" text="圣地与祠堂积累先知点。本版简化为 40 先知点、60 信仰创立宗教；传教士用信仰购买。" />
+                  <CivHelp label="本版宗教规则" text="先招募大预言家，再在圣地创教；须有万神殿，不额外消耗信仰。信条全局独占。预言家费用暂按古典基础计算，压力与信徒换算仍简化；完整伟人池、信条扩展和神学战待补。" />
                 </div>
+                <template v-if="!nation.religion">
                 <div class="meter">
                   <i
                     :style="{
                       width:
-                        Math.min(100, (nation.great.prophet / 40) * 100) + '%',
+                        Math.min(100, (nation.great.prophet / prophetCost(state)) * 100) + '%',
                     }"
                   />
                 </div>
-                <p>{{ Math.floor(nation.great.prophet) }} / 40 先知点 · 需 60 信仰</p>
+                <p>{{ Math.floor(nation.great.prophet) }} / {{ prophetCost(state) }} 预言家点 · 宗教 {{ majorNations.filter(n=>n.religion || n.prophetRecruited).length }} / {{ religionLimit(state) }}</p>
+                <button v-if="!nation.prophetRecruited && !nation.religion"
+                  :disabled="nation.great.prophet < prophetCost(state) || majorNations.filter(n=>n.religion || n.prophetRecruited).length>=religionLimit(state) || !cities.some(c=>c.buildings.includes('holy')) || !active(state)"
+                  @click="tell(recruitProphet(state)?'大预言家已招募':'需要预言家点、圣地和空闲地块')">招募大预言家</button>
+                <div class="setup-fields belief-fields">
+                  <label>信徒信条<select v-model="followerBelief" aria-label="信徒信条"><option value="">请选择</option><option v-for="b in availableBeliefs(state,'follower')" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
+                  <label>创始人信条<select v-model="founderBelief" aria-label="创始人信条"><option value="">请选择</option><option v-for="b in availableBeliefs(state,'founder')" :key="b.id" :value="b.id">{{ b.name }}</option></select></label>
+                </div>
+                <div class="button-row">
+                  <CivHelp v-if="followerBelief" label="信徒信条效果" :text="beliefs.find(b=>b.id===followerBelief)?.description ?? ''" />
+                  <CivHelp v-if="founderBelief" label="创始人信条效果" :text="beliefs.find(b=>b.id===founderBelief)?.description ?? ''" />
+                </div>
                 <button
                   :disabled="
                     !!nation.religion ||
-                    nation.great.prophet < 40 ||
-                    nation.faith < 60 ||
+                    !nation.pantheon || !religionCity(state) || !followerBelief || !founderBelief ||
+                    !availableBeliefs(state,'follower').some(b=>b.id===followerBelief) || !availableBeliefs(state,'founder').some(b=>b.id===founderBelief) ||
                     !active(state)
                   "
                   @click="
                     tell(
-                      foundReligion(state)
+                      foundReligion(state,0,[followerBelief,founderBelief])
                         ? '宗教已创立'
-                        : '需要圣地、先知点与信仰',
+                        : '需要万神殿、圣地中的大预言家和未被选择的信条',
                     )
                   "
                 >
                   创立宗教
                 </button>
+                </template>
+                <div v-if="nation.religion" class="religion-beliefs">
+                  <div v-for="id in nation.beliefs ?? []" :key="id">{{ beliefs.find(b=>b.id===id)?.name }} <CivHelp :label="`信条 ${id}`" :text="beliefs.find(b=>b.id===id)?.description ?? ''" /></div>
+                  <p v-if="!nation.beliefs?.length" class="hint">旧存档未记录信条。</p>
+                </div>
                 <h3>万神殿</h3>
                 <p v-if="nation.pantheon">
                   {{
-                    nation.pantheon === "fertility"
-                      ? "丰收女神 · 每城粮食 +1"
-                      : "工匠之神 · 每城生产 +1"
+                    pantheons.find(p=>p.id===nation.pantheon)?.name
                   }}
+                  <CivHelp label="万神殿效果" :text="pantheons.find(p=>p.id===nation.pantheon)?.description ?? ''" />
                 </p>
-                <div v-else class="button-row">
+                <div v-else class="pantheon-choices">
+                  <div v-for="p in pantheons" :key="p.id">
                   <button
-                    :disabled="nation.faith < 25 || !active(state)"
-                    @click="pantheon(state, 'fertility')"
+                    :disabled="nation.faith < 25 || state.nations.some(n=>n.pantheon===p.id) || !active(state)"
+                    @click="pantheon(state, p.id)"
                   >
-                    丰收女神 · 25 信仰</button
-                  ><button
-                    :disabled="nation.faith < 25 || !active(state)"
-                    @click="pantheon(state, 'crafts')"
-                  >
-                    工匠之神 · 25 信仰
-                  </button>
+                    {{ p.name }} · 25</button><CivHelp :label="`${p.name}效果`" :text="p.description" />
+                  </div>
                 </div>
               </article>
               <div>
-                <article
-                  v-for="[kind, label, icon] in [
-                    ['science', '大科学家', 'science'],
-                    ['culture', '大艺术家', 'culture'],
-                  ] as const"
-                  :key="kind"
-                  class="great-card"
-                >
-                  <CivIcon :name="icon" :size="28" />
+                <article class="great-card scientist-card">
+                  <CivIcon name="science" :size="28" />
                   <div>
-                    <h3>{{ label }}</h3>
+                    <h3>{{ currentScientist(state)?.name ?? '科学家名单已招募完' }}</h3>
+                    <p v-if="currentScientist(state)">{{ eras[currentScientist(state)!.era] }} · {{ Math.floor(nation.great.science) }} / {{ scientistCost(state) }} 点</p>
+                    <CivHelp v-if="currentScientist(state)" label="科学家能力" :text="currentScientist(state)!.description" />
+                    <CivHelp label="科学家招募规则" :text="`所有文明争抢同一名单，招募后需移动单位使用能力。当前每回合 +${(cities.reduce((v,c)=>v+scientistPoints(state,c),0)+(hasPolicy(nation,'inspiration')?2*(nation.government==='republic'?1.15:1):0)).toFixed(1)} 点。现有 9 位早中期科学家；费用按时代基础值计算，世界时代溢价、跳过和赞助待补。`" />
+                  </div>
+                  <button :disabled="!currentScientist(state) || nation.great.science<scientistCost(state) || !cities.length || !active(state)" @click="tell(recruitScientist(state)?'科学家已就绪，前往地图使用能力':'暂时无法招募：点数不足或出生地被占')">招募科学家</button>
+                </article>
+                <article class="great-card">
+                  <CivIcon name="culture" :size="28" />
+                  <div>
+                    <h3>大艺术家</h3>
                     <p>
-                      {{ Math.floor(nation.great[kind]) }} / 80 点 ·
-                      {{
-                        kind === "science"
-                          ? "立即获得 100 科技"
-                          : "获得 80 旅游与 60 文化"
-                      }}
+                      {{ Math.floor(nation.great.culture) }} / 80 点 ·
+                      获得 80 旅游与 60 文化
                     </p>
                   </div>
                   <button
-                    :disabled="nation.great[kind] < 80 || !active(state)"
+                    :disabled="nation.great.culture < 80 || !active(state)"
                     @click="
-                      tell(recruit(state, kind) ? '伟人已招募' : '点数不足')
+                      tell(recruitArtist(state) ? '伟人已招募' : '点数不足')
                     "
                   >
                     招募
@@ -1259,7 +1292,7 @@ const tabs = [
               <h3>文明分数</h3>
               <div class="chart-legend">
                 <span
-                  v-for="(n, o) in state.nations.slice(0, 3)"
+                  v-for="(n, o) in majorNations"
                   :key="n.name"
                   :style="{ color: n.color }"
                   >{{ n.name }} {{ score(state, o) }}</span
@@ -1269,7 +1302,7 @@ const tabs = [
                 v-if="state.history.length > 1"
                 viewBox="0 0 600 190"
                 role="img"
-                aria-label="三个文明的分数随回合变化"
+                aria-label="各文明的分数随回合变化"
               >
                 <path
                   d="M25 20V170H580M25 100H580"
@@ -1277,7 +1310,7 @@ const tabs = [
                   fill="none"
                 />
                 <polyline
-                  v-for="(n, o) in state.nations.slice(0, 3)"
+                  v-for="(n, o) in majorNations"
                   :key="n.name"
                   :points="chartLine(o)"
                   :stroke="n.color"
@@ -1471,7 +1504,7 @@ const tabs = [
               <CivIcon name="compass" :size="44" />
               <div>
                 <p class="kicker">A NEW WORLD</p>
-                <h2 id="setup-title">从一座城市开始</h2>
+                <h2 id="setup-title">新游戏</h2>
               </div>
               <button
                 v-if="started"
@@ -1482,35 +1515,21 @@ const tabs = [
                 <CivIcon name="close" />
               </button>
             </div>
-            <p>选文明和地图，开局后用开拓者建立城市。</p>
-            <div class="civilization-options">
-              <button
-                v-for="c in civilizations"
-                :key="c.id"
-                :class="{ selected: options.civilization === c.id }"
-                :style="{ '--civ-color': c.color }"
-                @click="options.civilization = c.id"
-              >
-                <CivIcon
-                  :name="
-                    c.id === 'china'
-                      ? 'wonder'
-                      : c.id === 'rome'
-                        ? 'shield'
-                        : 'water'
-                  "
-                  :size="30"
-                /><strong
-                  >{{ c.name }}<span>{{ c.leader }}</span></strong
-                ><small>{{ c.ability }}</small>
-                <p>{{ c.description }}</p>
-              </button>
-            </div>
             <div class="setup-fields">
+              <label>你的文明<select v-model="options.civilization" aria-label="你的文明">
+                <option value="random">随机文明</option>
+                <option v-for="c in civilizations" :key="c.id" :value="c.id">{{ c.name }} · {{ c.leader }}</option>
+              </select></label>
+              <label>AI 数量<select v-model.number="options.aiCount" aria-label="AI 数量">
+                <option v-for="count in 5" :key="count" :value="count">{{ count }} 个对手</option>
+              </select></label>
+              <label>城邦数量<select v-model.number="options.cityStateCount" aria-label="城邦数量">
+                <option v-for="count in [2,3,4,5,6]" :key="count" :value="count">{{ count }} 座{{ count===2?' · 政治哲学鼓舞不可达':'' }}</option>
+              </select></label>
               <label
                 >地图规模<select v-model="options.size">
-                  <option value="standard">标准 · 24 × 16</option>
-                  <option value="compact">紧凑 · 18 × 12</option>
+                  <option value="standard">标准</option>
+                  <option value="compact">紧凑</option>
                 </select></label
               ><label
                 >地图类型<select v-model="options.map">
@@ -1532,8 +1551,13 @@ const tabs = [
                 >随机种子<input
                   v-model="seedInput"
                   maxlength="80"
-                  placeholder="留空随机；相同文字得到相同地图"
+                  placeholder="留空随机；相同设置和种子复现开局"
               /></label>
+            </div>
+            <div class="setup-civilization-info">
+              <CivIcon :name="setupCivilization?.id==='china'?'wonder':setupCivilization?.id==='rome'?'shield':setupCivilization?.id==='egypt'?'water':'compass'" :size="24" />
+              <span>{{ setupCivilization ? setupCivilization.ability : '从华夏、罗马、埃及中随机选择' }}</span>
+              <CivHelp label="开局设置说明" :text="(setupCivilization?.description ?? '随机文明在建立新世界时决定，固定设置和种子可以复现。') + '\n当前仅有三种文明；多个AI允许重复，以不同名称、颜色区分。4–5个AI时地图自动扩大。人数只能在新游戏中调整，旧存档不重排玩家。'" />
             </div>
             <p v-if="initial.error && !started" class="warning">
               {{ initial.error }}

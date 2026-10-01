@@ -13,6 +13,7 @@ import {
   purchasePrice,
   jobKey,
   cost,
+  jobCost,
   productionRate,
   active,
 } from "./world";
@@ -55,6 +56,11 @@ function build(id: string) {
   if (buildReason(props.state, props.city, id)) return;
   const d = info(id);
   if (d.faithBuy) return;
+  const placed=props.city.districtPlacements?.[id];
+  if(placed!==undefined) {
+    emit('status',enqueue(props.state,props.city,id,placed)?`继续建造：${d.name}`:'当前不能恢复建设');
+    return;
+  }
   if (["district", "wonder"].includes(d.kind)) emit("place", id);
   else
     emit(
@@ -194,12 +200,12 @@ watch(
             <strong>{{ info(job.item).name }}</strong
             ><small
               >{{ Math.floor(city.invested[jobKey(job)] ?? 0) }} /
-              {{ cost(state, job.item) }} ·
+              {{ jobCost(state, city, job) }} ·
               {{
                 Math.max(
                   1,
                   Math.ceil(
-                    (cost(state, job.item) -
+                    (jobCost(state, city, job) -
                       (city.invested[jobKey(job)] ?? 0)) /
                       productionRate(state, city, job.item),
                   ),
@@ -214,7 +220,7 @@ watch(
                     Math.min(
                       100,
                       ((city.invested[jobKey(job)] ?? 0) /
-                        cost(state, job.item)) *
+                        jobCost(state, city, job)) *
                         100,
                     ) + '%',
                 }"
@@ -270,12 +276,13 @@ watch(
           </div>
           <p>{{ d.description }}</p>
           <div class="build-price">
-            <small
-              >{{ cost(state, d.id) }} 生产 ·
+            <small v-if="!d.faithBuy"
+              >{{ cost(state, d.id, city) }} 生产 ·
               {{
-                Math.ceil(cost(state, d.id) / productionRate(state, city, d.id))
+                Math.ceil(cost(state, d.id, city) / productionRate(state, city, d.id))
               }}
               回合</small
+            ><small v-else>仅信仰购买 · {{ purchasePrice(state, city, d.id) }}</small
             ><small v-if="d.resource"
               >需要 10
               {{
@@ -300,7 +307,7 @@ watch(
             >
               {{
                 ["district", "wonder"].includes(d.kind)
-                  ? "选择地块"
+                  ? city.districtPlacements?.[d.id]!==undefined ? '继续建设' : "选择地块"
                   : "加入队列"
               }}</button
             ><button

@@ -14,6 +14,7 @@ import {
 } from "./world";
 import { terrainNames, resources } from "./catalog";
 import CivIcon from "./CivIcon.vue";
+import CivHelp from './CivHelp.vue';
 const props = defineProps<{
   state: State;
   selected: number;
@@ -60,6 +61,15 @@ const units = computed(
 const cities = computed(
   () => new Map(props.state.cities.map((c) => [c.tile, c])),
 );
+const construction = computed(() => new Map(props.state.cities.flatMap(c=>[
+  ...Object.entries(c.districtPlacements??{}).map(([id,at])=>[at,id] as const),
+  ...c.queue.filter(j=>info(j.item).kind==='district').map(j=>[j.tile,j.item] as const),
+])));
+const yieldBadges = computed(() => props.state.tiles.map(t => {
+  const value = tileYield(props.state,t);
+  const entries = (['food','production','gold'] as const).filter(key => value[key] > 0).map(key => ({key,value:value[key]}));
+  return {value,entries,width:Math.max(24,entries.length * 18 + 4)};
+}));
 const placements = computed(() => {
   if (!props.placement) return new Set<number>();
   const c = props.state.cities.find((c) => c.id === props.placement!.city);
@@ -215,21 +225,15 @@ function keyboard(e: KeyboardEvent) {
         }}</span
       >
       <div>
-        <button
-          :class="{ selected: lens }"
-          @click="lens = !lens"
-          :aria-pressed="lens"
-          aria-label="显示地块产出"
-        >
-          <CivIcon name="food" /></button
-        ><button @click="focusTile()" aria-label="定位当前单位或城市">
-          <CivIcon name="compass" /></button
-        ><button @click="scale(-0.15)" aria-label="缩小地图">
-          <CivIcon name="minus" /></button
-        ><button @click="scale(0.15)" aria-label="放大地图">
-          <CivIcon name="plus" />
-        </button>
+        <CivHelp action icon="food" label="显示地块产出" text="开关地块产出图层。嫩芽是粮食，锤子是生产力，金币图标是金币；只显示非零产出。" :pressed="lens" @activate="lens=!lens" />
+        <CivHelp action icon="compass" label="定位当前单位或城市" text="将地图移回当前选中的单位或城市，不会移动单位或消耗行动。" @activate="focusTile()" />
+        <CivHelp action icon="minus" label="缩小地图" text="缩小地图，保持视野中心。" @activate="scale(-0.15)" />
+        <CivHelp action icon="plus" label="放大地图" text="放大地图，保持视野中心。" @activate="scale(0.15)" />
       </div>
+    </div>
+    <div v-if="lens" class="yield-legend">
+      <span><CivIcon name="food" :size="16" />粮食</span><span><CivIcon name="production" :size="16" />生产力</span><span><CivIcon name="gold" :size="16" />金币</span>
+      <CivHelp label="地块产出说明" text="旧版的 2 / 0 / 0 表示粮食 2、生产力 0、金币 0，不是坐标。现在用图标配数字表示。地块被市民工作后才计入城市产出；建筑、政策等加成看城市面板。城市名后的数字是人口。" />
     </div>
     <div
       ref="scroll"
@@ -441,6 +445,11 @@ function keyboard(e: KeyboardEvent) {
                 style="color: #f2e8c8"
               />
             </g>
+            <g v-else-if="construction.has(i)" transform="translate(-10,-10)">
+              <rect x="-6" y="-6" width="32" height="32" rx="6" fill="#3b6560" stroke="#e1cd9d" stroke-dasharray="4 3" />
+              <CivIcon :name="info(construction.get(i)!).icon" :size="20" style="color:#f2e8c8;opacity:.7" />
+              <text x="10" y="32" text-anchor="middle" fill="#fff1c5" font-size="10">待建</text>
+            </g>
             <g v-else-if="t.village" fill="#d9b780" stroke="#806449">
               <path d="m-16 13 9-18 9 18zm15 0 9-14 9 14z" />
               <path d="m-7 4 3 9" />
@@ -474,21 +483,23 @@ function keyboard(e: KeyboardEvent) {
             <g
               v-if="lens && !t.district && t.city < 0"
               transform="translate(0,-19)"
+              class="tile-yield-badge"
             >
+              <title>{{ `粮食 ${yieldBadges[i].value.food}，生产力 ${yieldBadges[i].value.production}，金币 ${yieldBadges[i].value.gold}` }}</title>
               <rect
-                x="-23"
+                :x="-yieldBadges[i].width/2"
                 y="-9"
-                width="46"
+                :width="yieldBadges[i].width"
                 height="17"
                 rx="8"
                 fill="#182c2d"
                 opacity=".88"
               />
-              <text y="3" class="yield-text">
-                {{ tileYield(state, t).food }} /
-                {{ tileYield(state, t).production }} /
-                {{ tileYield(state, t).gold }}
-              </text>
+              <g v-for="(entry,j) in yieldBadges[i].entries" :key="entry.key" :transform="`translate(${-yieldBadges[i].entries.length*9+j*18},-5)`">
+                <CivIcon :name="entry.key" :size="10" :style="{color:entry.key==='food'?'#b6d999':entry.key==='production'?'#edcfaa':'#f1d283'}" />
+                <text x="13" y="8" class="yield-text">{{ entry.value }}</text>
+              </g>
+              <text v-if="!yieldBadges[i].entries.length" y="3" class="yield-text">—</text>
             </g>
             <polygon
               v-if="!visible.has(i)"
@@ -586,7 +597,7 @@ function keyboard(e: KeyboardEvent) {
       </svg>
     </div>
     <div class="map-bottom">
-      <span>粮 / 锤 / 金 · {{ Math.round(zoom * 100) }}%</span
+      <span>缩放 {{ Math.round(zoom * 100) }}%</span
       ><span
         >{{ state.options.map === "continents" ? "大陆" : "盘古大陆" }} ·
         {{ state.width }} × {{ state.height }}</span
@@ -662,6 +673,12 @@ function keyboard(e: KeyboardEvent) {
   background: #2c4339;
   cursor: pointer;
 }
+.yield-legend {display:flex;align-items:center;gap:12px;padding:0 10px;background:#20352e;border-bottom:1px solid #53675b;}
+.yield-legend > span {display:flex;align-items:center;gap:4px;font-size:12px;white-space:nowrap;}
+.yield-legend > span:nth-child(1) {color:#b6d999;}
+.yield-legend > span:nth-child(2) {color:#edcfaa;}
+.yield-legend > span:nth-child(3) {color:#f1d283;}
+.yield-legend .civ-help-button {margin-left:auto;}
 .cartography button:hover,
 .cartography button.selected {
   background: #516348;

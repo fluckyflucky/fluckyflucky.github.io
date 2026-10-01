@@ -65,12 +65,14 @@ export interface Item {
   housing?: number;
   amenities?: number;
   faithBuy?: boolean;
+  faithCost?: number;
   repeat?: boolean;
   era?: number;
   unitClass?: 'melee' | 'ranged' | 'anticavalry' | 'cavalry' | 'siege' | 'naval' | 'recon' | 'civilian';
   rangedStrength?: number;
   bombardStrength?: number;
   maintenance?: number;
+  greatPerson?: boolean;
   source?: string;
   sourceId?: string;
 }
@@ -148,11 +150,15 @@ export const items: Item[] = [
     resource: "coal",
     icon: "ship",
   }),
-  unit("missionary", "传教士", 55, 0, 3, "theology", {
+  unit("missionary", "传教士", 55, 0, 4, "", {
     faithBuy: true,
+    faithCost: 150,
+    needs: 'shrine',
     icon: "faith",
-    description: "使用信仰购买，三次传播宗教",
+    description: "祠堂解锁 · 基础 150 信仰 · 三次传播宗教",
   }),
+  unit('prophet','大预言家',0,0,4,'',{greatPerson:true,icon:'faith',description:'用预言家点招募；在圣地创立宗教，不能生产或购买',source:'https://www.civilopedia.net/en-US/gathering-storm/concepts/faith_4/'}),
+  unit('scientist','大科学家',0,0,4,'',{greatPerson:true,icon:'science',description:'用科学家点招募；移动到对应地块使用能力，不能生产或购买',source:'https://www.civilopedia.net/en-US/gathering-storm/units/unit_great_scientist/'}),
   building("monument", "纪念碑", 25, "文化 +2", { yields: { culture: 2 } }),
   building("granary", "粮仓", 30, "粮食 +1，住房 +2", {
     unlock: "pottery",
@@ -345,7 +351,7 @@ export const items: Item[] = [
     cost: 130,
     kind: "wonder",
     unlock: "mysticism",
-    description: "丘陵地块；伟人点数翻倍、信仰 +3",
+    description: "丘陵地块；本城学院额外 +2 科学家点、信仰 +3；其余伟人奖励仍简化",
     icon: "wonder",
     yields: { faith: 3, tourism: 3 },
   },
@@ -439,7 +445,7 @@ for (const item of items) {
   item.sourceId = reference.sourceId;
   item.source = reference.source;
   if (reference.cost !== null) item.cost = reference.cost;
-  for (const key of ['strength','rangedStrength','bombardStrength','range','moves','maintenance'] as const) {
+  for (const key of ['strength','rangedStrength','bombardStrength','range','moves','maintenance','faithCost'] as const) {
     if (key in reference) item[key] = (reference as unknown as Record<string,number>)[key];
   }
   if (item.kind === 'unit') {

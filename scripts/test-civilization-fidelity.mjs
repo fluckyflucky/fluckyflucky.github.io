@@ -9,7 +9,7 @@ const w=await import(moduleUrl('src/games/civilization/world.ts')),
   politicsRef=await import(moduleUrl('src/games/civilization/politics-reference.ts'));
 let passed=0;
 function test(name, fn){fn();passed++;console.log('✓ '+name);}
-function setup(){const s=w.create({seed:42,size:'compact',speed:'normal',difficulty:'relaxed'});assert(w.found(s,s.units.find(u=>u.owner===0&&u.type==='settler')));return s;}
+function setup(){const s=w.create({seed:42,size:'compact',speed:'normal',difficulty:'relaxed',cityStateCount:2});assert(w.found(s,s.units.find(u=>u.owner===0&&u.type==='settler')));return s;}
 test('77 technologies and 61 civics match source costs, prerequisites, eras and boosts',()=>{
   assert.equal(c.techs.length,77);assert.equal(c.civics.length,61);
   for(const ref of r.researchReference){
@@ -161,5 +161,26 @@ test('legacy merchant/oligarchy layouts migrate without losing cards; malformed 
 });
 test('purchase affordability uses the same discounted price as the UI',()=>{
   const s=setup(),n=s.nations[0],city=s.cities.find(c=>c.owner===0);city.queue=[];n.government='democracy';n.gold=w.cost(s,'monument')*3;assert.equal(w.purchasePrice(s,city,'monument'),n.gold);assert(w.purchase(s,city,'monument'));assert.equal(n.gold,0);
+});
+test('defensive tactics boosts the declared-on civilization, not the aggressor or a rejected declaration',()=>{
+  const s=setup(),a=s.nations[0],b=s.nations[1];a.met.push(1);
+  assert.equal(w.diplomacy(s,1,'war'),true);
+  assert(b.boosts.includes('defensivetactics'));assert(!a.boosts.includes('defensivetactics'));
+  const progress=b.researchProgress.defensivetactics;
+  assert.equal(w.diplomacy(s,1,'war'),false);assert.equal(b.researchProgress.defensivetactics,progress);
+  const blocked=setup();blocked.nations[0].met.push(1);w.relation(blocked,0,1).until=100;
+  assert.equal(w.diplomacy(blocked,1,'war'),false);assert(!blocked.nations[1].boosts.includes('defensivetactics'));
+});
+test('missionary base purchase, movement, charges and shrine prerequisite match Civilopedia',()=>{
+  const s=setup(),n=s.nations[0],city=s.cities.find(c=>c.owner===0);
+  s.options.speed='normal';n.religion='test';city.religion=0;city.pressure[0]=100;n.faith=1000;
+  assert.match(w.buildReason(s,city,'missionary'),/祠堂/);
+  city.buildings.push('holy','shrine');assert.equal(w.buildReason(s,city,'missionary'),'');
+  assert(!n.civic.includes('theology'),'shrine, not theology, unlocks missionaries');
+  assert.equal(w.purchasePrice(s,city,'missionary'),150);
+  s.units=s.units.filter(u=>u.tile!==city.tile);
+  assert(w.purchase(s,city,'missionary'));const u=s.units.find(u=>u.owner===0&&u.type==='missionary');assert.equal(c.itemMap.missionary.moves,4);assert.equal(u.moves,0,'newly purchased units wait until the next turn');assert.equal(u.charges,3);assert.equal(n.faith,850);
+  n.government='theocracy';assert.equal(w.purchasePrice(s,city,'missionary'),128);
+  s.options.speed='quick';assert.equal(w.purchasePrice(s,city,'missionary'),85);
 });
 console.log(`\n${passed} factual/rule regression checks passed. This is NOT a 90% release approval.`);

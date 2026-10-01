@@ -1,5 +1,5 @@
 import { create, defaultOptions } from "./world";
-import { valid as validLegacy } from "./engine";
+import { validLegacy } from './legacy-save';
 import {
   civilizations,
   governments,
@@ -14,6 +14,8 @@ import {
 import { distance } from "./hex";
 import { remapPolicies } from './politics';
 import type { State, City, Nation } from "./model";
+import { pantheons, beliefs } from './religion';
+import { scientists, scientistById, scientistOrder } from './great-people';
 
 const CURRENT = "aoinatsu:civilization:v3",
   PREVIOUS = "aoinatsu:civilization:v2",
@@ -53,7 +55,9 @@ export function valid(value: unknown): value is State {
     )
       return false;
     if (
-      !civilizations.some((c) => c.id === s.options.civilization) ||
+      (s.options.civilization !== 'random' && !civilizations.some((c) => c.id === s.options.civilization)) ||
+      (s.options.aiCount !== undefined && !integer(s.options.aiCount, 1, 5)) ||
+      (s.options.cityStateCount !== undefined && !integer(s.options.cityStateCount, 2, 6)) ||
       !["compact", "standard"].includes(s.options.size) ||
       !["relaxed", "standard", "hard"].includes(s.options.difficulty) ||
       !["quick", "normal"].includes(s.options.speed) ||
@@ -61,6 +65,13 @@ export function valid(value: unknown): value is State {
       !integer(s.options.seed, 0, 4294967295)
     )
       return false;
+    const majors = (s.options.aiCount ?? 2) + 1, states=s.options.cityStateCount??2, civilized = majors + states,
+      relationCount = civilized * (civilized - 1) / 2;
+    if(s.scientistRecruits!==undefined) {
+      const order=scientistOrder(s);
+      if(!Array.isArray(s.scientistRecruits) || s.scientistRecruits.length>order.length ||
+        !s.scientistRecruits.every((r,i)=>record(r) && integer(r.owner,0,majors-1) && r.person===order[i].id)) return false;
+    }
     if (
       !Array.isArray(s.tiles) ||
       s.tiles.length !== s.width * s.height ||
@@ -69,7 +80,7 @@ export function valid(value: unknown): value is State {
       !Array.isArray(s.cities) ||
       s.cities.length > 100 ||
       !Array.isArray(s.nations) ||
-      s.nations.length !== 6 ||
+      s.nations.length !== civilized + 1 ||
       typeof s.continued !== "boolean"
     )
       return false;
@@ -78,16 +89,18 @@ export function valid(value: unknown): value is State {
       if (
         !integer(entity.id, 1, s.next - 1) ||
         ids.has(entity.id) ||
-        !integer(entity.owner, 0, 5) ||
+        !integer(entity.owner, 0, civilized) ||
         !integer(entity.tile, 0, s.tiles.length - 1)
       )
         return false;
       ids.add(entity.id);
     }
     const cityIds = new Set(s.cities.map((c) => c.id)),
-      unitTiles = new Set(s.units.map((u) => u.tile));
+      unitTiles = new Set(s.units.map((u) => u.tile)),
+      scientistUnits = s.units.filter(u=>u.type==='scientist');
     if (
       unitTiles.size !== s.units.length ||
+      new Set(scientistUnits.map(u=>u.person)).size !== scientistUnits.length ||
       new Set(s.cities.map((c) => c.tile)).size !== s.cities.length
     )
       return false;
@@ -117,7 +130,7 @@ export function valid(value: unknown): value is State {
           text(t.resource, 80) &&
           (t.resource === "" ||
             Object.prototype.hasOwnProperty.call(resources, t.resource)) &&
-          integer(t.owner, -1, 5) &&
+          integer(t.owner, -1, civilized) &&
           integer(t.city, -1) &&
           (t.city === -1 || cityIds.has(t.city)) &&
           integer(t.territory, -1) &&
@@ -152,7 +165,9 @@ export function valid(value: unknown): value is State {
           finite(u.xp, 0, 10000) &&
           integer(u.level, 0, 100) &&
           typeof u.fortified === "boolean" &&
-          typeof u.acted === "boolean",
+          typeof u.acted === "boolean" &&
+          (u.type==='scientist' ? !!scientistById(u.person) && u.charges===1 && s.scientistRecruits?.some(r=>r.person===u.person && r.owner===u.owner) &&
+            !s.nations[u.owner].scientistEffects?.includes(u.person!) : u.person===undefined),
       )
     )
       return false;
@@ -160,7 +175,8 @@ export function valid(value: unknown): value is State {
       !s.cities.every(
         (c) =>
           text(c.name, 80) &&
-          integer(c.capital, -1, 2) &&
+          (c.hildegard===undefined || typeof c.hildegard==='boolean') &&
+          integer(c.capital, -1, majors - 1) &&
           integer(c.pop, 1, 1000) &&
           finite(c.food, 0, 1e6) &&
           finite(c.hp, 0, 200) &&
@@ -176,25 +192,34 @@ export function valid(value: unknown): value is State {
               record(j) &&
               text(j.item, 80) &&
               Object.prototype.hasOwnProperty.call(itemMap, j.item) &&
+              !itemMap[j.item].greatPerson &&
               integer(j.tile, -1, s.tiles.length - 1) &&
               (!["district", "wonder"].includes(itemMap[j.item].kind) ||
                 j.tile >= 0),
           ) &&
           record(c.invested) &&
+          (c.productionCosts === undefined || record(c.productionCosts) && Object.entries(c.productionCosts).every(([k,v]) => {
+            const match = /^([A-Za-z][A-Za-z0-9]*):(-?\d+)$/.exec(k);
+            return !!match && itemIds.has(match[1]) && !itemMap[match[1]].greatPerson && integer(Number(match[2]),-1,s.tiles.length-1) && integer(v,1);
+          })) &&
+          (c.districtPlacements===undefined || record(c.districtPlacements) && Object.entries(c.districtPlacements).every(([id,at])=>
+            itemMap[id]?.kind==='district' && integer(at,0,s.tiles.length-1) && s.tiles[at].territory===c.id && s.tiles[at].city<0 && !s.tiles[at].district && !c.buildings.includes(id) && integer(c.productionCosts?.[`${id}:${at}`],1)) &&
+            new Set(Object.values(c.districtPlacements)).size===Object.keys(c.districtPlacements).length) &&
           Object.entries(c.invested).every(([k, v]) => {
             const match = /^([A-Za-z][A-Za-z0-9]*):(-?\d+)$/.exec(k);
             return (
               !!match &&
               itemIds.has(match[1]) &&
+              !itemMap[match[1]].greatPerson &&
               integer(Number(match[2]), -1, s.tiles.length - 1) &&
               finite(v)
             );
           }) &&
           finite(c.border) &&
           ["balanced", "food", "production", "gold"].includes(c.focus) &&
-          integer(c.religion, -1, 2) &&
+          integer(c.religion, -1, majors - 1) &&
           Array.isArray(c.pressure) &&
-          c.pressure.length === 3 &&
+          c.pressure.length === majors &&
           c.pressure.every((v) => finite(v)) &&
           typeof c.attacked === "boolean" &&
           s.tiles[c.tile].city === c.id &&
@@ -207,9 +232,11 @@ export function valid(value: unknown): value is State {
         (n, i) =>
           text(n.name, 80) &&
           text(n.civ, 30) &&
-          (i >= 3 || civilizations.some(c=>c.id===n.civ)) &&
+          (i >= majors || civilizations.some(c=>c.id===n.civ)) &&
           /^#[0-9a-f]{6}$/i.test(n.color) &&
-          n.kind === (i < 3 ? "major" : i < 5 ? "state" : "barbarian") &&
+          n.kind === (i < majors ? "major" : i < civilized ? "state" : "barbarian") &&
+          (n.aiStrategy === undefined || ['expansion','science','culture','military'].includes(n.aiStrategy)) &&
+          (n.explored === undefined || Array.isArray(n.explored) && n.explored.length <= s.tiles.length && n.explored.every(i => integer(i, 0, s.tiles.length - 1)) && new Set(n.explored).size === n.explored.length) &&
           finite(n.gold) &&
           finite(n.faith) &&
           strings(n.tech, techIds) &&
@@ -242,12 +269,21 @@ export function valid(value: unknown): value is State {
           ) &&
           typeof n.policyFree === "boolean" &&
           text(n.religion, 80) &&
-          ["", "fertility", "crafts"].includes(n.pantheon) &&
+          ['',...pantheons.map(p=>p.id)].includes(n.pantheon) &&
+          (n.beliefs===undefined || strings(n.beliefs,new Set(beliefs.map(b=>b.id)),4) &&
+            (n.beliefs.length===0 || n.religion!=='' && n.beliefs.length>=2 && n.beliefs.filter(id=>beliefs.find(b=>b.id===id)?.type==='follower').length===1 && new Set(n.beliefs.map(id=>beliefs.find(b=>b.id===id)?.type)).size===n.beliefs.length)) &&
+          (n.prophetRecruited===undefined || typeof n.prophetRecruited==='boolean') &&
+          (n.pantheonGift===undefined || typeof n.pantheonGift==='boolean') &&
           finite(n.tourism) &&
           finite(n.totalCulture) &&
-          Array.isArray(n.tourismAgainst) && n.tourismAgainst.length === 3 && n.tourismAgainst.every(v=>finite(v)) &&
+          Array.isArray(n.tourismAgainst) && n.tourismAgainst.length === majors && n.tourismAgainst.every(v=>finite(v)) &&
           record(n.space) && typeof n.space.launched === 'boolean' && finite(n.space.distance) && finite(n.space.speed, 1, 1000) &&
           integer(n.barbarianKills) &&
+          (n.districtDiscountBasis === undefined || integer(n.districtDiscountBasis)) &&
+          (n.greatPeopleEarned === undefined || integer(n.greatPeopleEarned)) &&
+          (n.scientistEffects===undefined || strings(n.scientistEffects,new Set(scientists.map(p=>p.id))) && n.scientistEffects.every(id=>s.scientistRecruits?.some(r=>r.person===id && r.owner===i))) &&
+          (n.eraScore === undefined || integer(n.eraScore)) &&
+          (n.influence === undefined || finite(n.influence,0,1000)) &&
           integer(n.envoys) &&
           record(n.great) &&
           ["science", "culture", "prophet"].every((k) =>
@@ -260,17 +296,20 @@ export function valid(value: unknown): value is State {
           integer(n.kills) &&
           integer(n.promotions) &&
           Array.isArray(n.met) &&
-          n.met.every((o) => integer(o, 0, 4)),
+          n.met.every((o) => integer(o, 0, civilized - 1) && o !== i) && new Set(n.met).size === n.met.length,
       )
     )
       return false;
+    const enhancedHolySites=s.cities.filter(c=>c.hildegard);
+    if(enhancedHolySites.length>1 || enhancedHolySites.some(c=>!c.buildings.includes('holy')) ||
+      enhancedHolySites.length && !s.nations.some(n=>n.scientistEffects?.includes('hildegard_of_bingen'))) return false;
     if (
       !Array.isArray(s.relations) ||
-      s.relations.length !== 10 ||
+      s.relations.length !== relationCount ||
       !s.relations.every(
         (r) =>
-          integer(r.a, 0, 4) &&
-          integer(r.b, 1, 4) &&
+          integer(r.a, 0, civilized - 1) &&
+          integer(r.b, 1, civilized - 1) &&
           r.a < r.b &&
           ["peace", "war", "friend"].includes(r.status) &&
           integer(r.since, 0, s.turn) &&
@@ -278,7 +317,7 @@ export function valid(value: unknown): value is State {
           finite(r.opinion, -1000, 1000) &&
           typeof r.delegation === "boolean",
       ) ||
-      new Set(s.relations.map((r) => `${r.a}:${r.b}`)).size !== 10
+      new Set(s.relations.map((r) => `${r.a}:${r.b}`)).size !== relationCount
     )
       return false;
     if (
@@ -287,7 +326,7 @@ export function valid(value: unknown): value is State {
       !s.routes.every(
         (r) =>
           integer(r.id, 1, s.next - 1) &&
-          integer(r.owner, 0, 4) &&
+          integer(r.owner, 0, civilized - 1) &&
           cityIds.has(r.from) &&
           cityIds.has(r.to) &&
           r.from !== r.to &&
@@ -300,13 +339,13 @@ export function valid(value: unknown): value is State {
       return false;
     if (
       !Array.isArray(s.cityStates) ||
-      s.cityStates.length !== 2 ||
+      s.cityStates.length !== states ||
       !s.cityStates.every(
         (c, i) =>
-          c.owner === i + 3 &&
-          ["science", "culture"].includes(c.type) &&
+          c.owner === i + majors &&
+          ["science", "culture", "industrial", "military", "trade", "religious"].includes(c.type) &&
           Array.isArray(c.envoys) &&
-          c.envoys.length === 3 &&
+          c.envoys.length === majors &&
           c.envoys.every((v) => integer(v)),
       )
     )
@@ -329,7 +368,7 @@ export function valid(value: unknown): value is State {
         (h) =>
           integer(h.turn, 1, s.turn) &&
           Array.isArray(h.scores) &&
-          h.scores.length === 3 &&
+          h.scores.length === majors &&
           h.scores.every((v) => finite(v)),
       )
     )
@@ -337,7 +376,7 @@ export function valid(value: unknown): value is State {
     if (
       s.winner !== null &&
       (!record(s.winner) ||
-        !integer(s.winner.owner, 0, 2) ||
+        !integer(s.winner.owner, 0, majors - 1) ||
         ![
           "science",
           "culture",
@@ -349,6 +388,8 @@ export function valid(value: unknown): value is State {
     )
       return false;
     // Keep city ownership and single-tile placement internally consistent.
+    const chosenBeliefs=s.nations.flatMap(n=>n.beliefs??[]);
+    if(new Set(chosenBeliefs).size!==chosenBeliefs.length) return false;
     for (const t of s.tiles) {
       if (
         t.territory >= 0 &&
@@ -408,7 +449,7 @@ export function migrate(value: unknown): State | null {
   if (!validLegacy(value)) return null;
   try {
     const old = value;
-    const s = create({ ...defaultOptions(), size: "compact", seed: old.seed });
+    const s = create({ ...defaultOptions(), cityStateCount:2, size: "compact", seed: old.seed });
     s.turn = old.turn;
     s.next = old.next;
     s.cities = old.cities.map(

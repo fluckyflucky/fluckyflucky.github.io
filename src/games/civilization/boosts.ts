@@ -2,6 +2,8 @@ import type { State } from './model';
 import { techs, civics, itemMap, governments } from './catalog';
 // Unsupported systems never trigger a substitute condition. Release audit lists them.
 export const supportedBoosts = new Set([
+  'defensivetactics', // Event-driven: only the target of a successful declaration.
+  'theenlightenment',
   'irrigation','sailing','archery','wheel','masonry','writing','astrology','bronze','engineering','currency','construction','ironworking','horseback','mathematics','celestialnavigation','shipbuilding','castles','buttress','machinery','education','militaryengineering','stirrups','apprentice','siegetactics','squarerigging','metalcasting','massproduction','astronomy','banking','printing','cartography','industry','economics','scientifictheory','sanitation','flight','steel','computers','plastics','composites','robotics',
   'empire','stateworkforce','craft','military','mysticism','militarytraining','recordedhistory','theology','drama','gamesrecreation','philosophy','feudal','guilds','mercenaries','divineright','civilservice','medievalfaires','reformedchurch','urbanization','operaballet','civilengineering','colonialism','media','nuclearprogram','communism','spacerace','professionalsports','coldwar','socialmedia','synthetictechnocracy','humanism',
 ]);
@@ -41,6 +43,8 @@ export function satisfiedBoosts(s: State, owner: number): string[] {
     civilengineering:districts.size>=7, colonialism:n.tech.includes('astronomy'), media:n.tech.includes('radio'), nuclearprogram:built('lab'),
     communism:built('factory',3), spacerace:built('spaceport'), professionalsports:built('entertainment',2), coldwar:n.tech.includes('nuclearfission'),
     socialmedia:n.tech.includes('telecommunications'), synthetictechnocracy:n.tech.includes('robotics'),
+    // Count actual recruited units, not legacy generic culture rewards.
+    theenlightenment:(s.scientistRecruits?.filter(r=>r.owner===owner).length??0)+Number(!!n.prophetRecruited)>=3,
   };
   return [...techs,...civics].filter(r=>r.boost && tests[r.id]).map(r=>r.id);
 }

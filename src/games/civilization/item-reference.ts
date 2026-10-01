@@ -248,7 +248,10 @@ export const itemReference = [
     "source": "https://www.civilopedia.net/zh-CN/gathering-storm/units/unit_missionary/",
     "cost": null,
     "maintenance": 0,
-    "moves": 4
+    "moves": 4,
+    "faithCost": 150,
+    "charges": 3,
+    "needsSourceId": "building_shrine"
   },
   {
     "id": "monument",

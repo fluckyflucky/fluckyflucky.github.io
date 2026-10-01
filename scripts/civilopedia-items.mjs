@@ -20,6 +20,11 @@ await Promise.all(Array.from({length:4},async()=>{
     const text=strip(html), stats={}, attributes=text.slice(text.indexOf('特点'));
     const upkeep=/维护费用\s*基准花费：\s*(\d+)/.exec(text);
     if (record.category==='units') stats.maintenance=upkeep?Number(upkeep[1]):0;
+    if (record.id==='missionary') {
+      const faith=/购买成本\s*基准花费：\s*(\d+)/.exec(text), charges=/(\d+)\s*传教次数/.exec(attributes);
+      assert(faith && charges && requirements.includes('building_shrine'), 'Missionary faith cost, charges and shrine requirement must be sourced');
+      stats.faithCost=Number(faith[1]);stats.charges=Number(charges[1]);stats.needsSourceId='building_shrine';
+    }
     for(const [key,label] of [['strength','近战攻击力'],['rangedStrength','远程攻击力'],['bombardStrength','轰炸攻击力'],['moves','移动力'],['range','射程']]){
       const value=new RegExp('(\\d+)\\s+'+label).exec(attributes); if(value)stats[key]=Number(value[1]);
     }
