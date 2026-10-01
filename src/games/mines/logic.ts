@@ -123,42 +123,43 @@ export function hint(s: MineState) {
   return null;
 }
 export function validMine(v: unknown): v is MineState {
-  try {
-    const s = v as MineState,
-      m = modes[s.mode];
-    if (!m) return false;
-    const n = m.width * m.height,
-      binary = (a: number[]) =>
-        Array.isArray(a) &&
-        a.length === n &&
-        a.every((v) => v === 0 || v === 1);
-    if (
-      s.version !== 1 ||
-      !binary(s.opened) ||
-      !binary(s.flags) ||
-      !Number.isSafeInteger(s.seconds) ||
-      s.seconds < 0 ||
-      !["ready", "playing", "won", "lost"].includes(s.status)
-    )
-      return false;
-    if (!s.board) return s.status === "ready" && s.opened.every((v) => !v);
-    if (
-      !Array.isArray(s.board) ||
-      s.board.length !== n ||
-      s.board.some((v) => !Number.isInteger(v) || v < -1 || v > 8) ||
-      !Number.isInteger(s.first) ||
-      s.first < 0 ||
-      s.first >= n ||
-      s.board[s.first] < 0
-    )
-      return false;
-    const bombs = s.board.flatMap((v, i) => (v < 0 ? [i] : []));
-    return (
-      bombs.length === m.mines &&
-      numbers(bombs, m.width, m.height).every((v, i) => v === s.board![i]) &&
-      s.opened.every((v, i) => !v || s.board![i] >= 0)
-    );
-  } catch {
+  if (!v || typeof v !== 'object') return false;
+  const s = v as MineState,
+    m = modes[s.mode];
+  if (!m) return false;
+  const n = m.width * m.height,
+    binary = (a: number[]) =>
+      Array.isArray(a) &&
+      a.length === n &&
+      a.every((v) => v === 0 || v === 1);
+  if (
+    s.version !== 1 ||
+    !binary(s.opened) ||
+    !binary(s.flags) ||
+    !Number.isSafeInteger(s.seconds) ||
+    s.seconds < 0 ||
+    !["ready", "playing", "won", "lost"].includes(s.status)
+  )
     return false;
-  }
+  if (!s.board) return s.board === null && s.status === "ready" && s.first === -1 && s.hit === -1 && s.opened.every((v) => !v);
+  if (
+    !Array.isArray(s.board) ||
+    s.board.length !== n ||
+    s.board.some((v) => !Number.isInteger(v) || v < -1 || v > 8) ||
+    !Number.isInteger(s.first) ||
+    s.first < 0 ||
+    s.first >= n ||
+    s.board[s.first] < 0
+  )
+    return false;
+  const bombs = s.board.flatMap((v, i) => (v < 0 ? [i] : []));
+  const allSafe = s.opened.filter(Boolean).length === n - m.mines;
+  return (
+    s.status !== 'ready' &&
+    (s.status === 'won' ? allSafe : !allSafe) &&
+    (s.status === 'lost' ? Number.isInteger(s.hit) && s.hit >= 0 && s.hit < n && s.board[s.hit] === -1 : s.hit === -1) &&
+    bombs.length === m.mines &&
+    numbers(bombs, m.width, m.height).every((v, i) => v === s.board![i]) &&
+    s.opened.every((v, i) => !v || s.board![i] >= 0)
+  );
 }

@@ -17,12 +17,15 @@
     "highlight.js": "^11.11.1",
     "markdown-it": "^14.1.0",
     "markdown-it-anchor": "^9.2.0",
-    "matter-js": "^0.20.0",
+    "planck": "1.4.2",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
     "wanakana": "^5.3.1"
   },
   "pnpm": {
+    "overrides": {
+      "stage-js": "1.0.1"
+    },
     "onlyBuiltDependencies": [
       "esbuild"
     ]
@@ -30,7 +33,6 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.6",
     "@types/markdown-it": "^14.1.2",
-    "@types/matter-js": "^0.20.2",
     "@vitejs/plugin-vue": "^5.2.4",
     "playwright": "^1.59.1",
     "tailwindcss": "^4.1.6",

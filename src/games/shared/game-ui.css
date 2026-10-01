@@ -15,6 +15,11 @@
 .arcade-button.primary:hover:not(:disabled) { background: #155e75; border-color: #0891b2; }
 .arcade-button:disabled { opacity: 0.35; cursor: default; }
 .arcade-button:focus-visible { outline: 2px solid #22d3ee; outline-offset: 3px; }
+.arcade-button.icon-button { display: inline-grid; place-items: center; padding: 9px; min-width: 44px; min-height: 44px; }
+.game-help > summary { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #44403c; border-radius: 9px; color: #d6d3d1; cursor: pointer; list-style: none; }
+.game-help > summary::-webkit-details-marker { display: none; }
+.game-help > summary:focus-visible { outline: 2px solid #22d3ee; outline-offset: 3px; }
+.game-help[open] > summary { margin-bottom: 12px; color: #67e8f9; }
 .arcade-notes { min-width: 0; }
 .arcade-note { border: 1px solid rgb(255 255 255 / 0.06); background: rgb(28 25 23 / 0.4); border-radius: 16px; padding: 20px; }
 .arcade-note h2 { font-size: 14px; color: #e7e5e4; font-weight: 600; margin-bottom: 12px; }

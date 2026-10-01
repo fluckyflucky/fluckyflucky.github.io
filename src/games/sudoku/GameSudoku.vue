@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from "vue";
+import { computed, ref, watch, onUnmounted, nextTick } from "vue";
 import {
   generate,
   validSudoku,
@@ -9,6 +9,7 @@ import {
   candidates,
 } from "./logic";
 import { readSaved, saveLocal } from "../shared/storage";
+import GameIcon from '../shared/GameIcon.vue';
 import "../shared/game-ui.css";
 import "../shared/puzzle-ui.css";
 const key = "aoinatsu:sudoku:v1",
@@ -16,7 +17,7 @@ const key = "aoinatsu:sudoku:v1",
   state = ref(validSudoku(saved) ? saved : generate()),
   selected = ref(0),
   pencil = ref(false),
-  message = ref("每行、每列、每宫都填入 1–9。"),
+  message = ref(""),
   confirm = ref(false);
 const history = ref<{ values: number[]; notes: number[] }[]>([]),
   bad = computed(() => conflicts(state.value.values)),
@@ -24,6 +25,10 @@ const history = ref<{ values: number[]; notes: number[] }[]>([]),
     state.value.values.every((v, i) => v === state.value.solution[i]),
   ),
   filled = computed(() => state.value.values.filter(Boolean).length);
+const boardElement = ref<HTMLElement | null>(null);
+function focusSelected() {
+  nextTick(() => boardElement.value?.querySelector<HTMLButtonElement>(`[data-cell="${selected.value}"]`)?.focus({ preventScroll: true }));
+}
 function persist() {
   saveLocal(key, state.value);
 }
@@ -44,7 +49,7 @@ function snapshot() {
 }
 function enter(v: number) {
   const i = selected.value;
-  if (won.value || state.value.givens[i]) return;
+  if (won.value || state.value.givens[i] || (!pencil.value && state.value.values[i] === v)) { focusSelected(); return; }
   snapshot();
   if (pencil.value && v) {
     state.value.notes[i] ^= 1 << (v - 1);
@@ -58,14 +63,16 @@ function enter(v: number) {
     ? "填完了！"
     : bad.value.some(Boolean)
       ? "红色格子有重复数字。"
-      : "继续。";
+      : "";
+  focusSelected();
 }
 function undo() {
   const a = history.value.pop();
   if (a) {
     state.value.values = a.values;
     state.value.notes = a.notes;
-    message.value = "退回一步。";
+    message.value = "";
+    focusSelected();
   }
 }
 function hint() {
@@ -75,7 +82,8 @@ function hint() {
   );
   if (wrong >= 0) {
     selected.value = wrong;
-    message.value = "这个数字不对，先改一下。";
+    message.value = "所选格子的数字不对。";
+    focusSelected();
     return;
   }
   const step = logicalStep(state.value.values);
@@ -87,6 +95,7 @@ function hint() {
     for (const i of peers[step.cell])
       state.value.notes[i] &= ~(1 << (step.value - 1));
     message.value = step.reason;
+    focusSelected();
   }
 }
 function newGame(difficulty: "easy" | "normal") {
@@ -94,9 +103,10 @@ function newGame(difficulty: "easy" | "normal") {
   history.value = [];
   selected.value = 0;
   confirm.value = false;
-  message.value = "新题准备好了。";
+  message.value = "";
 }
 function keydown(e: KeyboardEvent) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (/^[1-9]$/.test(e.key)) {
     e.preventDefault();
     enter(Number(e.key));
@@ -104,7 +114,8 @@ function keydown(e: KeyboardEvent) {
     e.preventDefault();
     enter(0);
   } else if (e.key === "n" || e.key === "N") {
-    pencil.value = !pencil.value;
+    e.preventDefault();
+    if (!e.repeat) pencil.value = !pencil.value;
   } else if (
     ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
   ) {
@@ -119,6 +130,7 @@ function keydown(e: KeyboardEvent) {
           : e.key === "ArrowLeft"
             ? r * 9 + Math.max(0, c - 1)
             : r * 9 + Math.min(8, c + 1);
+    focusSelected();
   }
 }
 </script>
@@ -144,8 +156,8 @@ function keydown(e: KeyboardEvent) {
       <div class="arcade-player">
         <div class="arcade-toolbar">
           <p>{{ state.difficulty === "easy" ? "轻松" : "标准" }} · 唯一解</p>
-          <button class="arcade-button" @click="confirm = !confirm">
-            换一题
+          <button class="arcade-button icon-button" aria-label="换一题" title="换一题" @click="confirm = !confirm">
+            <GameIcon name="reset" />
           </button>
         </div>
         <div v-if="confirm" class="new-choice">
@@ -155,6 +167,7 @@ function keydown(e: KeyboardEvent) {
           ><button class="arcade-button" @click="confirm = false">取消</button>
         </div>
         <div
+          ref="boardElement"
           class="sudoku-board"
           role="group"
           aria-label="数独棋盘"
@@ -163,6 +176,7 @@ function keydown(e: KeyboardEvent) {
           <button
             v-for="(v, i) in state.values"
             :key="i"
+            :data-cell="i"
             :tabindex="selected === i ? 0 : -1"
             class="cell"
             :class="{
@@ -199,38 +213,39 @@ function keydown(e: KeyboardEvent) {
         </div>
         <div class="arcade-actions">
           <button
-            class="arcade-button"
+            class="arcade-button icon-button"
             :class="{ primary: pencil }"
             :aria-pressed="pencil"
+            aria-label="笔记模式" title="笔记模式"
             @click="pencil = !pencil"
           >
-            笔记 {{ pencil ? "开" : "关" }}</button
-          ><button class="arcade-button" :disabled="won" @click="enter(0)">
-            擦除</button
+            <GameIcon name="pencil" /></button
+          ><button class="arcade-button icon-button" :disabled="won" aria-label="擦除" title="擦除" @click="enter(0)">
+            <GameIcon name="eraser" /></button
           ><button
-            class="arcade-button"
+            class="arcade-button icon-button"
             :disabled="!history.length"
+            aria-label="撤销" title="撤销"
             @click="undo"
           >
-            撤销</button
-          ><button class="arcade-button" :disabled="won" @click="hint">
-            提示
+            <GameIcon name="undo" /></button
+          ><button class="arcade-button icon-button" :disabled="won" aria-label="提示" title="提示" @click="hint">
+            <GameIcon name="hint" />
           </button>
         </div>
         <p class="arcade-status" role="status">
-          {{ won ? "解出来了！可以换一题。" : message }}
+          {{ won ? "填完了！" : message }}
         </p>
       </div>
       <aside class="arcade-notes">
-        <div class="arcade-note">
-          <h2>玩法</h2>
-          <p>先选格子，再选数字。粗线围起来的九宫也不能重复。</p>
-          <p>笔记可以记候选数字。电脑支持数字键、方向键、退格；N 切换笔记。</p>
-          <p>
-            每道题都是唯一解，能用排除法解完，不用猜。填错了可以撤销或提示。
-          </p>
-        </div>
-        <p class="arcade-save-note">进度保存在这个浏览器。</p>
+        <details class="game-help">
+          <summary aria-label="玩法" title="玩法"><GameIcon name="help" /></summary>
+          <div class="arcade-note">
+            <p>每行、每列、每个九宫都填 1–9，不重复。</p>
+            <p>笔记可以记候选数字。电脑支持数字键、方向键、退格；N 切换笔记。</p>
+          </div>
+        </details>
+        <p class="arcade-save-note">自动存档</p>
       </aside>
     </div>
   </section>

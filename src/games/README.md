@@ -21,6 +21,21 @@
 
 可选字段 `coverImages` 是封面图片数组，`accent` 设置封面的颜色，`props` 会传给游戏组件。奶龙和奶蛙版共用 `dragonMerge/GameDragonMerge.vue`，通过 `props.variant` 选择图片组，存档分别保存。
 
-消消乐的规则在 `match3/logic.ts`，合成游戏的碰撞与合并在 `dragonMerge/physics.ts`。合成游戏使用 Matter.js，物理引擎在进入游戏时才加载。奶龙 / 奶蛙的本地素材及来源见 `dragonMerge/ASSETS.md`。
+消消乐的规则在 `match3/logic.ts`，合成游戏的碰撞与合并在 `dragonMerge/physics.ts`。合成游戏和拧螺丝使用 Planck（Box2D），进入游戏时才加载。奶龙 / 奶蛙的本地素材及来源见 `dragonMerge/ASSETS.md`。
 
 沿用 2048 的实现时，可以参考 `game2048/Game2048.vue` 的响应式布局、键盘与触屏操作、减少动画设置和浏览器存档。新游戏的存储键应使用独立前缀（例如 `aoinatsu:your-game:v1`），访问浏览器存储时处理异常；在组件卸载时清理定时器和事件监听。
+
+共用按钮图标在 `shared/GameIcon.vue`，存储读写在 `shared/storage.ts`。游戏规则各自保留在游戏目录，不添加一次性的适配层。
+
+规则与物理检查（Node 24）：
+
+```sh
+node --experimental-strip-types scripts/test-arcade-rules.mjs
+node --experimental-strip-types scripts/test-table-games.mjs
+node --experimental-strip-types scripts/test-poker-settings.mjs
+node --experimental-strip-types scripts/test-puzzles.mjs
+node --experimental-strip-types scripts/test-screw-physics.mjs
+node --experimental-transform-types scripts/test-dragon-merge.mjs
+pnpm test:civilization
+pnpm build
+```

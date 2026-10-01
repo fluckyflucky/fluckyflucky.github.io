@@ -1,76 +1,91 @@
-import Matter from 'matter-js'
+import { World, Box, Circle, RevoluteJoint, testOverlap, type Body, type Fixture } from 'planck'
 import { holes, type ScrewLevel, type ScrewState } from './logic.ts'
 
-const { Bodies, Body, Composite, Constraint, Engine, Collision, Sleeping } = Matter
+const SCALE = 50, STEP = 1000 / 120, BOLT_CATEGORY = 1 << 14
 export interface PlatePose { x: number; y: number; angle: number; vx: number; vy: number; av: number; gone: boolean; pins: [number | null, number | null] }
 export interface ScrewPhysicsSave { screws: number[]; moves: number; plates: PlatePose[]; separated: string[]; clearBolts?: string[] }
-export interface PlateView { i: number; x: number; y: number; angle: number; length: number; a: Matter.Vector; b: Matter.Vector }
-interface Piece { body: Matter.Body; span: number; pins: [number | null, number | null]; joints: Matter.Constraint[]; gone: boolean }
+export interface PlateView { i: number; x: number; y: number; angle: number; length: number; a: { x: number; y: number }; b: { x: number; y: number } }
+interface Piece { body: Body; fixture: Fixture; span: number; pins: [number | null, number | null]; joint: RevoluteJoint | null; gone: boolean }
+const position = (body: Body) => ({ x: body.getPosition().x * SCALE, y: body.getPosition().y * SCALE })
+const overlaps = (a: Fixture, b: Fixture) => testOverlap(a.getShape(), 0, b.getShape(), 0, a.getBody().getTransform(), b.getBody().getTransform())
 
 export class ScrewWorld {
-  readonly engine = Engine.create({ enableSleeping: true, constraintIterations: 12, positionIterations: 10, velocityIterations: 8 })
+  readonly engine = new World({ gravity: { x: 0, y: 34 }, allowSleep: true, continuousPhysics: true })
   readonly pieces: Piece[] = []
   readonly level: ScrewLevel
   screws: number[]
   moves = 0
+  private ground = this.engine.createBody()
   private separated = new Set<string>()
-  private bolts = new Map<number, Matter.Body>()
+  private bolts = new Map<number, Body>()
   private clearBolts = new Set<string>()
+  private accumulator = 0
 
   constructor(level: ScrewLevel, saved?: ScrewPhysicsSave, legacy?: ScrewState) {
     this.level = level
     this.screws = [...(saved?.screws ?? legacy?.screws ?? level.screws)]
     this.moves = saved?.moves ?? legacy?.moves ?? 0
-    this.engine.gravity.y = 1.7
     this.separated = new Set(saved?.separated ?? [])
     this.clearBolts = new Set(saved?.clearBolts ?? [])
     level.plates.forEach((p, i) => {
-      const a = holes[p.a], b = holes[p.b], span = Math.hypot(b.x - a.x, b.y - a.y)
-      const pose = saved?.plates[i]
-      const body = Bodies.rectangle(pose?.x ?? (a.x + b.x) / 2, pose?.y ?? (a.y + b.y) / 2, span + 40, 34, {
-        angle: pose?.angle ?? Math.atan2(b.y - a.y, b.x - a.x), density: 0.002,
-        friction: 0.45, frictionAir: 0.008, restitution: 0.08,
-        collisionFilter: { category: 1 << i, mask: 0 }, sleepThreshold: 90,
+      const a = holes[p.a], b = holes[p.b], span = Math.hypot(b.x - a.x, b.y - a.y), pose = saved?.plates[i]
+      const body = this.engine.createDynamicBody({
+        position: { x: (pose?.x ?? (a.x + b.x) / 2) / SCALE, y: (pose?.y ?? (a.y + b.y) / 2) / SCALE },
+        angle: pose?.angle ?? Math.atan2(b.y - a.y, b.x - a.x),
+        linearDamping: 0.48, angularDamping: 0.48, bullet: true,
+      })
+      const fixture = body.createFixture(new Box((span / 2 + 20) / SCALE, 17 / SCALE), {
+        density: 5, friction: 0.45, restitution: 0.05, filterCategoryBits: 1 << i, filterMaskBits: 0,
       })
       const gone = pose?.gone ?? legacy?.removed.includes(i) ?? false
       const pins: Piece['pins'] = pose ? [...pose.pins] : [this.screws.includes(p.a) && !gone ? p.a : null, this.screws.includes(p.b) && !gone ? p.b : null]
-      const piece: Piece = { body, span, pins, joints: [], gone }
+      const piece: Piece = { body, fixture, span, pins, joint: null, gone }
       this.pieces.push(piece)
-      if (!gone) {
-        Composite.add(this.engine.world, body)
+      if (gone) this.engine.destroyBody(body)
+      else {
         this.attach(piece)
-        if (pose && !body.isStatic) { Body.setVelocity(body, { x: pose.vx, y: pose.vy }); Body.setAngularVelocity(body, pose.av) }
+        if (pose && !body.isStatic()) {
+          body.setLinearVelocity({ x: pose.vx * 60 / SCALE, y: pose.vy * 60 / SCALE })
+          body.setAngularVelocity(pose.av * 60)
+        }
       }
     })
     this.syncBolts()
     this.updateCollisions()
   }
 
-  private point(piece: Piece, side: number): Matter.Vector {
-    const offset = (side === 0 ? -1 : 1) * piece.span / 2
-    return { x: piece.body.position.x + Math.cos(piece.body.angle) * offset, y: piece.body.position.y + Math.sin(piece.body.angle) * offset }
+  private point(piece: Piece, side: number) {
+    const p = piece.body.getWorldPoint({ x: (side === 0 ? -1 : 1) * piece.span / 2 / SCALE, y: 0 })
+    return { x: p.x * SCALE, y: p.y * SCALE }
   }
 
   private attach(piece: Piece) {
-    piece.joints.forEach(j => Composite.remove(this.engine.world, j)); piece.joints = []
+    if (piece.joint) this.engine.destroyJoint(piece.joint)
+    piece.joint = null
     const count = piece.pins.filter(p => p !== null).length
-    Body.setStatic(piece.body, count === 2)
-    if (count === 1) {
-      const side = piece.pins[0] !== null ? 0 : 1, h = piece.pins[side]!
-      const point = this.point(piece, side)
-      const joint = Constraint.create({ bodyB: piece.body, pointA: { ...holes[h] },
-        pointB: { x: point.x - piece.body.position.x, y: point.y - piece.body.position.y },
-        length: 0, stiffness: 0.98, damping: 0.001 })
-      piece.joints.push(joint); Composite.add(this.engine.world, joint)
+    piece.body.setType(count === 2 ? 'static' : 'dynamic')
+    if (count === 2) {
+      const a = holes[piece.pins[0]!], b = holes[piece.pins[1]!]
+      piece.body.setTransform({ x: (a.x + b.x) / 2 / SCALE, y: (a.y + b.y) / 2 / SCALE }, Math.atan2(b.y - a.y, b.x - a.x))
+    } else if (count === 1) {
+      const side = piece.pins[0] !== null ? 0 : 1, h = holes[piece.pins[side]!]
+      const p = this.point(piece, side), centre = piece.body.getPosition()
+      piece.body.setPosition({ x: centre.x + (h.x - p.x) / SCALE, y: centre.y + (h.y - p.y) / SCALE })
+      const joint = new RevoluteJoint({}, this.ground, piece.body, { x: h.x / SCALE, y: h.y / SCALE })
+      this.engine.createJoint(joint); piece.joint = joint
     }
-    Sleeping.set(piece.body, false)
+    piece.body.setAwake(true)
   }
 
-  private covers(piece: Piece, point: Matter.Vector) {
-    const dx = point.x - piece.body.position.x, dy = point.y - piece.body.position.y
-    const x = dx * Math.cos(piece.body.angle) + dy * Math.sin(piece.body.angle)
-    const y = -dx * Math.sin(piece.body.angle) + dy * Math.cos(piece.body.angle)
-    return Math.abs(x) <= piece.span / 2 + 20 && Math.abs(y) <= 17
+  private covers(piece: Piece, point: { x: number; y: number }) {
+    const p = piece.body.getLocalPoint({ x: point.x / SCALE, y: point.y / SCALE })
+    return Math.abs(p.x * SCALE) <= piece.span / 2 + 20 && Math.abs(p.y * SCALE) <= 17
+  }
+
+  private aligned(piece: Piece, side: number, hole: number, tolerance: number) {
+    const p = this.point(piece, side), target = holes[hole], other = piece.pins[1 - side]
+    return Math.hypot(p.x - target.x, p.y - target.y) < tolerance
+      && (other === null || Math.abs(Math.hypot(holes[other].x - target.x, holes[other].y - target.y) - piece.span) < 0.5)
   }
 
   accessible(hole: number): boolean {
@@ -80,7 +95,7 @@ export class ScrewWorld {
       const p = this.pieces[i]
       if (p.gone || !this.covers(p, point)) continue
       if (this.screws.includes(hole) && this.clearBolts.has(`${i}:${hole}`)) return true
-      return [0, 1].some(side => Math.hypot(this.point(p, side).x - point.x, this.point(p, side).y - point.y) < 11)
+      return [0, 1].some(side => this.aligned(p, side, hole, 11))
     }
     return true
   }
@@ -93,79 +108,80 @@ export class ScrewWorld {
       let changed = false
       for (const side of [0, 1]) {
         if (piece.pins[side] === from) { piece.pins[side] = null; changed = true }
-        const point = this.point(piece, side)
-        if (piece.pins[side] === null && Math.hypot(point.x - holes[to].x, point.y - holes[to].y) < 9) {
+        if (piece.pins[side] === null && this.aligned(piece, side, to, 9)) {
           piece.pins[side] = to; changed = true
         }
       }
       if (changed) this.attach(piece)
     })
-    // A sleeping board may have been resting on the support just unpinned.
-    this.pieces.forEach(p => { if (!p.gone && !p.body.isStatic) Sleeping.set(p.body, false) })
-    this.moves++
-    this.syncBolts()
+    // Removing an anchor or parked screw changes an entire support island.
+    this.pieces.forEach(p => { if (!p.gone && !p.body.isStatic()) p.body.setAwake(true) })
+    this.moves++; this.syncBolts(); this.updateCollisions()
     return true
   }
 
   private syncBolts() {
     for (const [h, body] of this.bolts) if (!this.screws.includes(h)) {
-      Composite.remove(this.engine.world, body); this.bolts.delete(h)
+      this.engine.destroyBody(body); this.bolts.delete(h)
       this.pieces.forEach((_, i) => this.clearBolts.delete(`${i}:${h}`))
     }
     for (const h of this.screws) if (!this.bolts.has(h)) {
-      const body = Bodies.circle(holes[h].x, holes[h].y, 10, {
-        isStatic: true, friction: 0.3, restitution: 0,
-        collisionFilter: { category: 1 << 20, mask: 0 },
+      const body = this.engine.createBody({ position: { x: holes[h].x / SCALE, y: holes[h].y / SCALE } })
+      body.createFixture(new Circle(10 / SCALE), {
+        friction: 0.3, restitution: 0, filterCategoryBits: BOLT_CATEGORY, filterMaskBits: 0,
       })
-      this.bolts.set(h, body); Composite.add(this.engine.world, body)
+      this.bolts.set(h, body)
     }
   }
 
   private updateCollisions() {
-    this.pieces.forEach(p => { p.body.collisionFilter.mask = 0 })
-    // A board's own pins sit inside its drilled holes. Screws already
-    // covered by another depth layer become obstacles once that layer clears.
+    const masks = this.pieces.map(() => 0)
     for (const [h, bolt] of this.bolts) {
-      bolt.collisionFilter.mask = 0
+      const fixture = bolt.getFixtureList()!
+      let mask = 0
       this.pieces.forEach((p, i) => {
         if (p.gone || p.pins.includes(h)) return
         const key = `${i}:${h}`
-        if (!Collision.collides(p.body, bolt)) this.clearBolts.add(key)
-        if (this.clearBolts.has(key)) {
-          bolt.collisionFilter.mask! |= p.body.collisionFilter.category!
-          p.body.collisionFilter.mask! |= bolt.collisionFilter.category!
-        }
+        if (!overlaps(p.fixture, fixture)) this.clearBolts.add(key)
+        if (this.clearBolts.has(key)) { mask |= 1 << i; masks[i] |= BOLT_CATEGORY }
       })
+      if (fixture.getFilterMaskBits() !== mask) fixture.setFilterData({ categoryBits: BOLT_CATEGORY, maskBits: mask, groupIndex: 0 })
     }
     for (let i = 0; i < this.pieces.length; i++) for (let j = i + 1; j < this.pieces.length; j++) {
       const a = this.pieces[i], b = this.pieces[j], key = `${i}:${j}`
       if (a.gone || b.gone) continue
-      // Initially overlapping boards sit in different depth layers. Do not
-      // explosively resolve those overlaps; once clear, physical collisions
-      // take over, so a swinging/falling board can hit another board.
-      if (!this.separated.has(key) && !Collision.collides(a.body, b.body)) this.separated.add(key)
-      if (this.separated.has(key)) {
-        a.body.collisionFilter.mask! |= b.body.collisionFilter.category!
-        b.body.collisionFilter.mask! |= a.body.collisionFilter.category!
-      }
+      // Initially crossed boards occupy separate depth layers. Once they
+      // separate, subsequent impacts and support use ordinary rigid contacts.
+      if (!this.separated.has(key) && !overlaps(a.fixture, b.fixture)) this.separated.add(key)
+      if (this.separated.has(key)) { masks[i] |= 1 << j; masks[j] |= 1 << i }
     }
-  }
-
-  step(delta = 1000 / 60) {
-    this.updateCollisions(); Engine.update(this.engine, delta)
-    this.pieces.forEach(p => {
-      if (!p.gone && p.pins.every(h => h === null) && p.body.bounds.min.y > 380) {
-        p.gone = true; Composite.remove(this.engine.world, p.body)
-      }
+    this.pieces.forEach((p, i) => {
+      if (!p.gone && p.fixture.getFilterMaskBits() !== masks[i])
+        p.fixture.setFilterData({ categoryBits: 1 << i, maskBits: masks[i], groupIndex: 0 })
     })
   }
 
+  step(delta = 1000 / 60) {
+    if (!Number.isFinite(delta) || delta <= 0) return
+    this.accumulator += Math.min(delta, 100)
+    while (this.accumulator + 1e-7 >= STEP) {
+      this.accumulator -= STEP
+      this.updateCollisions(); this.engine.step(STEP / 1000, 12, 8)
+      this.pieces.forEach(p => {
+        if (p.gone || p.pins.some(h => h !== null)) return
+        const minY = Math.min(...[-1, 1].flatMap(x => [-1, 1].map(y =>
+          p.body.getWorldPoint({ x: x * (p.span / 2 + 20) / SCALE, y: y * 17 / SCALE }).y * SCALE)))
+        if (minY > 380) { p.gone = true; this.engine.destroyBody(p.body) }
+      })
+    }
+  }
+
   get views(): PlateView[] {
-    return this.pieces.flatMap((p, i) => p.gone ? [] : [{ i, x: p.body.position.x, y: p.body.position.y,
-      angle: p.body.angle * 180 / Math.PI, length: p.span + 40, a: this.point(p, 0), b: this.point(p, 1) }])
+    return this.pieces.flatMap((p, i) => p.gone ? [] : [{ i, ...position(p.body),
+      angle: p.body.getAngle() * 180 / Math.PI, length: p.span + 40, a: this.point(p, 0), b: this.point(p, 1) }])
   }
   get remaining() { return this.pieces.filter(p => !p.gone).length }
-  get active() { return this.pieces.some(p => !p.gone && !p.body.isStatic && !p.body.isSleeping) }
+  get active() { return this.pieces.some(p => !p.gone && !p.body.isStatic() && p.body.isAwake()) }
   hint(): [number, number] | null {
     const destinations = holes.map((point, h) => ({ point, h })).filter(({ point, h }) => !this.screws.includes(h)
       && this.pieces.every(p => p.gone || !this.covers(p, point))).sort((a, b) => a.point.y - b.point.y)
@@ -173,28 +189,41 @@ export class ScrewWorld {
       const piece = this.pieces[i]
       if (piece.gone) continue
       for (const from of piece.pins) {
-        if (from === null || !this.accessible(from)) continue
-        if (destinations.length) return [from, destinations[0].h]
+        if (from !== null && this.accessible(from) && destinations.length) return [from, destinations[0].h]
       }
     }
-    // Detached boards can rest on parked screws: remove those supports too.
     for (const from of [...this.screws].sort((a, b) => holes[b].y - holes[a].y)) {
       if (!this.accessible(from)) continue
       const bolt = this.bolts.get(from)!
-      const supporting = this.pieces.some((p, i) => !p.gone && !p.pins.includes(from)
-        && this.clearBolts.has(`${i}:${from}`) && Matter.Query.collides(bolt, [p.body]).length > 0)
-      const target = destinations.find(({ point }) => point.y < holes[from].y)
+      const supporting = this.pieces.some(p => {
+        if (p.gone || p.pins.includes(from)) return false
+        for (let edge = p.body.getContactList(); edge; edge = edge.next)
+          if (edge.other === bolt && edge.contact.isTouching()) return true
+        return false
+      })
+      const target = destinations[0]
       if (supporting && target) return [from, target.h]
+    }
+    // With every external parking hole occupied, move a loose screw into an
+    // exposed drilled hole first. This frees a parking hole for the next pin.
+    if (!destinations.length) {
+      const target = holes.map((point, h) => ({ h, layer: this.pieces.reduce((layer, p, i) => !p.gone && this.covers(p, point) ? i : layer, -1) }))
+        .filter(({ h }) => !this.screws.includes(h) && this.accessible(h)).sort((a, b) => a.layer - b.layer)[0]
+      const from = [...this.screws].sort((a, b) => holes[a].y - holes[b].y)
+        .find(h => this.accessible(h) && this.pieces.every(p => p.gone || !p.pins.includes(h)))
+      if (target && from !== undefined) return [from, target.h]
     }
     return null
   }
   snapshot(): ScrewPhysicsSave {
     return { screws: [...this.screws], moves: this.moves, separated: [...this.separated], clearBolts: [...this.clearBolts], plates: this.pieces.map(p => ({
-      x: p.body.position.x, y: p.body.position.y, angle: p.body.angle, vx: p.body.velocity.x, vy: p.body.velocity.y,
-      av: p.body.angularVelocity, pins: [...p.pins], gone: p.gone,
+      ...position(p.body), angle: p.body.getAngle(), vx: p.body.getLinearVelocity().x * SCALE / 60, vy: p.body.getLinearVelocity().y * SCALE / 60,
+      av: p.body.getAngularVelocity() / 60, pins: [...p.pins], gone: p.gone,
     })) }
   }
-  destroy() { Composite.clear(this.engine.world, false); Engine.clear(this.engine) }
+  destroy() {
+    for (let body = this.engine.getBodyList(); body;) { const next = body.getNext(); this.engine.destroyBody(body); body = next }
+  }
 }
 
 export function validPhysicsSave(level: ScrewLevel, value: unknown): value is ScrewPhysicsSave {

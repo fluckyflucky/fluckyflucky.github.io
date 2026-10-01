@@ -29,7 +29,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules') && id.includes('matter-js')) {
+          if (id.includes('node_modules') && (id.includes('/planck/') || id.includes('/stage-js/'))) {
             return 'game-physics'
           }
           if (id.includes('node_modules')) {

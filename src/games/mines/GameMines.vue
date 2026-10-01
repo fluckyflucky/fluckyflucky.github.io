@@ -11,13 +11,14 @@ import {
   type Mode,
 } from "./logic";
 import { readSaved, saveLocal } from "../shared/storage";
+import GameIcon from '../shared/GameIcon.vue';
 import "../shared/game-ui.css";
 import "../shared/puzzle-ui.css";
 const key = "aoinatsu:mines:v2",
   saved = readSaved(key),
   state = ref(validMine(saved) ? saved : fresh()),
   flagMode = ref(false),
-  message = ref("第一下不会踩雷。"),
+  message = ref(""),
   size = ref(27),
   confirm = ref<Mode | null>(null),
   suggested = ref(-1),
@@ -34,13 +35,11 @@ function pointerStart(event: PointerEvent, i: number) {
   suppressClick = false;
   if (event.pointerType === 'mouse' || ended.value) return;
   cancelHold();
-  suppressClick = false;
   gesture = { x: event.clientX, y: event.clientY, cell: i, cancelled: false };
   holdTimer = window.setTimeout(() => {
     if (!gesture || gesture.cancelled) return;
     suppressClick = true;
     flag(i);
-    message.value = state.value.flags[i] ? '已标旗。' : '已取消标旗。';
   }, 450);
 }
 function pointerMove(event: PointerEvent) {
@@ -57,12 +56,15 @@ function contextFlag(i: number) {
   cancelHold();
   if (!suppressClick) flag(i);
 }
-function clickCell(i: number) {
-  if (suppressClick) { suppressClick = false; return; }
+function clickCell(event: MouseEvent, i: number) {
+  const suppressed = suppressClick;
+  suppressClick = false;
+  if (suppressed && event.detail > 0) return;
   focused.value = i;
   open(i);
 }
 function keyboard(event: KeyboardEvent, i: number) {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
   const w = config.value.width, row = Math.floor(i / w), col = i % w;
   let next = i;
   if (event.key === 'ArrowLeft') next = row * w + Math.max(0, col - 1);
@@ -111,7 +113,7 @@ function reset(mode: Mode) {
   state.value = fresh(mode);
   confirm.value = null;
   suggested.value = -1;
-  message.value = "第一下不会踩雷。";
+  message.value = "";
   scroll.value?.scrollTo(0, 0);
 }
 function flag(i: number) {
@@ -136,10 +138,10 @@ function open(i: number) {
   else reveal(state.value, i);
   message.value =
     state.value.status === "lost"
-      ? "踩到雷了。可以重开一盘。"
+      ? "踩到雷了。"
       : state.value.status === "won"
         ? "扫干净了！"
-        : "继续。";
+        : "";
 }
 function showHint() {
   const step = hint(state.value);
@@ -191,7 +193,7 @@ function label(i: number) {
           {{ m.label }}
         </button>
       </div>
-      <button class="arcade-button" @click="confirm = state.mode">重开</button>
+      <button class="arcade-button icon-button" aria-label="重开" title="重开" @click="confirm = state.mode"><GameIcon name="reset" /></button>
     </div>
     <div v-if="confirm" class="confirm">
       <p>重开会覆盖当前棋盘。</p>
@@ -200,14 +202,16 @@ function label(i: number) {
     </div>
     <div class="arcade-actions mine-tools">
       <button
-        class="arcade-button"
+        class="arcade-button icon-button"
         :class="{ primary: flagMode }"
         :aria-pressed="flagMode"
+        :aria-label="flagMode ? '标旗模式，点击切换为开格' : '开格模式，点击切换为标旗'"
+        :title="flagMode ? '标旗模式' : '开格模式'"
         @click="flagMode = !flagMode"
       >
-        {{ flagMode ? "⚑ 标旗模式" : "▧ 开格模式" }}</button
-      ><button class="arcade-button" :disabled="ended" @click="showHint">
-        提示</button
+        <GameIcon :name="flagMode ? 'flag' : 'cell'" /></button
+      ><button class="arcade-button icon-button" :disabled="ended" aria-label="提示" title="提示" @click="showHint">
+        <GameIcon name="hint" /></button
       ><label
         >格子大小
         <input
@@ -221,7 +225,7 @@ function label(i: number) {
         {{ remaining }} 个安全格</span
       >
     </div>
-    <p v-if="state.mode === 'large'" class="pan-note">手机横滑棋盘，往下看直接滚动页面。</p>
+    <p v-if="state.mode === 'large'" class="pan-note">横滑看棋盘</p>
     <div ref="scroll" class="mine-scroll" @pointermove="pointerMove" @pointerup="pointerEnd" @pointercancel="pointerCancel" @scroll="cancelHold">
       <div
         class="mine-board"
@@ -250,13 +254,13 @@ function label(i: number) {
           @pointerdown="pointerStart($event, i)"
           @keydown="keyboard($event, i)"
           @focus="focused = i"
-          @click="clickCell(i)"
+          @click="clickCell($event, i)"
           @contextmenu.prevent="contextFlag(i)"
         >
           <span v-if="state.status === 'lost' && state.board?.[i] === -1"
             >✹</span
-          ><span v-else-if="state.flags[i]">⚑</span
-          ><span
+          ><GameIcon v-else-if="state.flags[i]" name="flag" class="cell-flag" />
+          <span
             v-else-if="state.opened[i] && state.board?.[i]"
             :class="`number n${state.board[i]}`"
             >{{ state.board[i] }}</span
@@ -275,13 +279,16 @@ function label(i: number) {
     <p class="arcade-status" role="status">
       {{ state.status === "won" ? "扫干净了！" : message }}
     </p>
-    <div class="arcade-note">
+    <details class="game-help">
+      <summary aria-label="玩法" title="玩法"><GameIcon name="help" /></summary>
+      <div class="arcade-note">
       <p>
         点击开格，右键或长按标旗，也可切换标旗模式。点数字可连开邻格，标错旗会踩雷。
       </p>
       <p>第一下不会踩雷。方向键移动，Enter 开格，F 标旗。</p>
-      <p class="arcade-save-note">棋盘和计时保存在这个浏览器。</p>
-    </div>
+      </div>
+    </details>
+    <p class="arcade-save-note">自动存档</p>
   </section>
 </template>
 <style scoped>
@@ -353,6 +360,7 @@ function label(i: number) {
 .cell.flagged {
   color: #b13f34;
 }
+.cell-flag { width: 17px; height: 17px; }
 .cell.hit {
   background: #c96155;
   color: #fff;

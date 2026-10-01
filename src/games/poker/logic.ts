@@ -87,8 +87,7 @@ export const is27 = (cards: Card[]) =>
   cards
     .map(rank)
     .sort((a, b) => a - b)
-    .join(",") === "2,7" &&
-  suit(cards[0]) !== suit(cards[1]);
+    .join(",") === "2,7";
 export interface Player {
   name: string;
   chips: number;
@@ -97,9 +96,32 @@ export interface Player {
   total: number;
   folded: boolean;
   playing: boolean;
+  kind: SeatKind;
+  style: BotStyle;
+}
+export type SeatKind = "human" | "bot" | "empty";
+export type BotStyle = "tag" | "lag" | "rock" | "calling";
+export const botStyles = {
+  tag: { label: "紧凶", entry: 0.04, raise: 0.18, bluff: 0.065, sizing: 0.65 },
+  lag: { label: "松凶", entry: -0.04, raise: 0.11, bluff: 0.14, sizing: 0.8 },
+  rock: { label: "紧弱", entry: 0.09, raise: 0.32, bluff: 0.008, sizing: 0.4 },
+  calling: { label: "松弱", entry: -0.08, raise: 0.38, bluff: 0.015, sizing: 0.4 },
+} as const;
+export interface SeatConfig { kind: SeatKind; style: BotStyle }
+export interface TableSettings { seats: SeatConfig[]; bounty: boolean }
+export const humanSeat = (s: Poker) => s.players.findIndex(p => p.kind === "human");
+export const tableSettings = (s: Poker): TableSettings => ({
+  seats: s.players.map(({ kind, style }) => ({ kind, style })), bounty: s.bounty,
+});
+export function validSettings(v: unknown): v is TableSettings {
+  const s = v as TableSettings | null;
+  return !!s && typeof s.bounty === "boolean" && Array.isArray(s.seats) && s.seats.length === 6
+    && s.seats.every(p => p && ["human", "bot", "empty"].includes(p.kind) && Object.hasOwn(botStyles, p.style))
+    && s.seats.filter(p => p.kind === "human").length === 1 && s.seats.some(p => p.kind === "bot");
 }
 export interface Poker {
-  version: 1;
+  version: 2;
+  bankroll: number;
   players: Player[];
   deck: Card[];
   board: Card[];
@@ -111,6 +133,7 @@ export interface Poker {
   minRaise: number;
   pending: number[];
   acted: number[];
+  actedAt: number[];
   log: string[];
   done: boolean;
   result: string;
@@ -119,13 +142,18 @@ export interface Poker {
 }
 export const SB = 10,
   BB = 20,
-  BOUNTY = 20;
-export function createTable(): Poker {
+  BOUNTY = 10 * BB;
+export function createTable(settings: TableSettings = {
+  seats: ["tag", "tag", "lag", "rock", "calling", "lag"].map((style, i) => ({ kind: i === 0 ? "human" : "bot", style: style as BotStyle })), bounty: true,
+}, rng = Math.random): Poker {
+  if (!validSettings(settings)) throw new Error("A table needs one human and at least one bot");
   const s: Poker = {
-    version: 1,
-    players: ["你", "阿石", "小夏", "老白"].map((name) => ({
-      name,
-      chips: 1000,
+    version: 2,
+    bankroll: settings.seats.filter(p => p.kind !== "empty").length * 1000,
+    players: settings.seats.map(({ kind, style }, i) => ({
+      name: kind === "human" ? "你" : ["阿川", "阿石", "小夏", "老白", "阿青", "栗子"][i],
+      kind, style,
+      chips: kind === "empty" ? 0 : 1000,
       hole: [],
       bet: 0,
       total: 0,
@@ -134,7 +162,7 @@ export function createTable(): Poker {
     })),
     deck: [],
     board: [],
-    dealer: 3,
+    dealer: 5,
     actor: -1,
     street: 0,
     hand: 0,
@@ -142,13 +170,14 @@ export function createTable(): Poker {
     minRaise: BB,
     pending: [],
     acted: [],
+    actedAt: Array(6).fill(0),
     log: [],
     done: true,
     result: "",
     revealed: [],
-    bounty: true,
+    bounty: settings.bounty,
   };
-  deal(s);
+  deal(s, rng);
   return s;
 }
 function log(s: Poker, text: string) {
@@ -168,7 +197,7 @@ export const toCall = (s: Poker, i = s.actor) =>
   Math.max(0, s.current - s.players[i].bet);
 export const mayRaise = (s: Poker, i = s.actor) =>
   i >= 0 &&
-  !s.acted.includes(i) &&
+  (!s.acted.includes(i) || s.current - s.actedAt[i] >= s.minRaise) &&
   s.players[i].chips > toCall(s, i) &&
   s.players.some((p, k) => k !== i && canAct(p));
 export const raiseMin = (s: Poker) =>
@@ -183,8 +212,8 @@ function pay(s: Poker, i: number, amount: number) {
 export function deal(s: Poker, rng = Math.random) {
   if (
     !s.done ||
-    s.players.filter((p) => p.chips > 0).length < 2 ||
-    s.players[0].chips === 0
+    s.players.filter((p) => p.kind !== "empty" && p.chips > 0).length < 2 ||
+    s.players[humanSeat(s)].chips === 0
   )
     return false;
   s.dealer = order(s, s.dealer, (p) => p.chips > 0)[0];
@@ -195,6 +224,7 @@ export function deal(s: Poker, rng = Math.random) {
   s.board = [];
   s.revealed = [];
   s.acted = [];
+  s.actedAt = Array(6).fill(0);
   s.deck = shuffle(
     Array.from({ length: 52 }, (_, i) => i),
     rng,
@@ -204,7 +234,7 @@ export function deal(s: Poker, rng = Math.random) {
     p.bet = 0;
     p.total = 0;
     p.folded = false;
-    p.playing = p.chips > 0;
+    p.playing = p.kind !== "empty" && p.chips > 0;
     p.hole = p.playing ? [s.deck.pop()!, s.deck.pop()!] : [];
   }
   const seats = order(s, s.dealer, (p) => p.playing);
@@ -286,7 +316,7 @@ function finish(s: Poker) {
     });
     s.players[win].chips += bonus;
     s.revealed.push(win);
-    log(s, `${s.players[win].name}用 2–7 不同花获胜，额外收取 ${bonus} 筹码`);
+    log(s, `${s.players[win].name}用 2–7 获胜，额外收取 ${bonus} 筹码`);
   }
   s.result = received
     .map((v, i) => (v ? `${s.players[i].name}收回 ${v}` : ""))
@@ -323,6 +353,7 @@ function advance(s: Poker) {
   s.current = 0;
   s.minRaise = BB;
   s.acted = [];
+  s.actedAt = Array(6).fill(0);
   s.pending = order(s, s.dealer, canAct);
   s.actor = s.pending[0] ?? -1;
   log(s, ["", "翻牌", "转牌", "河牌"][s.street]);
@@ -361,6 +392,7 @@ export function action(s: Poker, type: "fold" | "call" | "raise", target = 0) {
     log(s, `${p.name}${p.chips === 0 ? "全押" : "加注到"} ${total}`);
   }
   s.acted.push(i);
+  s.actedAt[i] = p.bet;
   s.pending = s.pending.filter((k) => k !== i);
   advance(s);
   return true;
@@ -390,73 +422,90 @@ export function equity(
   return wins / trials;
 }
 export function botAction(s: Poker, rng = Math.random) {
-  if (s.actor <= 0 || s.done) return;
+  if (s.actor < 0 || s.done || s.players[s.actor].kind !== "bot") return;
   const i = s.actor,
     p = s.players[i],
     call = toCall(s),
     odds = call / (pot(s) + call || 1),
     chance = equity(p.hole, s.board, s.players.filter(live).length - 1, rng);
-  const aggressive = i === 2 ? 0.12 : i === 3 ? -0.04 : 0;
-  const bluff = rng() < (is27(p.hole) && s.bounty ? 0.24 : 0.045);
-  if (mayRaise(s) && (chance + aggressive > 0.62 || bluff)) {
+  const style = botStyles[p.style], baseline = 1 / s.players.filter(live).length;
+  const bluff = rng() < style.bluff + (is27(p.hole) && s.bounty ? 0.12 : 0);
+  if (mayRaise(s) && (chance > baseline + style.raise || bluff)) {
     const target = Math.min(
       p.bet + p.chips,
-      Math.max(raiseMin(s), s.current + Math.round((pot(s) * 0.55) / 10) * 10),
+      Math.max(raiseMin(s), s.current + Math.round((pot(s) * style.sizing) / 10) * 10),
     );
     if (action(s, "raise", target)) return;
   }
-  if (call > 0 && chance + aggressive < odds + 0.04 && rng() > 0.12)
+  const threshold = s.street === 0 ? Math.max(odds + style.entry / 2, baseline + style.entry) : odds + style.entry / 2;
+  if (call > 0 && chance < threshold)
     action(s, "fold");
   else action(s, "call");
 }
 export function validPoker(v: unknown): v is Poker {
-  try {
-    const s = v as Poker;
-    const int = (x: number) => Number.isSafeInteger(x) && x >= 0;
-    const cards = (a: number[]) =>
-      Array.isArray(a) && a.every((c) => int(c) && c < 52);
-    return (
-      s.version === 1 &&
-      s.players.length === 4 &&
-      s.players.every(
-        (p) =>
-          int(p.chips) &&
-          p.chips <= 4000 &&
-          int(p.bet) &&
-          int(p.total) &&
-          p.bet <= p.total &&
-          cards(p.hole) &&
-          p.hole.length === (p.playing ? 2 : 0) &&
-          typeof p.folded === "boolean",
-      ) &&
-      s.players.reduce((a, p) => a + p.chips + (s.done ? 0 : p.total), 0) ===
-        4000 &&
-      cards(s.deck) &&
-      cards(s.board) &&
-      [0, 3, 4, 5].includes(s.board.length) &&
-      new Set([...s.deck, ...s.board, ...s.players.flatMap((p) => p.hole)])
-        .size ===
-        [...s.deck, ...s.board, ...s.players.flatMap((p) => p.hole)].length &&
-      int(s.street) &&
-      s.street <= 3 &&
-      int(s.dealer) &&
-      s.dealer < 4 &&
-      int(s.hand) &&
-      s.minRaise >= BB &&
-      int(s.current) &&
-      Array.isArray(s.pending) &&
-      s.pending.every((i) => int(i) && i < 4) &&
-      Array.isArray(s.acted) &&
-      s.acted.every((i) => int(i) && i < 4) &&
-      Array.isArray(s.log) &&
-      Array.isArray(s.revealed) &&
-      s.revealed.every((i) => int(i) && i < 4) &&
-      typeof s.done === "boolean" &&
-      (s.done
-        ? s.actor === -1
-        : s.actor === s.pending[0] && canAct(s.players[s.actor]))
-    );
-  } catch {
-    return false;
-  }
+  if (!v || typeof v !== 'object') return false;
+  const s = v as Poker;
+  if (!Array.isArray(s.players) || s.players.length !== 6 || !s.players.every(p => p && typeof p === 'object')) return false;
+  const int = (x: number) => Number.isSafeInteger(x) && x >= 0;
+  const cards = (a: number[]) =>
+    Array.isArray(a) && a.every((c) => int(c) && c < 52);
+  return (
+    s.version === 2 &&
+    validSettings(tableSettings(s)) &&
+    int(s.bankroll) && s.bankroll >= 2000 && s.bankroll <= 6000 &&
+    s.players.every(
+      (p) =>
+        int(p.chips) &&
+        typeof p.name === "string" && p.name.length <= 24 &&
+        p.chips <= s.bankroll &&
+        int(p.bet) &&
+        int(p.total) &&
+        p.bet <= p.total &&
+        cards(p.hole) &&
+        p.hole.length === (p.playing ? 2 : 0) &&
+        typeof p.folded === "boolean" && typeof p.playing === "boolean" &&
+        (p.kind !== "empty" || (!p.playing && p.chips === 0 && p.total === 0)),
+    ) &&
+    s.players.reduce((a, p) => a + p.chips + (s.done ? 0 : p.total), 0) ===
+      s.bankroll &&
+    cards(s.deck) &&
+    cards(s.board) &&
+    s.board.length === [0, 3, 4, 5][s.street] &&
+    new Set([...s.deck, ...s.board, ...s.players.flatMap((p) => p.hole)])
+      .size ===
+      [...s.deck, ...s.board, ...s.players.flatMap((p) => p.hole)].length &&
+    int(s.street) &&
+    s.street <= 3 &&
+    int(s.dealer) &&
+    s.dealer < 6 &&
+    int(s.hand) &&
+    int(s.minRaise) && s.minRaise >= BB &&
+    int(s.current) &&
+    Array.isArray(s.pending) &&
+    new Set(s.pending).size === s.pending.length && s.pending.every((i) => int(i) && i < 6 && canAct(s.players[i])) &&
+    Array.isArray(s.acted) &&
+    s.acted.every((i) => int(i) && i < 6) &&
+    Array.isArray(s.actedAt) && s.actedAt.length === 6 && s.actedAt.every(int) &&
+    Array.isArray(s.log) && s.log.length <= 24 && s.log.every(t => typeof t === "string") &&
+    Array.isArray(s.revealed) &&
+    s.revealed.every((i) => int(i) && i < 6) && typeof s.bounty === "boolean" && typeof s.result === "string" &&
+    typeof s.done === "boolean" &&
+    (s.done
+      ? s.actor === -1
+      : int(s.actor) && s.actor < 6 && s.actor === s.pending[0] && canAct(s.players[s.actor]))
+  );
+}
+
+// Preserve the old four-player hand and its chips; the two new seats start empty.
+export function restorePoker(value: unknown): Poker | null {
+  if (validPoker(value)) return value;
+  if (!value || typeof value !== "object" || (value as { version?: number }).version !== 1) return null;
+  const old = value as Omit<Poker, "version">;
+  if (!Array.isArray(old.players) || old.players.length !== 4) return null;
+  const seats = ["tag", "tag", "lag", "rock", "calling", "lag"] as BotStyle[];
+  const players = [...old.players.map((p, i) => ({ ...p, kind: i === 0 ? "human" as const : "bot" as const, style: seats[i] })),
+    ...[4, 5].map(i => ({ name: ["阿青", "栗子"][i - 4], kind: "empty" as const, style: seats[i],
+      chips: 0, hole: [], bet: 0, total: 0, folded: false, playing: false }))];
+  const s: Poker = { ...old, version: 2, players, bankroll: 4000, actedAt: players.map(p => p.bet) };
+  return validPoker(s) ? s : null;
 }

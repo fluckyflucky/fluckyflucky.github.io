@@ -4,6 +4,7 @@ import { holes, levels, validState } from './logic'
 import { ScrewWorld, validPhysicsSave, type ScrewPhysicsSave } from './physics'
 import { readSaved, saveLocal } from '../shared/storage'
 import { readProgress } from '../shared/puzzleProgress'
+import GameIcon from '../shared/GameIcon.vue'
 import '../shared/game-ui.css'
 import '../shared/puzzle-ui.css'
 
@@ -20,7 +21,7 @@ const views = shallowRef(world.views)
 const accessibleHoles = ref(holes.map((_, h) => world.accessible(h)))
 const remaining = ref(world.remaining)
 const selected = ref<number | null>(null), suggested = ref<[number, number] | null>(null)
-const history = ref<ScrewPhysicsSave[]>([]), message = ref('点一颗螺丝，再点空孔。')
+const history = ref<ScrewPhysicsSave[]>([]), message = ref('')
 const won = computed(() => remaining.value === 0)
 function persist() { if (!resumable.value) saveLocal(key, { level: level.value, unlocked: unlocked.value, best: best.value, state: world.snapshot() }) }
 watch([level, unlocked, best], persist, { deep: true })
@@ -34,7 +35,7 @@ function select(index: number) {
   if (index < 0 || index > unlocked.value) return
   resumable.value = false
   level.value = index; world.destroy(); world = new ScrewWorld(puzzle.value); sync(); history.value = []; selected.value = null; suggested.value = null
-  message.value = '点一颗螺丝，再点空孔。'
+  message.value = ''
   persist(); animate()
 }
 function resume() {
@@ -43,7 +44,7 @@ function resume() {
   world = new ScrewWorld(puzzle.value, validPhysicsSave(puzzle.value, saved.state) ? saved.state : undefined,
     validState(puzzle.value, saved.state) ? saved.state : undefined)
   resumable.value = false; sync(); persist(); animate()
-  message.value = '已继续上次。'
+  message.value = ''
 }
 function startHard() {
   unlocked.value = Math.max(unlocked.value, 40)
@@ -54,7 +55,7 @@ function clickHole(hole: number) {
   suggested.value = null
   if (state.value.screws.includes(hole)) {
     selected.value = selected.value === hole ? null : hole
-    message.value = selected.value === null ? '取消了。' : '把这颗螺丝移到一个空孔。'
+    message.value = ''
     return
   }
   if (selected.value === null) { message.value = '先选一颗螺丝。'; return }
@@ -63,17 +64,17 @@ function clickHole(hole: number) {
   resumable.value = false
   history.value.push(previous); if (history.value.length > 100) history.value.shift()
   sync(); selected.value = null
-  message.value = '螺丝挪好了。'
+  message.value = ''
   persist(); animate()
 }
 function undo() {
   const prev = history.value.pop()
   if (prev) { world.destroy(); world = new ScrewWorld(puzzle.value, prev); sync(); persist(); animate() }
-  selected.value = null; suggested.value = null; message.value = '退回一步。'
+  selected.value = null; suggested.value = null; message.value = ''
 }
 function showHint() {
   suggested.value = world.hint()
-  message.value = suggested.value ? '把亮起的螺丝移到亮起的空孔。' : '先撤销几步，腾出木板外的空孔。'
+  message.value = suggested.value ? '' : '没有可移动的位置，试试撤销。'
 }
 function sync() {
   state.value = { screws: [...world.screws], moves: world.moves }
@@ -102,7 +103,7 @@ onBeforeUnmount(() => { disposed = true; cancelAnimationFrame(frame); persist();
     <header class="arcade-header"><h1 class="arcade-title">拧螺丝</h1><div class="arcade-stats"><div class="arcade-score"><span>关卡</span><strong>{{ level + 1 }} / {{ levels.length }}</strong></div><div class="arcade-score"><span>步数</span><strong>{{ state.moves }}</strong></div></div></header>
     <div class="arcade-layout">
       <div class="arcade-player">
-        <div class="arcade-toolbar"><p>{{ puzzle.name }} · 剩 {{ remaining }} 块</p><div class="arcade-actions"><button v-if="resumable" class="arcade-button" @click="resume">继续上次</button><button class="arcade-button" :disabled="!history.length" @click="undo">撤销</button><button class="arcade-button" @click="select(level)">重玩</button></div></div>
+        <div class="arcade-toolbar"><p>{{ puzzle.name }} · 剩 {{ remaining }} 块</p><div class="arcade-actions"><button v-if="resumable" class="arcade-button" @click="resume">继续上次</button><button class="arcade-button icon-button" :disabled="!history.length" aria-label="撤销" title="撤销" @click="undo"><GameIcon name="undo" /></button><button class="arcade-button icon-button" aria-label="重玩" title="重玩" @click="select(level)"><GameIcon name="reset" /></button><button class="arcade-button icon-button" :disabled="won" aria-label="提示" title="提示" @click="showHint"><GameIcon name="hint" /></button></div></div>
         <div class="screw-stage" role="group" aria-label="螺丝木板">
           <svg viewBox="0 0 300 360" aria-hidden="true">
             <defs><pattern id="screw-grain" width="60" height="30" patternUnits="userSpaceOnUse"><path d="M0 8 Q20 4 60 9 M0 22 Q35 28 60 20" fill="none" stroke="#735638" stroke-opacity=".12" /></pattern></defs>
@@ -112,7 +113,7 @@ onBeforeUnmount(() => { disposed = true; cancelAnimationFrame(frame); persist();
               <g v-for="v in views" :key="`${level}-${v.i}`" class="wood-plate" :data-plate="v.i">
                 <g :transform="`translate(${v.x} ${v.y}) rotate(${v.angle})`">
                   <rect :x="-v.length / 2" y="-17" :width="v.length" height="38" rx="15" fill="#0003" />
-                  <rect :x="-v.length / 2" y="-19" :width="v.length" height="36" rx="14" :fill="puzzle.plates[v.i].color" stroke="#fff6" stroke-width="2" />
+                  <rect :x="-v.length / 2" y="-17" :width="v.length" height="34" rx="6" :fill="puzzle.plates[v.i].color" stroke="#fff6" stroke-width="2" />
                   <path :d="`M${-v.length / 2 + 26} -10 H${v.length / 2 - 26} M${-v.length / 2 + 30} 9 H${v.length / 2 - 25}`" stroke="#fff3" stroke-width="2" />
                 </g>
                 <circle v-for="(h, side) in [v.a, v.b]" :key="side" :cx="h.x" :cy="h.y" r="9" fill="#574b3e" stroke="#fff6" stroke-width="2" />
@@ -122,9 +123,9 @@ onBeforeUnmount(() => { disposed = true; cancelAnimationFrame(frame); persist();
           <button v-for="(h, i) in holes" :key="i" class="hole-button" :class="{ selected: selected === i, suggested: suggested?.includes(i), empty: !state.screws.includes(i) }" :style="{ left: `${h.x / 3}%`, top: `${h.y / 3.6}%` }" :disabled="won || !accessibleHoles[i]" :aria-label="`${state.screws.includes(i) ? '螺丝' : '空孔'} ${i + 1}${!accessibleHoles[i] ? '，被木板遮住' : ''}`" :aria-pressed="selected === i" @click="clickHole(i)"><span v-if="state.screws.includes(i) && accessibleHoles[i]" class="bolt"><i /></span><span v-else-if="accessibleHoles[i]" class="empty-ring" /></button>
           <div v-if="won" class="arcade-result"><h2>{{ level === levels.length - 1 ? '全部拆完了' : '拆干净了！' }}</h2><p>{{ state.moves }} 步 · 本关最佳 {{ best[level] }} 步</p><button class="arcade-button primary" @click="select(level < levels.length - 1 ? level + 1 : 0)">{{ level < levels.length - 1 ? '下一关' : '再玩一遍' }}</button></div>
         </div>
-        <p class="arcade-status" role="status">{{ won ? '过关了' : message }}</p>
+        <p v-if="message" class="arcade-status" role="status">{{ message }}</p>
       </div>
-      <aside class="arcade-notes"><div class="arcade-note"><h2>玩法</h2><p>点螺丝，再点空孔。剩一颗时木板绕它摆动；全部拆掉才会下落。</p><p>等木板转开，露出下面的螺丝。木板孔和底板孔对齐时，也能重新钉住。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="showHint">提示</button></div>
+      <aside class="arcade-notes"><details class="game-help"><summary aria-label="玩法" title="玩法"><GameIcon name="help" /></summary><div class="arcade-note"><p>点螺丝，再点空孔。剩一颗时木板绕它摆动；全部拆掉才会下落。</p><p>木板孔和底板孔对齐时，也能重新钉住。</p></div></details>
         <button class="arcade-button puzzle-hint" @click="startHard">挑战难关 · 第 41 关</button>
         <div class="puzzle-levels" aria-label="选择关卡"><button v-for="(_, i) in levels" :key="i" class="arcade-button" :class="{ primary: i === level, completed: best[i] }" :disabled="i > unlocked" :aria-label="`第 ${i + 1} 关${best[i] ? '，已通过' : ''}`" :aria-current="i === level ? 'step' : undefined" @click="select(i)">{{ i + 1 }}<span v-if="best[i]">✓</span></button></div>
         <p class="arcade-save-note">自动存档</p>

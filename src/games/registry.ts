@@ -49,7 +49,7 @@ export const games: GameDefinition[] = [
   {
     id: 'mines',
     title: '扫雷',
-    description: '99 雷，或 50×50 大盘。首点安全。',
+    description: '9×9 或 25×25。首点安全。',
     category: '逻辑推理',
     coverText: '⚑',
     controls: '点击开格 · 右键 / 按钮标旗',

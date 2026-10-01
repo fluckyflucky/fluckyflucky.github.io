@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { canMove, isValidBoard, moveBoard, spawnTile, type Direction } from './logic'
+import { readBest, readSaved, saveLocal } from '../shared/storage'
+import GameIcon from '../shared/GameIcon.vue'
+import '../shared/game-ui.css'
 
 interface Snapshot { board: number[]; score: number; keepPlaying: boolean }
 interface Tile { id: number; index: number; value: number }
@@ -13,32 +16,16 @@ function freshBoard() {
   return spawnTile(spawnTile(Array<number>(16).fill(0)).board).board
 }
 
-function readSession(): Snapshot | null {
-  try {
-    const data = JSON.parse(localStorage.getItem(saveKey) ?? 'null') as Partial<Snapshot> | null
-    if (data && isValidBoard(data.board) && typeof data.score === 'number'
-      && Number.isSafeInteger(data.score) && data.score >= 0 && typeof data.keepPlaying === 'boolean') {
-      return { board: data.board, score: data.score, keepPlaying: data.keepPlaying }
-    }
-  } catch { /* A blocked store or invalid save should not prevent playing. */ }
-  return null
-}
-
-function readBest() {
-  try {
-    const value = Number(localStorage.getItem(bestKey))
-    return Number.isSafeInteger(value) && value >= 0 ? value : 0
-  } catch { return 0 }
-}
-
 function makeTiles(values: readonly number[]): Tile[] {
   return values.flatMap((value, index) => value ? [{ id: tileId++, index, value }] : [])
 }
 
-const saved = readSession()
+const data = readSaved(saveKey) as Partial<Snapshot> | null
+const saved = data && isValidBoard(data.board) && typeof data.score === 'number'
+  && Number.isSafeInteger(data.score) && data.score >= 0 && typeof data.keepPlaying === 'boolean' ? data as Snapshot : null
 const tiles = ref(makeTiles(saved?.board ?? freshBoard()))
 const score = ref(saved?.score ?? 0)
-const best = ref(Math.max(readBest(), score.value))
+const best = ref(Math.max(readBest(bestKey), score.value))
 const keepPlaying = ref(saved?.keepPlaying ?? false)
 const previous = ref<Snapshot | null>(null)
 const gain = ref(0)
@@ -53,10 +40,8 @@ const won = computed(() => board.value.some(value => value >= 2048) && !keepPlay
 const over = computed(() => !canMove(board.value))
 
 function persist() {
-  try {
-    localStorage.setItem(saveKey, JSON.stringify({ board: board.value, score: score.value, keepPlaying: keepPlaying.value }))
-    localStorage.setItem(bestKey, String(best.value))
-  } catch { /* Playing remains available without browser storage. */ }
+  saveLocal(saveKey, { board: board.value, score: score.value, keepPlaying: keepPlaying.value })
+  saveLocal(bestKey, best.value)
 }
 
 watch([board, score, best, keepPlaying], persist)
@@ -131,11 +116,11 @@ function endSwipe(event: PointerEvent) {
   move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'))
 }
 
-const directions: { direction: Direction; label: string; icon: string }[] = [
-  { direction: 'up', label: '向上移动', icon: '↑' },
-  { direction: 'left', label: '向左移动', icon: '←' },
-  { direction: 'down', label: '向下移动', icon: '↓' },
-  { direction: 'right', label: '向右移动', icon: '→' },
+const directions: { direction: Direction; label: string; angle: number }[] = [
+  { direction: 'up', label: '向上移动', angle: 0 },
+  { direction: 'left', label: '向左移动', angle: -90 },
+  { direction: 'down', label: '向下移动', angle: 180 },
+  { direction: 'right', label: '向右移动', angle: 90 },
 ]
 function buttonMove(direction: Direction) { focusBoard(); move(direction) }
 
@@ -178,8 +163,8 @@ function tileLabel(value: number) { return value >= 1e6 ? `2^${Math.log2(value)}
         <div class="flex items-center justify-between gap-2 mb-4">
           <span class="text-xs text-stone-500">{{ keepPlaying ? '继续合并' : '目标 2048' }}</span>
           <div class="flex gap-2 shrink-0">
-            <button class="game-button" :disabled="!previous" @click="undo">撤回</button>
-            <button class="game-button primary" @click="restart">新一局</button>
+            <button class="game-button icon-button" :disabled="!previous" aria-label="撤回" title="撤回" @click="undo"><GameIcon name="undo" /></button>
+            <button class="game-button icon-button primary" aria-label="新一局" title="新一局" @click="restart"><GameIcon name="reset" /></button>
           </div>
         </div>
 
@@ -228,21 +213,22 @@ function tileLabel(value: number) { return value >= 1e6 ? `2^${Math.log2(value)}
         </div>
 
         <div class="flex items-center justify-center gap-2 mt-5" aria-label="方向操作">
-          <button v-for="item in directions" :key="item.direction" class="direction-button" :aria-label="item.label" :disabled="won || over" @click="buttonMove(item.direction)">{{ item.icon }}</button>
+          <button v-for="item in directions" :key="item.direction" class="direction-button" :aria-label="item.label" :disabled="won || over" @click="buttonMove(item.direction)"><GameIcon name="arrow" :style="{ transform: `rotate(${item.angle}deg)` }" /></button>
         </div>
-        <p class="mt-4 text-center text-xs text-stone-500">方向键 / WASD · 手机滑动 · 点击箭头</p>
         <p role="status" aria-live="polite" aria-atomic="true" class="sr-only">得分 {{ score }}，最高分 {{ best }}。{{ won ? '合出 2048 了。' : over ? '游戏结束。' : '' }}</p>
       </section>
 
       <aside class="game-notes">
-        <div class="rounded-2xl border border-white/[0.06] bg-stone-900/40 p-5">
-          <h2 class="text-sm font-semibold text-stone-200 mb-3">怎么玩</h2>
-          <p id="instructions-2048" class="text-sm text-stone-400 leading-7">向任意方向滑动，相同的数字会合并。</p>
+        <details class="game-help">
+          <summary aria-label="玩法" title="玩法"><GameIcon name="help" /></summary>
+          <div class="rounded-2xl border border-white/[0.06] bg-stone-900/40 p-5">
+          <p id="instructions-2048" class="text-sm text-stone-400 leading-7">滑动或按方向键 / WASD，相同数字会合并。</p>
           <div class="flex items-center gap-2 mt-4 mb-4" aria-label="两个 2 合成一个 4">
             <span class="example-tile">2</span><span class="text-stone-500 text-xs">+</span><span class="example-tile">2</span><span class="text-stone-500 text-xs">=</span><span class="example-tile merged">4</span>
           </div>
           <p class="text-sm text-stone-400 leading-7">每次有效移动会出现一个 2 或 4。合出 2048 就赢了，无法移动时结束。</p>
-        </div>
+          </div>
+        </details>
         <p class="text-xs text-stone-500 leading-6 px-1 mt-5">自动存档</p>
       </aside>
     </div>
@@ -262,6 +248,8 @@ function tileLabel(value: number) { return value >= 1e6 ? `2^${Math.log2(value)}
 .game-button.primary:hover { background: #155e75; border-color: #0891b2; }
 .game-button:disabled, .direction-button:disabled { opacity: 0.35; cursor: default; }
 .game-button:focus-visible, .direction-button:focus-visible { outline: 2px solid #22d3ee; outline-offset: 3px; }
+.game-button { min-height: 44px; }
+.game-button.icon-button { display: inline-grid; place-items: center; padding: 9px; min-width: 44px; }
 .board { --gap: 10px; position: relative; padding: 12px; border: 1px solid rgb(103 232 249 / 0.12); border-radius: 18px; background: #111c23; box-shadow: 0 16px 50px rgb(0 0 0 / 0.15); touch-action: pinch-zoom; user-select: none; -webkit-user-select: none; }
 .board:focus { outline: none; }
 .board:focus-visible { outline: 2px solid rgb(34 211 238 / 0.6); outline-offset: 4px; }
@@ -278,7 +266,7 @@ function tileLabel(value: number) { return value >= 1e6 ? `2^${Math.log2(value)}
 .board-result { position: absolute; inset: 0; z-index: 2; border-radius: 17px; background: rgb(12 23 30 / 0.9); backdrop-filter: blur(5px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 18px; }
 .result-enter-active, .result-leave-active { transition: opacity 0.2s; }
 .result-enter-from, .result-leave-to { opacity: 0; }
-.direction-button { width: 44px; height: 44px; border-radius: 10px; border: 1px solid #383d3e; color: #a8c6d0; background: rgb(20 31 38 / 0.7); font-size: 21px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.direction-button { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; border: 1px solid #383d3e; color: #a8c6d0; background: rgb(20 31 38 / 0.7); font-size: 21px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
 .direction-button:hover:not(:disabled) { background: #183c49; border-color: #155e75; }
 .example-tile { display: flex; width: 36px; height: 36px; align-items: center; justify-content: center; background: #293b46; color: #deebf0; border-radius: 7px; font-weight: 600; }
 .example-tile.merged { background: #22515e; color: #d2f5fa; }

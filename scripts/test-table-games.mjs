@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {
   evaluate,
   handName,
-  createTable,
+  createTable as createSixTable,
   deal,
   action,
   botAction,
@@ -36,6 +36,7 @@ const rng = (seed) => () => {
   return seed / 4294967296;
 };
 const card = (r, s = 0) => r - 2 + s * 13;
+const createTable = () => createSixTable({ seats: Array.from({length:6}, (_,i) => ({kind:i === 0 ? 'human' : i < 4 ? 'bot' : 'empty', style:'tag'})), bounty:true });
 const ranks = (rs, ss = []) => rs.map((r, i) => card(r, ss[i] ?? i % 4));
 assert.equal(handName(ranks([14, 2, 3, 4, 5, 9, 10])), "顺子");
 assert.equal(handName([10, 11, 12, 9, 8, 0, 13]), "同花顺");
@@ -50,14 +51,24 @@ assert(
     evaluate(ranks([14, 2, 3, 4, 5, 9, 10])),
 );
 assert(is27([card(2, 0), card(7, 1)]));
-assert(!is27([card(2, 0), card(7, 0)]));
-const bountyTable=createTable();
-bountyTable.players[0].hole=[card(2,0),card(7,1)];
-bountyTable.actor=1;bountyTable.pending=[1,2,3,0];
-assert(action(bountyTable,'fold'));assert(action(bountyTable,'fold'));assert(action(bountyTable,'fold'));
-assert(bountyTable.done);assert(bountyTable.log.some(s=>s.includes('额外收取 60')));
-assert.equal(bountyTable.players[0].chips,1090);
-assert.equal(bountyTable.players.reduce((a,p)=>a+p.chips,0),4000);
+assert(is27([card(2, 0), card(7, 0)]));
+for (const sevenSuit of [0, 1]) {
+  const bountyTable=createTable();
+  bountyTable.players[0].hole=[card(2,0),card(7,sevenSuit)];
+  bountyTable.actor=1;bountyTable.pending=[1,2,3,0];
+  assert(action(bountyTable,'fold'));assert(action(bountyTable,'fold'));assert(action(bountyTable,'fold'));
+  assert(bountyTable.done);assert(bountyTable.log.some(s=>s.includes('额外收取 600')));
+  assert.equal(bountyTable.players[0].chips,1630);
+  assert.equal(bountyTable.players.reduce((a,p)=>a+p.chips,0),4000);
+}
+const shortBounty=createTable();
+shortBounty.players[0].hole=[card(2,0),card(7,0)];
+shortBounty.players[0].chips += shortBounty.players[1].chips - 30;shortBounty.players[1].chips=30;
+shortBounty.actor=1;shortBounty.pending=[1,2,3,0];
+assert(action(shortBounty,'fold'));assert(action(shortBounty,'fold'));assert(action(shortBounty,'fold'));
+assert.equal(shortBounty.players[1].chips,0);
+assert(shortBounty.log.some(s=>s.includes('额外收取 430')));
+assert.equal(shortBounty.players.reduce((a,p)=>a+p.chips,0),4000);
 const honest=createTable(),changed=structuredClone(honest);
 changed.players[0].hole=[0,1];changed.players[1].hole=[2,3];changed.players[2].hole=[4,5];changed.deck=[...changed.deck].reverse();
 botAction(honest,rng(123));botAction(changed,rng(123));
@@ -99,6 +110,7 @@ short.pending = [0, 1, 2, 3];
 short.current = 100;
 short.minRaise = 100;
 short.acted = [1];
+short.actedAt[1] = 100;
 short.players.forEach((p) => {
   p.chips = 900;
   p.bet = 100;

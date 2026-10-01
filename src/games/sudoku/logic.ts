@@ -162,32 +162,29 @@ export function generate(
   };
 }
 export function validSudoku(value: unknown): value is Sudoku {
-  try {
-    const s = value as Sudoku;
-    const board = (a: number[]) =>
-      Array.isArray(a) &&
-      a.length === 81 &&
-      a.every((n) => Number.isInteger(n) && n >= 0 && n <= 9);
-    return (
-      s.version === 1 &&
-      ["easy", "normal"].includes(s.difficulty) &&
-      board(s.givens) &&
-      board(s.solution) &&
-      board(s.values) &&
-      s.solution.every(Boolean) &&
-      !conflicts(s.solution).some(Boolean) &&
-      s.givens.every(
-        (v, i) => !v || (v === s.solution[i] && s.values[i] === v),
-      ) &&
-      Array.isArray(s.notes) &&
-      s.notes.length === 81 &&
-      s.notes.every((n) => Number.isInteger(n) && n >= 0 && n < 512) &&
-      Number.isSafeInteger(s.seconds) &&
-      s.seconds >= 0 &&
-      countSolutions(s.givens) === 1 &&
-      !!logicalSolve(s.givens)
-    );
-  } catch {
-    return false;
-  }
+  if (!value || typeof value !== 'object') return false;
+  const s = value as Sudoku;
+  const board = (a: number[]) =>
+    Array.isArray(a) &&
+    a.length === 81 &&
+    a.every((n) => Number.isInteger(n) && n >= 0 && n <= 9);
+  return (
+    s.version === 1 &&
+    ["easy", "normal"].includes(s.difficulty) &&
+    board(s.givens) &&
+    board(s.solution) &&
+    board(s.values) &&
+    s.solution.every(Boolean) &&
+    !conflicts(s.solution).some(Boolean) &&
+    s.givens.every(
+      (v, i) => !v || (v === s.solution[i] && s.values[i] === v),
+    ) &&
+    Array.isArray(s.notes) &&
+    s.notes.length === 81 &&
+    s.notes.every((n) => Number.isInteger(n) && n >= 0 && n < 512) &&
+    Number.isSafeInteger(s.seconds) &&
+    s.seconds >= 0 &&
+    countSolutions(s.givens) === 1 &&
+    !!logicalSolve(s.givens)
+  );
 }

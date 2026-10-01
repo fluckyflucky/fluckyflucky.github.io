@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { mazes, move, hint, validState, type Direction, type MazeState } from './logic'
 import { readSaved, saveLocal } from '../shared/storage'
 import { readProgress } from '../shared/puzzleProgress'
+import GameIcon from '../shared/GameIcon.vue'
 import '../shared/game-ui.css'
 import '../shared/puzzle-ui.css'
 
@@ -15,12 +16,13 @@ const maze = computed(() => mazes[level.value])
 function fresh(): MazeState { return { position: maze.value.start, painted: [maze.value.start], moves: 0 } }
 const state = ref<MazeState>(currentSave && saved && validState(maze.value, saved.state) ? saved.state : fresh())
 const history = ref<MazeState[]>([]), suggested = ref<Direction | null>(null)
+const stageElement = ref<HTMLElement | null>(null)
 const floor = computed(() => new Set(maze.value.floor)), paint = computed(() => new Set(state.value.painted))
 const won = computed(() => paint.value.size === floor.value.size)
 const remaining = computed(() => floor.value.size - paint.value.size)
-const arrows: { direction: Direction; label: string; icon: string }[] = [
-  { direction: 'up', label: '向上', icon: '↑' }, { direction: 'left', label: '向左', icon: '←' },
-  { direction: 'down', label: '向下', icon: '↓' }, { direction: 'right', label: '向右', icon: '→' },
+const arrows: { direction: Direction; label: string; angle: number }[] = [
+  { direction: 'up', label: '向上', angle: 0 }, { direction: 'left', label: '向左', angle: -90 },
+  { direction: 'down', label: '向下', angle: 180 }, { direction: 'right', label: '向右', angle: 90 },
 ]
 function persist() { saveLocal(key, { level: level.value, unlocked: unlocked.value, best: best.value, state: state.value }) }
 watch([state, level, unlocked, best], persist, { deep: true })
@@ -43,6 +45,7 @@ function startHard() {
 }
 function step(direction: Direction) {
   if (won.value) return
+  stageElement.value?.focus({ preventScroll: true })
   const next = move(maze.value, state.value, direction)
   if (next === state.value) return
   history.value.push(state.value); if (history.value.length > 100) history.value.shift()
@@ -50,7 +53,9 @@ function step(direction: Direction) {
 }
 function undo() { const previous = history.value.pop(); if (previous) state.value = previous; suggested.value = null }
 function keydown(event: KeyboardEvent) {
-  const direction = ({ ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down', ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right' } as Record<string, Direction>)[event.key]
+  if (event.ctrlKey || event.metaKey || event.altKey) return
+  const keys: Record<string, Direction> = { ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down', ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right' }
+  const direction = keys[event.key] ?? keys[event.key.toLowerCase()]
   if (direction && !(event.target instanceof HTMLButtonElement)) { event.preventDefault(); step(direction) }
 }
 let pointer: { x: number; y: number; id: number } | null = null
@@ -75,19 +80,19 @@ function pointerup(e: PointerEvent) {
     </header>
     <div class="arcade-layout">
       <div class="arcade-player">
-        <div class="arcade-toolbar"><p>{{ maze.name }} · 剩 {{ remaining }} 格</p><div class="arcade-actions"><button class="arcade-button" :disabled="!history.length" @click="undo">撤销</button><button class="arcade-button" @click="select(level)">重玩</button></div></div>
-        <div class="maze-stage" tabindex="0" role="group" aria-label="迷宫，使用方向键或滑动涂色" @pointerdown="pointerdown" @pointerup="pointerup" @pointercancel="pointer = null">
+        <div class="arcade-toolbar"><p>{{ maze.name }} · 剩 {{ remaining }} 格</p><div class="arcade-actions"><button class="arcade-button icon-button" :disabled="!history.length" aria-label="撤销" title="撤销" @click="undo"><GameIcon name="undo" /></button><button class="arcade-button icon-button" aria-label="重玩" title="重玩" @click="select(level)"><GameIcon name="reset" /></button><button class="arcade-button icon-button" :disabled="won" aria-label="提示" title="提示" @click="suggested = hint(maze, state)"><GameIcon name="hint" /></button></div></div>
+        <div ref="stageElement" class="maze-stage" tabindex="0" role="group" aria-label="迷宫，使用方向键或滑动涂色" @pointerdown="pointerdown" @pointerup="pointerup" @pointercancel="pointer = null">
           <div class="maze-grid" :style="{ gridTemplateColumns: `repeat(${maze.size}, 1fr)` }" aria-hidden="true">
             <span v-for="(_, i) in maze.size ** 2" :key="`${level}-${i}`" class="maze-cell" :class="{ floor: floor.has(i), painted: paint.has(i) }" />
           </div>
           <div class="maze-ball" :style="{ width: `${100 / maze.size}%`, height: `${100 / maze.size}%`, left: `${state.position % maze.size * 100 / maze.size}%`, top: `${Math.floor(state.position / maze.size) * 100 / maze.size}%` }" aria-hidden="true"><span /></div>
           <div v-if="won" class="arcade-result"><h2>{{ level === mazes.length - 1 ? '全部涂完了' : '涂满了！' }}</h2><p>{{ state.moves }} 步 · 本关最佳 {{ best[level] }} 步</p><button class="arcade-button primary" @click="select(level < mazes.length - 1 ? level + 1 : 0)">{{ level < mazes.length - 1 ? '下一关' : '再玩一遍' }}</button></div>
         </div>
-        <div class="maze-pad"><button v-for="arrow in arrows" :key="arrow.direction" class="arcade-button" :class="[arrow.direction, { primary: suggested === arrow.direction }]" :aria-label="arrow.label" :disabled="won" @click="step(arrow.direction)">{{ arrow.icon }}</button></div>
-        <p class="arcade-status" role="status">{{ won ? '过关了' : suggested ? `试试${arrows.find(a => a.direction === suggested)?.label}` : '一滑到底，碰到墙才能转弯。' }}</p>
+        <div class="maze-pad"><button v-for="arrow in arrows" :key="arrow.direction" class="arcade-button icon-button" :class="[arrow.direction, { primary: suggested === arrow.direction }]" :aria-label="arrow.label" :disabled="won" @click="step(arrow.direction)"><GameIcon name="arrow" :style="{ transform: `rotate(${arrow.angle}deg)` }" /></button></div>
+        <p class="sr-only" role="status">{{ won ? '过关了' : `剩 ${remaining} 格` }}</p>
       </div>
       <aside class="arcade-notes">
-        <div class="arcade-note"><h2>玩法</h2><p>滑动屏幕，或按方向键 / WASD。小球撞墙才停，经过的路会染色。涂满所有白格就过关。</p><button class="arcade-button puzzle-hint" :disabled="won" @click="suggested = hint(maze, state)">提示</button></div>
+        <details class="game-help"><summary aria-label="玩法" title="玩法"><GameIcon name="help" /></summary><div class="arcade-note"><p>滑动或按方向键 / WASD，小球撞墙才停。涂满所有白格过关。</p></div></details>
         <button class="arcade-button advanced-entry" @click="startAdvanced">从第 11 关开始</button>
         <button class="arcade-button advanced-entry" @click="startHard">挑战难关 · 第 21 关</button>
         <div class="puzzle-levels" aria-label="选择关卡"><button v-for="(_, i) in mazes" :key="i" class="arcade-button" :class="{ primary: i === level, completed: best[i] }" :disabled="i > unlocked" :aria-label="`第 ${i + 1} 关${best[i] ? '，已通过' : ''}`" :aria-current="i === level ? 'step' : undefined" @click="select(i)">{{ i + 1 }}<span v-if="best[i]">✓</span></button></div>

@@ -37,7 +37,7 @@ export function findMove(board: readonly number[]): [number, number] | null {
 }
 
 export function createBoard(random: () => number = Math.random): number[] {
-  for (let attempt = 0; attempt < 30; attempt++) {
+  while (true) {
     const board: number[] = []
     for (let index = 0; index < SIZE * SIZE; index++) {
       const possible = Array.from({ length: TYPES }, (_, type) => type).filter(type =>
@@ -47,9 +47,6 @@ export function createBoard(random: () => number = Math.random): number[] {
     }
     if (findMove(board)) return board
   }
-  // A known playable layout also handles deterministic or unlucky random sources.
-  return [0, 1, 0, 2, 3, 4, 2, 0, 3, 4, 1, 2,
-    ...Array.from({ length: SIZE * (SIZE - 2) }, (_, i) => (Math.floor(i / SIZE + 2) * 2 + i % SIZE) % TYPES)]
 }
 
 export function collapseBoard(board: readonly number[], removed: ReadonlySet<number>, random: () => number = Math.random) {

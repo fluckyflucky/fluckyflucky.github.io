@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { adjacent, collapseBoard, createBoard, findMatches, findMove, SIZE, validBoard } from './logic'
 import { fruits } from './fruits'
 import { readBest, readSaved, saveLocal } from '../shared/storage'
+import GameIcon from '../shared/GameIcon.vue'
 import '../shared/game-ui.css'
 
 interface Piece { id: number; index: number; type: number }
@@ -10,20 +11,17 @@ interface Save { board: number[]; score: number; moves: number }
 const saveKey = 'aoinatsu:match3:session:v1', bestKey = 'aoinatsu:match3:best:v1'
 let pieceId = 0
 function makePieces(board: readonly number[]): Piece[] { return board.map((type, index) => ({ id: pieceId++, index, type })) }
-function load(): Save | null {
-  const value = readSaved(saveKey) as Partial<Save> | null
-  return value && validBoard(value.board) && typeof value.score === 'number'
+const value = readSaved(saveKey) as Partial<Save> | null
+const saved = value && validBoard(value.board) && typeof value.score === 'number'
     && Number.isSafeInteger(value.score) && value.score >= 0 && typeof value.moves === 'number'
     && Number.isInteger(value.moves) && value.moves >= 0 && value.moves <= 30
     && (value.moves === 0 || findMove(value.board))
     ? { board: value.board, score: value.score, moves: value.moves } : null
-}
-const saved = load()
 const pieces = ref(makePieces(saved?.board ?? createBoard()))
 const score = ref(saved?.score ?? 0), moves = ref(saved?.moves ?? 30)
 const best = ref(Math.max(readBest(bestKey), score.value))
 const selected = ref<number | null>(null), hints = ref<number[]>([]), busy = ref(false)
-const notice = ref('点击两块相邻水果，或滑动交换。'), combo = ref(0)
+const notice = ref(''), combo = ref(0), focused = ref(0)
 const boardElement = ref<HTMLElement | null>(null)
 const board = computed(() => {
   const value = Array<number>(SIZE * SIZE).fill(-1)
@@ -75,7 +73,7 @@ async function swap(a: number, b: number) {
   }
   moves.value--
   let chain = 0
-  while (matched.size && chain < 40) {
+  while (matched.size) {
     chain++
     combo.value = chain
     score.value += matched.size * 10 * chain
@@ -92,11 +90,13 @@ async function swap(a: number, b: number) {
     if (!await pause(220)) return
     matched = findMatches(board.value)
   }
-  if (matched.size || (moves.value > 0 && !findMove(board.value))) {
+  if (moves.value > 0 && !findMove(board.value)) {
     pieces.value = makePieces(createBoard())
-    notice.value = '棋盘已重新排列。'
-  } else notice.value = chain > 1 ? `${chain} 连消` : '消除了！'
+    notice.value = '没有可消除的组合，已换盘。'
+  } else notice.value = ''
   busy.value = false
+  focused.value = a
+  nextTick(() => boardElement.value?.querySelector<HTMLButtonElement>(`[data-cell="${a}"]`)?.focus({ preventScroll: true }))
 }
 
 let ignoreClickUntil = 0
@@ -112,13 +112,13 @@ function hint() {
   const pair = findMove(board.value)
   hints.value = pair ?? []
   selected.value = null
-  notice.value = '试试这两块。'
+  notice.value = ''
 }
 function restart() {
   if (busy.value) return
   pieces.value = makePieces(createBoard()); score.value = 0; moves.value = 30
   selected.value = null; hints.value = []; combo.value = 0
-  notice.value = '点击两块相邻水果，或滑动交换。'
+  notice.value = ''
 }
 
 let swipe: { index: number; x: number; y: number; pointerId: number } | null = null
@@ -164,10 +164,10 @@ function onKey(event: KeyboardEvent, index: number) {
     <div class="arcade-layout">
       <section class="arcade-player">
         <div class="arcade-toolbar">
-          <p>{{ busy ? '消除中…' : '三块相同水果就能消除' }}</p>
+          <p>30 步</p>
           <div class="arcade-actions">
-            <button class="arcade-button" :disabled="busy || over" @click="hint">提示</button>
-            <button class="arcade-button primary" :disabled="busy" @click="restart">新一局</button>
+            <button class="arcade-button icon-button" :disabled="busy || over" aria-label="提示" title="提示" @click="hint"><GameIcon name="hint" /></button>
+            <button class="arcade-button icon-button primary" :disabled="busy" aria-label="新一局" title="新一局" @click="restart"><GameIcon name="reset" /></button>
           </div>
         </div>
         <div ref="boardElement" class="fruit-board" role="group" aria-label="消消乐棋盘" :aria-busy="busy">
@@ -179,10 +179,11 @@ function onKey(event: KeyboardEvent, index: number) {
                 :class="{ selected: selected === piece.index, hinted: hints.includes(piece.index) }"
                 :style="{ '--col': piece.index % SIZE, '--row': Math.floor(piece.index / SIZE), '--fruit-color': fruits[piece.type].color }"
                 :data-cell="piece.index" :data-kind="piece.type"
+                :tabindex="focused === piece.index ? 0 : -1"
                 :aria-label="`第 ${Math.floor(piece.index / SIZE) + 1} 行第 ${piece.index % SIZE + 1} 列，${fruits[piece.type].name}`"
                 :aria-pressed="selected === piece.index"
                 :disabled="busy || over"
-                @click="choose(piece.index)" @pointerdown="startSwipe($event, piece.index)"
+                @focus="focused = piece.index" @click="choose(piece.index)" @pointerdown="startSwipe($event, piece.index)"
                 @pointerup="endSwipe" @pointercancel="swipe = null" @keydown="onKey($event, piece.index)"
               ><img :src="fruits[piece.type].image" alt="" draggable="false" /></button>
             </TransitionGroup>
@@ -196,13 +197,13 @@ function onKey(event: KeyboardEvent, index: number) {
         <p class="arcade-status" role="status" aria-live="polite">{{ notice }}</p>
       </section>
       <aside class="arcade-notes">
-        <div class="arcade-note">
-          <h2>怎么玩</h2>
-          <p>交换相邻水果，让横排或竖排凑齐至少三个相同的水果。</p>
+        <details class="game-help">
+          <summary aria-label="玩法" title="玩法"><GameIcon name="help" /></summary>
+          <div class="arcade-note"><p>点选或滑动交换相邻水果，横竖凑齐三个即可消除。</p>
           <div class="fruit-example" aria-hidden="true"><img v-for="i in 3" :key="i" :src="fruits[0].image" alt="" /><span>→ 消除</span></div>
           <p>每局 30 步。只有成功消除才扣步数，连消有额外加分。</p>
-          <p>点提示找三连。无三连时自动洗牌。</p>
-        </div>
+          <p>没有可消除的组合时换盘。</p></div>
+        </details>
         <p class="arcade-save-note">自动存档</p>
       </aside>
     </div>

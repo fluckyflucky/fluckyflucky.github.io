@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import Matter from 'matter-js'
 import { ScrewWorld, validPhysicsSave } from '../src/games/screws/physics.ts'
 import { levels, holes } from '../src/games/screws/logic.ts'
 
@@ -13,8 +12,8 @@ assert.equal(pendulum.remaining, 1, 'Removing one screw must not delete the plat
 steps(pendulum, 45)
 assert(Math.abs(pendulum.views[0].angle) > 30, 'Gravity must visibly rotate a single-pinned board')
 assert(Math.hypot(pendulum.views[0].b.x - holes[9].x, pendulum.views[0].b.y - holes[9].y) < 1, 'The remaining screw is the fixed pivot')
-assert(!pendulum.pieces[0].body.isStatic)
-assert(pendulum.pieces[0].joints.length === 1)
+assert(!pendulum.pieces[0].body.isStatic())
+assert(pendulum.pieces[0].joint)
 assert(pendulum.accessible(7), 'Rotating the board must reveal the previously covered hole')
 const snapshot = pendulum.snapshot()
 assert(validPhysicsSave(levels[0], snapshot))
@@ -23,7 +22,7 @@ assert(Math.abs(restored.views[0].angle - pendulum.views[0].angle) < 0.001)
 steps(restored, 30)
 assert(Math.abs(restored.views[0].angle - pendulum.views[0].angle) > 1, 'Restored pendulums continue moving')
 assert(pendulum.relocate(9, 1))
-assert.equal(pendulum.pieces[0].joints.length, 0)
+assert.equal(pendulum.pieces[0].joint, null)
 assert.equal(pendulum.remaining, 1, 'Unpinned boards must fall physically before clearing')
 steps(pendulum, 180)
 assert.equal(pendulum.remaining, 0)
@@ -34,14 +33,23 @@ pendulum.destroy(); restored.destroy()
 const repinned = new ScrewWorld(levels[0])
 assert(repinned.relocate(6, 0)); assert(repinned.relocate(0, 6))
 steps(repinned, 60)
-assert(repinned.pieces[0].body.isStatic, 'An aligned reinserted screw must fix the board again')
+assert(repinned.pieces[0].body.isStatic(), 'An aligned reinserted screw must fix the board again')
 assert(Math.abs(repinned.views[0].angle) < 0.001)
 repinned.destroy()
+
+// Close to a hole is not enough if two bolts would require stretching wood.
+const rigidSpan = new ScrewWorld({name:'Rigid length',plates:[{a:2,b:17,color:'#c90'}],screws:[2,17]})
+assert(rigidSpan.relocate(2,0))
+const theta = Math.atan2(holes[17].y-holes[18].y,holes[17].x-holes[18].x), span=rigidSpan.pieces[0].span
+rigidSpan.pieces[0].body.setTransform({x:(holes[17].x-Math.cos(theta)*span/2)/50,y:(holes[17].y-Math.sin(theta)*span/2)/50},theta)
+assert(!rigidSpan.accessible(18), 'Two fixed pins must preserve the plate length')
+assert(!rigidSpan.relocate(0,18), 'Reinserting a screw cannot stretch or warp a board')
+rigidSpan.destroy()
 
 const fixture = { name: 'Collision test', plates: [{ a: 2, b: 5, color: '#c90' }, { a: 10, b: 13, color: '#ac0' }], screws: [2, 5, 10, 13] }
 const falling = new ScrewWorld(fixture)
 let contacts = 0
-Matter.Events.on(falling.engine, 'collisionStart', e => { contacts += e.pairs.length })
+falling.engine.on('begin-contact', () => { contacts++ })
 assert(falling.relocate(2, 0)); assert(falling.relocate(5, 1)); steps(falling, 180)
 assert(contacts > 0, 'A falling board must collide with a lower board')
 assert(falling.views[0].y < 230 && falling.views[0].y > 180, 'The lower board must support the fallen board')
@@ -50,10 +58,39 @@ assert(falling.relocate(10, 18)); assert(falling.relocate(13, 19)); steps(fallin
 assert.equal(falling.remaining, 0, 'Removing the lower support lets both boards fall')
 falling.destroy()
 
+const fastFall = new ScrewWorld(fixture)
+assert(fastFall.relocate(2, 0)); assert(fastFall.relocate(5, 1))
+fastFall.pieces[0].body.setLinearVelocity({ x: 0, y: 100 })
+steps(fastFall, 240)
+assert.equal(fastFall.remaining, 2, 'A fast board must not tunnel through the lower board')
+assert(fastFall.views[0].y < fastFall.views[1].y - 30)
+assert(validPhysicsSave(fixture, fastFall.snapshot()))
+fastFall.destroy()
+
+const longSwing = new ScrewWorld(levels[0])
+assert(longSwing.relocate(6, 0))
+let maximumDrift = 0
+for (let i = 0; i < 1200; i++) {
+  longSwing.step()
+  const anchor = longSwing.views[0].b
+  maximumDrift = Math.max(maximumDrift, Math.hypot(anchor.x - holes[9].x, anchor.y - holes[9].y))
+  assert(validPhysicsSave(levels[0], longSwing.snapshot()))
+}
+assert(maximumDrift < .5, `Long-running pivot drift: ${maximumDrift}px`)
+const beforeUndo = longSwing.snapshot()
+const undoSwing = new ScrewWorld(levels[0], beforeUndo)
+const afterUndo = undoSwing.snapshot()
+assert.deepEqual(afterUndo.screws, beforeUndo.screws)
+assert.deepEqual(afterUndo.plates[0].pins, beforeUndo.plates[0].pins)
+for (const key of ['x', 'y', 'angle', 'vx', 'vy', 'av']) assert(Math.abs(afterUndo.plates[0][key] - beforeUndo.plates[0][key]) < 1e-9)
+steps(undoSwing, 180)
+assert(Math.hypot(undoSwing.views[0].b.x - holes[9].x, undoSwing.views[0].b.y - holes[9].y) < .5)
+longSwing.destroy(); undoSwing.destroy()
+
 const boltFixture = { name: 'Screw stops a board', plates: [{ a: 2, b: 5, color: '#c90' }], screws: [2, 5, 10, 13] }
 const blocked = new ScrewWorld(boltFixture)
 let boltContacts = 0
-Matter.Events.on(blocked.engine, 'collisionStart', e => { boltContacts += e.pairs.filter(p => p.bodyA.circleRadius || p.bodyB.circleRadius).length })
+blocked.engine.on('begin-contact', c => { if (c.getFixtureA().getType() === 'circle' || c.getFixtureB().getType() === 'circle') boltContacts++ })
 assert(blocked.relocate(2, 0)); assert(blocked.relocate(5, 1)); steps(blocked, 240)
 assert(boltContacts > 0, 'Parked screws must be physical obstacles, not just drawings')
 assert(blocked.views[0].y > 200 && blocked.views[0].y < 225, 'The board must rest above the screw heads')

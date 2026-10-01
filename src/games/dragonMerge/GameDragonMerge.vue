@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { getLevels, type DragonVariant } from './assets'
-import { DANGER, HEIGHT, MergeWorld, RADII, validSave, WIDTH } from './physics'
+import { DANGER, HEIGHT, MergeWorld, RADII, SCALE, validSave, WIDTH } from './physics'
 import { readBest, readSaved, saveLocal } from '../shared/storage'
+import GameIcon from '../shared/GameIcon.vue'
 import '../shared/game-ui.css'
 
 const props = defineProps<{ variant: DragonVariant }>()
@@ -69,7 +70,9 @@ function drawPiece(ctx: CanvasRenderingContext2D, level: number, x: number, y: n
     ctx.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, -radius, -radius, radius * 2, radius * 2)
   }
   ctx.restore()
-  ctx.strokeStyle = levels[level].color; ctx.lineWidth = ghost ? 1.5 : level > 8 ? 4 + (level - 8) * 2 : 2
+  ctx.strokeStyle = levels[level].color
+  ctx.lineWidth = Math.min(radius, ghost ? 1.5 : level > 8 ? 4 + (level - 8) * 2 : 2)
+  ctx.beginPath(); ctx.arc(0, 0, radius - ctx.lineWidth / 2, 0, Math.PI * 2)
   ctx.stroke()
   ctx.restore()
 }
@@ -90,8 +93,9 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(x, DANGER + 12); ctx.lineTo(x, HEIGHT - 8); ctx.stroke(); ctx.setLineDash([])
     drawPiece(ctx, world.current, x, 32, RADII[world.current], 0, true)
   }
-  for (const { body, level } of world.pieces.values()) {
-    drawPiece(ctx, level, body.position.x, body.position.y, RADII[level], body.angle)
+  for (const { body, level, radius } of world.pieces.values()) {
+    const p = body.getPosition()
+    drawPiece(ctx, level, p.x * SCALE, p.y * SCALE, radius, body.getAngle())
   }
   if (!reducedMotion) for (const effect of world.effects) {
     const progress = effect.age / 380
@@ -191,8 +195,8 @@ onBeforeUnmount(() => {
         <div class="arcade-toolbar">
           <div class="next-piece"><span>下一个</span><img :src="levels[state.next].image" :alt="levels[state.next].name" /></div>
           <div class="arcade-actions">
-            <button class="arcade-button" :disabled="loading || state.over" @click="togglePause">{{ paused ? '继续' : '暂停' }}</button>
-            <button class="arcade-button primary" @click="restart">新一局</button>
+            <button class="arcade-button icon-button" :disabled="loading || state.over" :aria-label="paused ? '继续' : '暂停'" :title="paused ? '继续' : '暂停'" @click="togglePause"><GameIcon :name="paused ? 'play' : 'pause'" /></button>
+            <button class="arcade-button icon-button primary" aria-label="新一局" title="新一局" @click="restart"><GameIcon name="reset" /></button>
           </div>
         </div>
         <div class="drop-field">
@@ -212,17 +216,20 @@ onBeforeUnmount(() => {
         </div>
         <div class="drop-controls">
           <input v-model.number="aim" type="range" :min="RADII[state.current] + 2" :max="WIDTH - RADII[state.current] - 2" aria-label="投放位置" :disabled="paused || loading || state.over" />
-          <button class="arcade-button primary" :disabled="!state.ready || paused || loading || loadFailed" @click="drop">丢下去</button>
+          <button class="arcade-button icon-button primary" aria-label="投放" title="投放" :disabled="!state.ready || paused || loading || loadFailed" @click="drop"><GameIcon name="drop" /></button>
         </div>
-        <p class="arcade-status" role="status" aria-live="polite">{{ loading ? '加载中' : paused ? '已暂停' : '点击投放，拖动后松手也可以。' }}</p>
         <p class="sr-only" role="status" aria-live="polite">得分 {{ state.score }}。{{ state.over ? '游戏结束' : '' }}</p>
       </section>
       <aside class="arcade-notes">
+        <details class="game-help">
+          <summary aria-label="玩法" title="玩法"><GameIcon name="help" /></summary>
+          <div class="arcade-note">
+            <p id="merge-instructions">点击投放，拖动后松手也可以。相同的{{ name }}碰到一起会合成。</p>
+            <p>堆过虚线太久就会结束。左右键调整位置，空格投放。</p>
+          </div>
+        </details>
         <div class="arcade-note">
-          <h2>怎么玩</h2>
-          <p id="merge-instructions">选择位置，把{{ name }}丢下去。相同的碰到一起，就合成更大的一只。</p>
-          <p>堆过虚线太久就会结束。电脑也可以用左右键调整，空格投放。</p>
-          <h2 class="progression-title">合成顺序</h2>
+          <h2>合成顺序</h2>
           <div class="progression">
             <div v-for="(level, index) in levels" :key="index" class="progression-piece" :class="{ reached: index <= state.maxLevel }">
               <img :src="level.image" :alt="level.name" :title="level.name" /><span>{{ index + 1 }}</span>
@@ -245,8 +252,7 @@ onBeforeUnmount(() => {
 .drop-canvas:focus-visible { outline: 3px solid #22d3ee; outline-offset: -4px; }
 .drop-controls { display: flex; align-items: center; gap: 14px; margin-top: 15px; }
 .drop-controls input { min-width: 0; flex: 1; accent-color: #d3ae6b; min-height: 44px; cursor: pointer; }
-.drop-controls .arcade-button { min-width: 88px; min-height: 44px; }
-.arcade-note h2.progression-title { margin-top: 20px; }
+.game-help { margin-bottom: 16px; }
 .progression { display: flex; flex-wrap: wrap; gap: 8px; }
 .progression-piece { display: flex; flex-direction: column; align-items: center; gap: 3px; opacity: 0.45; }
 .progression-piece.reached { opacity: 1; }
@@ -254,6 +260,6 @@ onBeforeUnmount(() => {
 .progression-piece span { font-size: 10px; color: #a8a29e; }
 .variant-link { display: inline-block; margin: 12px 4px 0; padding: 6px 0; color: #67e8f9; font-size: 12px; }
 .variant-link:focus-visible { outline: 2px solid #22d3ee; outline-offset: 3px; }
-@media (max-width: 767px) { .arcade-header { flex-wrap: nowrap; gap: 12px; } .arcade-title { font-size: 26px; white-space: nowrap; } }
+@media (max-width: 767px) { .arcade-header { gap: 12px; } .arcade-title { font-size: 26px; } }
 @media (max-width: 380px) { .arcade-header { gap: 8px; } .arcade-title { font-size: 22px; } .version-label { margin-left: 5px; padding: 2px 4px; font-size: 10px; } .arcade-score { min-width: 58px; padding: 8px; } .arcade-score strong { font-size: 20px; } }
 </style>
