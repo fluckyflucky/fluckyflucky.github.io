@@ -8,6 +8,7 @@ export interface PlateView { i: number; x: number; y: number; angle: number; len
 interface Piece { body: Body; fixture: Fixture; span: number; pins: [number | null, number | null]; joint: RevoluteJoint | null; gone: boolean }
 const position = (body: Body) => ({ x: body.getPosition().x * SCALE, y: body.getPosition().y * SCALE })
 const overlaps = (a: Fixture, b: Fixture) => testOverlap(a.getShape(), 0, b.getShape(), 0, a.getBody().getTransform(), b.getBody().getTransform())
+const holeDistance = (a: number, b: number) => Math.hypot(holes[a].x - holes[b].x, holes[a].y - holes[b].y)
 
 export class ScrewWorld {
   readonly engine = new World({ gravity: { x: 0, y: 34 }, allowSleep: true, continuousPhysics: true })
@@ -28,7 +29,7 @@ export class ScrewWorld {
     this.separated = new Set(saved?.separated ?? [])
     this.clearBolts = new Set(saved?.clearBolts ?? [])
     level.plates.forEach((p, i) => {
-      const a = holes[p.a], b = holes[p.b], span = Math.hypot(b.x - a.x, b.y - a.y), pose = saved?.plates[i]
+      const a = holes[p.a], b = holes[p.b], span = holeDistance(p.a, p.b), pose = saved?.plates[i]
       const body = this.engine.createDynamicBody({
         position: { x: (pose?.x ?? (a.x + b.x) / 2) / SCALE, y: (pose?.y ?? (a.y + b.y) / 2) / SCALE },
         angle: pose?.angle ?? Math.atan2(b.y - a.y, b.x - a.x),
@@ -85,7 +86,7 @@ export class ScrewWorld {
   private aligned(piece: Piece, side: number, hole: number, tolerance: number) {
     const p = this.point(piece, side), target = holes[hole], other = piece.pins[1 - side]
     return Math.hypot(p.x - target.x, p.y - target.y) < tolerance
-      && (other === null || Math.abs(Math.hypot(holes[other].x - target.x, holes[other].y - target.y) - piece.span) < 0.5)
+      && (other === null || Math.abs(holeDistance(other, hole) - piece.span) < 0.5)
   }
 
   accessible(hole: number): boolean {
@@ -231,11 +232,12 @@ export function validPhysicsSave(level: ScrewLevel, value: unknown): value is Sc
   return !!s && Number.isSafeInteger(s.moves) && s.moves >= 0 && Array.isArray(s.screws)
     && s.screws.length === level.screws.length && new Set(s.screws).size === s.screws.length
     && s.screws.every(h => Number.isInteger(h) && !!holes[h]) && Array.isArray(s.plates) && s.plates.length === level.plates.length
-    && s.plates.every(p => p && [p.x, p.y, p.angle, p.vx, p.vy, p.av].every(Number.isFinite)
+    && s.plates.every((p, i) => p && [p.x, p.y, p.angle, p.vx, p.vy, p.av].every(Number.isFinite)
       && Math.abs(p.x) < 2000 && Math.abs(p.y) < 2000 && Math.abs(p.angle) < 10000
       && Math.abs(p.vx) < 100 && Math.abs(p.vy) < 100 && Math.abs(p.av) < 10 && typeof p.gone === 'boolean'
       && Array.isArray(p.pins) && p.pins.length === 2 && (p.pins[0] === null || p.pins[0] !== p.pins[1])
       && p.pins.every(h => h === null || (Number.isInteger(h) && s.screws.includes(h)))
+      && (p.pins.includes(null) || Math.abs(holeDistance(p.pins[0]!, p.pins[1]!) - holeDistance(level.plates[i].a, level.plates[i].b)) < 0.5)
       && (!p.gone || p.pins.every(h => h === null)))
     && Array.isArray(s.separated) && s.separated.length <= level.plates.length ** 2
     && s.separated.every(k => typeof k === 'string' && /^\d+:\d+$/.test(k))

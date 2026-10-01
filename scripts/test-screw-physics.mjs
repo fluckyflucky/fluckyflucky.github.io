@@ -44,6 +44,9 @@ const theta = Math.atan2(holes[17].y-holes[18].y,holes[17].x-holes[18].x), span=
 rigidSpan.pieces[0].body.setTransform({x:(holes[17].x-Math.cos(theta)*span/2)/50,y:(holes[17].y-Math.sin(theta)*span/2)/50},theta)
 assert(!rigidSpan.accessible(18), 'Two fixed pins must preserve the plate length')
 assert(!rigidSpan.relocate(0,18), 'Reinserting a screw cannot stretch or warp a board')
+const stretched=rigidSpan.snapshot()
+stretched.screws=[18,17];stretched.plates[0].pins=[18,17]
+assert(!validPhysicsSave(rigidSpan.level,stretched), 'A saved pair of pins cannot imply stretched wood either')
 rigidSpan.destroy()
 
 const fixture = { name: 'Collision test', plates: [{ a: 2, b: 5, color: '#c90' }, { a: 10, b: 13, color: '#ac0' }], screws: [2, 5, 10, 13] }
