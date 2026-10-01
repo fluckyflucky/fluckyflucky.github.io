@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { categories } from 'virtual:markdown-index'
+import notesIcon from '../icons/home/notes.svg'
+import thoughtsIcon from '../icons/home/thoughts.svg'
+import imagesIcon from '../icons/home/images.svg'
+import toolsIcon from '../icons/home/tools.svg'
+import dictionaryIcon from '../icons/home/dictionary.svg'
+import gamesIcon from '../icons/home/games.svg'
 
 const router = useRouter()
 
@@ -9,39 +15,33 @@ document.title = '青い夏'
 const features = [
   {
     title: '笔记',
-    desc: '造轮子时的笔记。主要是技术实践、学习心得',
     path: '/notes',
-    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    icon: notesIcon,
   },
   {
     title: '夏日记忆',
-    desc: '一些不会发在社交媒体上的随笔。',
     path: '/thoughts',
-    icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
+    icon: thoughtsIcon,
   },
   {
     title: '图库',
-    desc: '镜头下那些转瞬即逝的美。未来也考虑把画放在这里。',
     path: '/images',
-    icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z',
+    icon: imagesIcon,
   },
   {
     title: '工具箱',
-    desc: '纯前端开发小工具，JSON 格式化、Base64 编解码、时间戳转换等。',
     path: '/tools',
-    icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+    icon: toolsIcon,
   },
   {
     title: '词典',
-    desc: 'JMdict 日英中词典，支持搜索与单词卡片学习。',
     path: '/jmdict',
-    icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+    icon: dictionaryIcon,
   },
   {
     title: '小游戏',
-    desc: '2048、消消乐、合成大奶龙。',
     path: '/games',
-    icon: 'M6 12h4m-2-2v4m7-3h.01M17 13h.01M7 6h10a4 4 0 014 4v6a2 2 0 01-3.414 1.414L15 15H9l-2.586 2.414A2 2 0 013 16v-6a4 4 0 014-4z',
+    icon: gamesIcon,
   },
 ]
 
@@ -70,24 +70,19 @@ const recommendations = categories['/thoughts']?.items.slice(0, 2) ?? []
         class="group text-left p-5 rounded-2xl border cursor-pointer transition-all duration-300
                bg-white/[0.025] border-white/[0.06]
                hover:bg-white/[0.05] hover:border-cyan-500/25 hover:shadow-lg hover:shadow-cyan-500/[0.04]
+               focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-400
 "
         @click="router.push(f.path)"
       >
-        <div class="flex items-start gap-3.5">
-          <span class="mt-0.5 shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
-                       bg-cyan-500/[0.08] text-cyan-400
-                       group-hover:bg-cyan-500/[0.15] group-hover:text-cyan-300
-                       transition-all duration-300">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-              <path stroke-linecap="round" stroke-linejoin="round" :d="f.icon" />
-            </svg>
+        <div class="flex items-center gap-3.5">
+          <span class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
+                       bg-cyan-500/[0.08] group-hover:bg-cyan-500/[0.15]
+                       transition-colors duration-300">
+            <img :src="f.icon" alt="" aria-hidden="true" class="w-6 h-6" />
           </span>
-          <div class="min-w-0">
-            <h2 class="text-[15px] font-semibold text-stone-200 mb-1">{{ f.title }}</h2>
-            <p class="text-[13px] text-stone-400 leading-relaxed">{{ f.desc }}</p>
-          </div>
-          <svg class="w-4 h-4 shrink-0 mt-1 text-stone-600 group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all duration-300 self-center opacity-30 group-hover:opacity-100"
-               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <h2 class="min-w-0 flex-1 text-[19px] font-semibold text-stone-200">{{ f.title }}</h2>
+          <svg class="w-4 h-4 shrink-0 text-stone-600 group-hover:text-cyan-500 group-hover:translate-x-0.5 transition-all duration-300 opacity-30 group-hover:opacity-100"
+               aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </div>
