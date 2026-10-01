@@ -30,4 +30,21 @@
 | frog-7.jpg | https://raw.githubusercontent.com/Marshall-Jimmy/naiwa-universe/c3e6120b9fd79e83cdf2ab42f95839b4784d47dd/public/images/thinkerSuit.jpg |
 | frog-8.jpg | https://wx1.sinaimg.cn/middle/006fvOR2gy1ie5u0dajkej30u00yi76q.jpg |
 
-共 18 张 JPEG，820,235 字节（约 801 KiB）。挑选时避开了大字文案和与玩法无关的角色，游戏使用 `assets.ts` 中的本地图片。
+2026-10-01 补齐第 10–13 档，两个版本各 13 张不同的本地 JPEG，不再重复末档图片。奶龙补充来自 [新浪 / 寄给月亮的爱意LP](https://www.sina.cn/news/detail/5292767627712055.html)；奶蛙补充来自 [新浪 / jwr呀](https://www.sina.cn/news/detail/5329000809367043.html) 和 [新浪 / 命运如星轨般缠绕](https://www.sina.cn/news/detail/5332545027440769.html)。保留原图及角落标识，没有去水印。奶蛙保持黄色形象，不使用蓝色版本。
+
+| 本地文件 | 原始图片 |
+| --- | --- |
+| dragon-9.jpg | https://wx3.sinaimg.cn/middle/008kN0ifgy1icmo9xqef0j30u00xi40u.jpg |
+| dragon-10.jpg | https://wx1.sinaimg.cn/middle/008kN0ifgy1icmo9y4ch5j30u00wsjtf.jpg |
+| dragon-11.jpg | https://wx2.sinaimg.cn/middle/008kN0ifgy1icmo9ywx9oj30u00z0mzt.jpg |
+| dragon-12.jpg | https://wx3.sinaimg.cn/middle/008kN0ifgy1icmoa1ex0xj30u00t8dia.jpg |
+| frog-9.jpg | https://wx3.sinaimg.cn/middle/005NuEBPly1ifucd5oakbj306k0870sm.jpg |
+| frog-10.jpg | https://wx3.sinaimg.cn/middle/005NuEBPly1ifucd5fznej30el0ft3z6.jpg |
+| frog-11.jpg | https://xinyewebsite.com/games/milk-frog/image/glimpse.jpg |
+| frog-12.jpg | https://wx4.sinaimg.cn/middle/007YX4j9gy1ig5neev167j30a30ccglx.jpg |
+
+第 12 档按用户选图换成 [辛野 / 奶蛙](https://xinyewebsite.com/games/milk-frog/) 的“惊鸿一瞥”无字原图，未修改图片。
+
+运行 `node --experimental-strip-types scripts/test-merge-assets.mjs` 检查 13 档映射、JPEG 格式和文件内容去重。档位编号、尺寸和存档键不变，原存档无需迁移。
+
+人工筛选：逐张检查原图和游戏圆形中心裁切。奶蛙新四档无大字文案、没有其他角色，动作和表情可区分；弃用了蓝色版本、带“防吃”“小妹妹你挺狂啊”“惊鸿三瞥”文案的图，以及解剖图、多人场景。来源原有的小水印保留，不做去水印。
