@@ -33,6 +33,8 @@ export interface Unit {
   level: number;
   fortified: boolean;
   acted: boolean;
+  fortificationTurns?: number;
+  restingMoves?: number;
   person?: string;
 }
 export interface Job {
@@ -60,6 +62,7 @@ export interface City {
   religion: number;
   pressure: number[];
   attacked: boolean;
+  lastDamagedTurn?: number;
   hildegard?: boolean;
 }
 export interface Nation {

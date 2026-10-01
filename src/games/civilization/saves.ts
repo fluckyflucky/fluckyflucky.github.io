@@ -166,6 +166,8 @@ export function valid(value: unknown): value is State {
           integer(u.level, 0, 100) &&
           typeof u.fortified === "boolean" &&
           typeof u.acted === "boolean" &&
+          (u.fortificationTurns===undefined || integer(u.fortificationTurns,0,2)) &&
+          (u.restingMoves===undefined || u.fortified && finite(u.restingMoves,0,10)) &&
           (u.type==='scientist' ? !!scientistById(u.person) && u.charges===1 && s.scientistRecruits?.some(r=>r.person===u.person && r.owner===u.owner) &&
             !s.nations[u.owner].scientistEffects?.includes(u.person!) : u.person===undefined),
       )
@@ -176,6 +178,7 @@ export function valid(value: unknown): value is State {
         (c) =>
           text(c.name, 80) &&
           (c.hildegard===undefined || typeof c.hildegard==='boolean') &&
+          (c.lastDamagedTurn===undefined || integer(c.lastDamagedTurn,1,s.turn)) &&
           integer(c.capital, -1, majors - 1) &&
           integer(c.pop, 1, 1000) &&
           finite(c.food, 0, 1e6) &&

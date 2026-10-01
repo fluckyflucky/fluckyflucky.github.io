@@ -85,6 +85,7 @@ export function districtDiscount(s: State, id: string, owner = 0) {
 }
 export function cost(s: State, id: string, city?: City) {
   const d = info(id);
+  if(id==='repairDefenses' && city) return Math.max(1,Math.ceil((100-city.walls)/2));
   if (d.kind === 'district' && id !== 'spaceport') {
     const at=city?.districtPlacements?.[id], locked=at===undefined ? undefined : city?.productionCosts?.[`${id}:${at}`];
     if(locked!==undefined) return locked;
@@ -95,10 +96,27 @@ export function cost(s: State, id: string, city?: City) {
   return Math.round(d.cost * speedMultiplier(s));
 }
 export function jobCost(s: State, c: City, j: Job) {
+  if (j.item === 'repairDefenses') return cost(s,j.item,c);
   // Old v3 queues were priced at the base cost. Preserve that contract when loading.
   return c.productionCosts?.[jobKey(j)] ?? Math.round(info(j.item).cost * speedMultiplier(s));
 }
 export const speedMultiplier = (s: State) => s.options.speed === 'normal' ? 1 : 2 / 3;
+export const growthCost = (s: State, c: City) => Math.floor((15 + 8*c.pop + c.pop**1.5)*speedMultiplier(s));
+export const requiredAmenities = (c: City) => Math.ceil(c.pop/2);
+export function happiness(happy: number) {
+  // Gathering Storm, August 2020 thresholds. Positive yield bonuses include food.
+  if (happy>=5) return {label:'欣喜若狂',yield:1.2,food:1.2,growth:1};
+  if (happy>=3) return {label:'幸福',yield:1.1,food:1.1,growth:1};
+  if (happy>=-1) return {label:'满意',yield:1,food:1,growth:1};
+  if (happy>=-3) return {label:'不满',yield:0.9,food:1,growth:0.85};
+  if (happy>=-5) return {label:'不幸福',yield:0.8,food:1,growth:0.7};
+  if (happy>=-7) return {label:'动荡',yield:0.7,food:1,growth:0};
+  return {label:'叛乱',yield:0.6,food:1,growth:0};
+}
+export function housingGrowth(housing: number, population: number) {
+  const remaining=Math.floor(housing)-population;
+  return remaining>=2 ? 1 : remaining>=1 ? 0.5 : remaining>=-4 ? 0.25 : 0;
+}
 export function researchCost(s: State, n: Nation, d: Research) {
   return Math.ceil(
     d.cost *
@@ -380,6 +398,7 @@ export function spawn(s: State, owner: number, type: string, tile: number) {
     xp: 0,
     level: 0,
     fortified: false,
+    fortificationTurns: 0,
     acted: false,
   };
   s.units.push(u);
@@ -493,6 +512,12 @@ export function found(s: State, u: Unit) {
   s.tiles[u.tile].village = false;
   s.tiles[u.tile].camp = false;
   s.tiles[u.tile].road = true;
+  const center=s.tiles[u.tile];
+  center.baseTerrain ??= center.terrain==='forest' ? 'grass' : center.terrain==='hill' ? 'plain' : center.terrain as Tile['baseTerrain'];
+  center.hills ??= center.terrain==='hill';
+  if(['forest','rainforest','marsh'].includes(center.feature??'')) center.feature='';
+  if(center.terrain==='forest') center.terrain=center.hills?'hill':center.baseTerrain==='plain'?'plain':'grass';
+  center.improvement='';center.pillaged=false;
   for (const i of [u.tile, ...neighbors(s, u.tile)]) claim(s, c, i);
   s.units = s.units.filter((x) => x.id !== u.id);
   if (neighbors(s, u.tile).some((i) => s.tiles[i].terrain === "water"))
@@ -516,8 +541,8 @@ export function tileYield(s: State, t: Tile, o = 0): Yield {
   y.food = base==='grass' ? 2 : ['plain','tundra','coast','ocean','lake'].includes(base) ? 1 : 0;
   y.production = base==='plain' ? 1 : 0;
   if (t.hills || t.terrain==='hill') y.production++;
-  if (t.feature==='forest' || t.terrain==='forest') y.production++;
-  if (t.feature==='rainforest' || t.feature==='marsh') y.food++;
+  if (t.city<0 && (t.feature==='forest' || t.terrain==='forest')) y.production++;
+  if (t.city<0 && (t.feature==='rainforest' || t.feature==='marsh')) y.food++;
   if (base==='coast' || base==='lake') y.gold=1;
   if (base==='mountain' || t.terrain==='mountain') return emptyYield();
   if (resourceVisible(n, t)) {
@@ -525,7 +550,7 @@ export function tileYield(s: State, t: Tile, o = 0): Yield {
     if (["iron", "horses", "coal", "oil"].includes(t.resource)) y.production++;
     if (["spices", "gems"].includes(t.resource)) y.gold += 2;
   }
-  if (!t.pillaged) {
+  if (!t.pillaged && t.city<0) {
     if (t.improvement === "farm") {
       const adjacent = neighbors(s,s.tiles.indexOf(t)).filter(i=>s.tiles[i].improvement==='farm' && !s.tiles[i].pillaged).length;
       y.food += 1 + (n.tech.includes('replaceableparts') ? adjacent : n.civic.includes('feudal') ? Math.floor(adjacent/2) : 0);
@@ -551,6 +576,7 @@ export function tileYield(s: State, t: Tile, o = 0): Yield {
       y.gold++;
     }
   }
+  if(t.city>=0) {y.food=Math.max(2,y.food);y.production=Math.max(1,y.production);}
   return y;
 }
 export function workedTiles(s: State, c: City) {
@@ -629,27 +655,11 @@ export function adjacency(s: State, id: string, tile: number) {
   if (id === "harbor") return ns.filter((t) => t.city >= 0).length * 2 + ns.filter(t=>t.resource && t.terrain==='water').length + minor + plaza;
   return 0;
 }
-export function amenities(s: State, c: City) {
-  const n = s.nations[c.owner],
-    luxury = new Set(
-      s.tiles
-        .filter(
-          (t) =>
-            t.owner === c.owner &&
-            resources[t.resource]?.type === "luxury" &&
-            t.improvement === resources[t.resource].improvement &&
-            !t.pillaged,
-        )
-        .map((t) => t.resource),
-    ).size;
+function localAmenities(s: State, c: City) {
+  const n = s.nations[c.owner];
   return (
-    (hasSuzerainBonus(s,c.owner,'桑给巴尔') && ownCities(s,c.owner).slice().sort((a,b)=>b.pop-a.pop || a.id-b.id).slice(0,6).some(city=>city.id===c.id) ? 2 : 0) +
     (cityBelief(s,c,'zen') && specialtyDistricts(c)>=2 ? 1 : 0) +
     (palaceCity(s,c.owner)?.id === c.id ? 2 : 0) +
-    Math.floor(
-      (luxury * Math.min(4, ownCities(s, c.owner).length)) /
-        Math.max(1, ownCities(s, c.owner).length),
-    ) +
     c.buildings.reduce((v, b) => v + (info(b).amenities ?? 0), 0) +
     (n.government === "republic" && hasDistrict(c) ? 1 : 0) +
     (n.government === 'digital' ? 2 : 0) +
@@ -662,6 +672,22 @@ export function amenities(s: State, c: City) {
       ? 1
       : 0)
   );
+}
+export function amenityAllocation(s: State, owner: number) {
+  const cities=ownCities(s,owner), allocation=new Map(cities.map(c=>[c.id,localAmenities(s,c)]));
+  const suppliers=new Set([owner,...s.cityStates.filter(cs=>suzerain(s,cs)===owner && !atWar(s,owner,cs.owner)).map(cs=>cs.owner)]);
+  const luxuries=[...new Set(s.tiles.filter(t=>suppliers.has(t.owner) && resources[t.resource]?.type==='luxury' &&
+    (t.city>=0 || t.improvement===resources[t.resource].improvement && !t.pillaged)).map(t=>t.resource))].sort();
+  const capacities=[...luxuries.map(()=>4),...(hasSuzerainBonus(s,owner,'桑给巴尔')?[6,6]:[])];
+  for(const capacity of capacities) {
+    // One copy of each luxury, one amenity per eligible city, lowest surplus first.
+    const recipients=cities.slice().sort((a,b)=>(allocation.get(a.id)!-requiredAmenities(a))-(allocation.get(b.id)!-requiredAmenities(b)) || a.id-b.id).slice(0,capacity);
+    for(const c of recipients) allocation.set(c.id,allocation.get(c.id)!+1);
+  }
+  return allocation;
+}
+export function amenities(s: State, c: City) {
+  return amenityAllocation(s,c.owner).get(c.id)!;
 }
 export function yields(s: State, c: City) {
   const n = s.nations[c.owner],
@@ -733,9 +759,8 @@ export function yields(s: State, c: City) {
   }
   const csYield=cityStateYields(s,c);
   for(const k of Object.keys(y) as (keyof Yield)[]) y[k]+=csYield[k];
-  const happy = amenities(s, c) - Math.floor((c.pop - 1) / 2),
-    mult =
-      happy >= 5 ? 1.2 : happy >= 3 ? 1.1 : happy <= -5 ? 0.7 : happy <= -3 ? 0.8 : happy < 0 ? 0.9 : 1;
+  const amenityCount=amenities(s,c), happy=amenityCount-requiredAmenities(c), mood=happiness(happy);
+  y.food*=mood.food;
   for (const k of [
     "production",
     "gold",
@@ -743,14 +768,14 @@ export function yields(s: State, c: City) {
     "culture",
     "faith",
   ] as const)
-    y[k] *= mult;
+    y[k] *= mood.yield;
   if (hasPolicy(n, "planning")) y.production++;
   if (n.government === "communist") {
     // Governor-dependent production is not granted until governors exist.
     y.science *= 1.1;
   }
   if (hasSuzerainBonus(s,c.owner,'日内瓦') && !civilizedIds(s).some(owner=>owner!==c.owner && atWar(s,c.owner,owner))) y.science*=1.15;
-  let housing =
+  const housing =
     (cityBelief(s,c,'feed') ? religiousBuildings.length*2 : 0) +
     baseHousing(s, c) + (hasPalace ? 1 : 0) +
     c.buildings.reduce((v, b) => v + (info(b).housing ?? 0), 0) +
@@ -761,19 +786,19 @@ export function yields(s: State, c: City) {
     (hasPolicy(n, "newdeal") && specialtyDistricts(c)>=3 ? 4 : 0) +
     s.tiles.filter(
       (t) =>
-        t.territory === c.id && ["farm", "pasture"].includes(t.improvement),
+        t.territory === c.id && !t.pillaged && ["farm", "pasture", "plantation", "fishery"].includes(t.improvement),
     ).length *
       0.5;
   const growing =
     Math.max(0, y.food - c.pop * 2) *
-    (housing <= c.pop ? 0.25 : housing < c.pop + 2 ? 0.5 : 1) *
-    (happy >= 5 ? 1.2 : happy >= 3 ? 1.1 : happy <= -5 ? 0 : happy <= -3 ? 0.7 : happy < 0 ? 0.85 : 1) *
+    housingGrowth(housing,c.pop) * mood.growth *
     (n.pantheon==='fertility'?1.1:1);
   return {
     ...y,
     housing,
-    amenities: amenities(s, c),
-    requiredAmenities: Math.floor((c.pop - 1) / 2),
+    amenities: amenityCount,
+    requiredAmenities: requiredAmenities(c),
+    happiness: mood.label,
     happy,
     growing,
   };
@@ -823,6 +848,13 @@ export function buildReason(s: State, c: City, id: string, queued = false) {
   if (!d) return "未知项目";
   if (d.greatPerson) return '只能在伟人面板招募';
   if (!active(s)) return "游戏已结束";
+  if(id==='repairDefenses') {
+    if(!c.buildings.includes('walls')) return '需要远古城墙';
+    if(c.walls>=100) return '城墙无损伤';
+    const remaining=3-(s.turn-(c.lastDamagedTurn??s.turn-3));
+    if(remaining>0) return `遭受攻击后还需等待 ${remaining} 回合`;
+    if(!queued && c.queue.some(j=>j.item===id)) return '已在队列中';
+  }
   if (d.unlock && !n.tech.includes(d.unlock) && !n.civic.includes(d.unlock))
     return `需要${[...techs, ...civics].find((t) => t.id === d.unlock)?.name}`;
   if (d.needs && !(info(d.needs)?.kind==='project' ? ownCities(s,c.owner).some(city=>city.buildings.includes(d.needs!)) : c.buildings.includes(d.needs)))
@@ -944,7 +976,9 @@ function complete(s: State, c: City, j: Job) {
     if (d.resource) n.strategic[d.resource] -= 10;
     if (d.id === "settler") c.pop--;
   } else if (d.repeat) {
-    if (d.id === 'laser') {
+    if(d.id==='repairDefenses') {
+      c.walls=100;
+    } else if (d.id === 'laser') {
       if (!n.space.launched) return false;
       n.space.speed++;
     } else if (d.id === "festival") {
@@ -1116,14 +1150,50 @@ export function movementCost(s: State, u: Unit, from: number, to: number) {
   // two-move settler would never be able to enter a forested hill at all.
   return Math.min(terrainCost, info(u.type).moves ?? 2);
 }
+function exertsControl(s: State, u: Unit, i: number) {
+  return !!info(u.type).strength && !info(u.type).range &&
+    (info(u.type).domain==='sea' || s.tiles[u.tile].terrain!=='water') &&
+    (s.tiles[u.tile].terrain==='water')===(s.tiles[i].terrain==='water') &&
+    distance(s.tiles[u.tile],s.tiles[i])===1;
+}
+export const ignoresZone = (u: Unit) => info(u.type).unitClass==='cavalry' || !info(u.type).strength;
 export function zone(s: State, u: Unit, i: number) {
   return s.units.some(
     (v) =>
       atWar(s, u.owner, v.owner) &&
-      !!info(v.type).strength &&
-      !info(v.type).range &&
-      distance(s.tiles[v.tile], s.tiles[i]) === 1,
-  );
+      exertsControl(s,v,i),
+  ) || s.cities.some(c=>atWar(s,u.owner,c.owner) && s.tiles[i].terrain!=='water' && distance(s.tiles[c.tile],s.tiles[i])===1);
+}
+export function underSiege(s: State, c: City) {
+  return neighbors(s,c.tile).every(i=>s.tiles[i].terrain==='mountain' || s.units.some(u=>atWar(s,c.owner,u.owner) &&
+    !!info(u.type).strength && (u.tile===i || exertsControl(s,u,i))));
+}
+export function maxMoves(s: State, u: Unit) {
+  return (info(u.type).moves??2)+(hasPolicy(s.nations[u.owner],'logistics') && s.tiles[u.tile].owner===u.owner ? 1 : 0);
+}
+export const canFortify = (u: Unit) => !!info(u.type).strength && !['cavalry','siege','naval'].includes(info(u.type).unitClass??'');
+export function fortify(s: State, u: Unit) {
+  if(!active(s)) return false;
+  if(u.fortified) {
+    u.fortified=false;
+    u.moves=u.restingMoves ?? (u.acted ? 0 : maxMoves(s,u));
+    delete u.restingMoves;
+  } else {
+    u.restingMoves=u.moves;
+    u.fortified=true;u.moves=0;
+  }
+  return true;
+}
+export function healingRate(s: State, u: Unit) {
+  if(u.acted || u.owner===barbarianOwner(s) || u.type==='missionary') return 0;
+  const t=s.tiles[u.tile];
+  const friendly=t.owner===u.owner || s.cityStates.some(cs=>cs.owner===t.owner && suzerain(s,cs)===u.owner && !atWar(s,u.owner,cs.owner));
+  const medic=s.units.some(v=>v.owner===u.owner && v.type==='scientist' && v.person==='abu_al_qasim_al_zahrawi' && distance(s.tiles[v.tile],t)<=1);
+  const onWater=t.terrain==='water' || info(u.type).domain==='sea';
+  if(onWater && !friendly && !medic) return 0;
+  const retired=info(u.type).domain!=='sea' && s.nations[u.owner].scientistEffects?.includes('abu_al_qasim_al_zahrawi');
+  const base=friendly ? (t.city>=0 || t.district && info(t.district).kind==='district' ? 20 : 15) : t.owner<0 ? 10 : 5;
+  return base+(medic?20:0)+(retired?5:0);
 }
 export function path(
   s: State,
@@ -1145,7 +1215,7 @@ export function path(
       while (result[0] !== u.tile) result.unshift(prev.get(result[0])!);
       return result;
     }
-    if (i !== u.tile && zone(s, u, i) && u.type !== "scout") continue;
+    if (i !== u.tile && zone(s, u, i) && !ignoresZone(u)) continue;
     for (const k of neighbors(s, i)) {
       if (
         !passable(s, u, k, ignoreUnits) ||
@@ -1168,7 +1238,7 @@ export function reachable(s: State, u: Unit) {
   while (open.length) {
     open.sort((a, b) => best.get(a)! - best.get(b)!);
     const i = open.shift()!;
-    if (i !== u.tile && zone(s, u, i) && u.type !== "scout") continue;
+    if (i !== u.tile && zone(s, u, i) && !ignoresZone(u)) continue;
     for (const k of neighbors(s, i)) {
       if (!passable(s, u, k) || (u.owner === 0 && !s.tiles[k].seen)) continue;
       const score = best.get(i)! + movementCost(s, u, i, k);
@@ -1211,9 +1281,10 @@ export function move(s: State, u: Unit, to: number) {
       boost(s, u.owner, "military");
       if (!u.owner) event(s, "蛮族营地已清除，获得 50 金币", "combat");
     }
-    if (zone(s, u, u.tile) && u.type !== "scout") u.moves = 0;
+    if (zone(s, u, u.tile) && !ignoresZone(u)) u.moves = 0;
   }
   u.fortified = false;
+  u.fortificationTurns=0;delete u.restingMoves;
   u.acted = true;
   if (!u.owner) reveal(s);
   return true;
@@ -1235,12 +1306,15 @@ export function strength(
       ? 10
       : 0) -
     Math.round((100 - u.hp) / 10) +
-    (defending &&
-    (s.tiles[u.tile].terrain === "hill" || s.tiles[u.tile].terrain === "forest")
-      ? 3
-      : 0) +
-    (defending && u.fortified ? 6 : 0)
+    (defending ? terrainDefense(s.tiles[u.tile]) : 0) +
+    (defending && canFortify(u) ? 3*(u.fortificationTurns??(u.fortified?2:0)) : 0)
   );
+}
+function terrainDefense(t: Tile) {
+  if(t.city>=0 || t.terrain==='water') return 0;
+  return (t.hills || t.terrain==='hill' ? 3 : 0) +
+    (t.terrain==='forest' || ['forest','rainforest'].includes(t.feature??'') ? 3 : 0) -
+    (['marsh','floodplains'].includes(t.feature??'') ? 2 : 0);
 }
 export function combatPreview(s: State, u: Unit, i: number) {
   const t = s.tiles[i];
@@ -1300,6 +1374,7 @@ export function attack(s: State, u: Unit, i: number) {
   u.moves = 0;
   u.acted = true;
   u.fortified = false;
+  u.fortificationTurns=0;delete u.restingMoves;
   if (p.enemy) {
     p.enemy.hp -= p.damage;
     if(displaceGreatPerson(s,p.enemy) && !info(u.type).range && u.hp>0 && !p.city) u.tile=i;
@@ -1316,6 +1391,7 @@ export function attack(s: State, u: Unit, i: number) {
     }
   } else {
     const c = p.city!;
+    c.lastDamagedTurn=s.turn;
     if (c.walls > 0)
       c.walls = Math.max(
         0,
@@ -1389,6 +1465,7 @@ export function promote(s: State, u: Unit) {
   u.hp = Math.min(100, u.hp + 50);
   u.moves = 0;
   u.acted = true;
+  u.fortificationTurns=0;
   s.nations[u.owner].promotions++;
   return true;
 }
@@ -1426,6 +1503,7 @@ export function upgrade(s: State, u: Unit) {
   u.type = id;
   u.moves = 0;
   u.acted = true;
+  u.fortificationTurns=0;
   return true;
 }
 export function improvementReason(s: State, u: Unit, id: string) {
@@ -1527,6 +1605,7 @@ export function pillage(s: State, u: Unit) {
   t.pillaged = true;
   u.moves = 0;
   u.acted = true;
+  u.fortificationTurns=0;
   u.hp = Math.min(100, u.hp + 25);
   s.nations[u.owner].gold += 25;
   return true;
@@ -1954,12 +2033,12 @@ export function nextTurn(s: State) {
       n.tourismAgainst[target] += t.tourism * (1 + (trade ? 0.25 : 0) + (trade && hasPolicy(n,'online') ? 0.5 : 0));
     }
     for (const tile of s.tiles.filter(
-      (t) => t.owner === o && t.improvement && !t.pillaged,
+      (t) => t.owner === o && (t.city>=0 || t.improvement && !t.pillaged),
     )) {
       const res = resources[tile.resource];
       if (
         res?.type === "strategic" &&
-        tile.improvement === res.improvement &&
+        (tile.city>=0 || tile.improvement === res.improvement) &&
         resourceVisible(n, tile)
       )
         n.strategic[tile.resource] = Math.min(
@@ -1970,8 +2049,8 @@ export function nextTurn(s: State) {
     for (const c of ownCities(s, o)) {
       const y = yields(s, c);
       c.food += y.food < c.pop * 2 ? y.food - c.pop * 2 : y.growing;
-      const needed = 12 + c.pop * 6;
-      if (c.food >= needed) {
+      const needed = growthCost(s,c);
+      if (c.food >= needed && y.growing>0) {
         c.food -= needed;
         c.pop++;
         if (!o) event(s, `${c.name}人口增长至 ${c.pop}`, "city");
@@ -1980,15 +2059,8 @@ export function nextTurn(s: State) {
         c.food = 0;
         if (!o) event(s, `${c.name}粮食不足，人口减少`, "city");
       } else c.food = Math.max(0, c.food);
-      const besieged = s.units.some(
-        (u) =>
-          atWar(s, o, u.owner) &&
-          info(u.type).strength &&
-          distance(s.tiles[u.tile], s.tiles[c.tile]) === 1,
-      );
-      if (!besieged) {
+      if (!underSiege(s,c)) {
         c.hp = Math.min(200, c.hp + 10);
-        if (c.buildings.includes("walls")) c.walls = Math.min(100, c.walls + 5);
       }
       if (c.queue.length) {
         const j = c.queue[0],
@@ -2092,14 +2164,11 @@ export function nextTurn(s: State) {
       r.opinion = Math.min(30, r.opinion + 1);
   }
   for (const u of s.units) {
-    if (!u.acted) {
-      const medic=s.units.some(v=>v.owner===u.owner && v.type==='scientist' && v.person==='abu_al_qasim_al_zahrawi' && distance(s.tiles[v.tile],s.tiles[u.tile])<=1);
-      const retired=info(u.type).domain!=='sea' && s.nations[u.owner].scientistEffects?.includes('abu_al_qasim_al_zahrawi');
-      u.hp = Math.min(100, u.hp + (s.tiles[u.tile].owner === u.owner ? 15 : 8) + (medic?20:0) + (retired?5:0));
-    }
-    u.moves = (info(u.type).moves ?? 2) + (hasPolicy(s.nations[u.owner],'logistics') && s.tiles[u.tile].owner===u.owner ? 1 : 0);
+    u.hp=Math.min(100,u.hp+healingRate(s,u));
+    u.fortificationTurns=!u.acted && canFortify(u) && s.tiles[u.tile].terrain!=='water' ? Math.min(2,(u.fortificationTurns??(u.fortified?2:0))+1) : 0;
+    u.moves = maxMoves(s,u);
     u.acted = false;
-    if (u.fortified) u.moves = 0;
+    if (u.fortified) {u.restingMoves=u.moves;u.moves = 0;} else delete u.restingMoves;
   }
   s.cities.forEach((c) => (c.attacked = false));
   if (s.turn % 5 === 0)
@@ -2169,6 +2238,7 @@ function chooseBuild(s: State, c: City) {
       v += n.civ === "rome" ? 20 : 10;
     if (d.id === "commercial" || d.id === "market") v += 15;
     if (d.id === "walls") v += war ? 35 : 12;
+    if(d.id==='repairDefenses') v+=60+(100-c.walls)*0.3;
     if (d.id === "settler")
       v +=
         cs.length < (strategy === 'expansion' ? 5 : 3) && !us.some((u) => u.type === "settler") && !cs.some(city => city.queue.some(j => j.item === 'settler')) && s.turn > 12
@@ -2204,7 +2274,7 @@ function chooseBuild(s: State, c: City) {
     if (d.kind === "project" && !d.repeat) v += 70;
     if (d.repeat) v -= 5;
     if (d.kind === "wonder") v += n.civ === "egypt" ? 15 : 2;
-    if (d.amenities) v += yields(s, c).happy < 0 ? 40 : 0;
+    if (d.amenities) v += yields(s, c).happy < -1 ? 40 : 0;
     return v;
   };
   choices = choices
@@ -2494,7 +2564,7 @@ function followPath(s: State, u: Unit, route: number[]) {
     spent += movementCost(s, u, route[k - 1], route[k]);
     if (spent > u.moves) break;
     destination = route[k];
-    if (zone(s, u, destination) && u.type !== 'scout') break;
+    if (zone(s, u, destination) && !ignoresZone(u)) break;
   }
   return destination !== u.tile && move(s, u, destination);
 }

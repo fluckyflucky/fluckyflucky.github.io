@@ -2038,3 +2038,6 @@
     scroll-behavior: auto !important;
   }
 }
+.unit-rest-status,.city-defense-status {display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.growth > div:first-child {align-items:center;gap:6px;}
+.growth > div:first-child > .civ-help-button {margin-left:auto;}

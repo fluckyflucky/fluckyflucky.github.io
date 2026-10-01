@@ -910,7 +910,7 @@ const tabs = [
                   </div>
                 </div>
                 <p v-else class="warning">尚未安排生产</p>
-                <p class="hint" v-if="yields(state, c).happy < 0">
+                <p class="hint" v-if="yields(state, c).happy < -1">
                   宜居度不足，产出降低
                 </p>
               </article>

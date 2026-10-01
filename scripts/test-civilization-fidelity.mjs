@@ -75,7 +75,7 @@ test('nationalism does not give every existing unit a passive combat bonus',()=>
   const s=setup(),u=s.units.find(u=>u.owner===0&&u.type==='warrior'),before=w.strength(s,u,1);s.nations[0].civic.push('nationalism');assert.equal(w.strength(s,u,1),before);
 });
 test('archers use 25 ranged strength and 15 melee defense',()=>{
-  const s=setup(),u=w.spawn(s,0,'archer',s.units.find(u=>u.owner===0).tile);s.tiles[u.tile].terrain='grass';assert.equal(c.itemMap.archer.cost,60);assert.equal(w.strength(s,u,1),25);assert.equal(w.strength(s,u,1,true),15);
+  const s=setup(),u=w.spawn(s,0,'archer',s.units.find(u=>u.owner===0).tile);Object.assign(s.tiles[u.tile],{terrain:'grass',hills:false,feature:''});assert.equal(c.itemMap.archer.cost,60);assert.equal(w.strength(s,u,1),25);assert.equal(w.strength(s,u,1,true),15);
 });
 test('corvee is only +15% for ancient/classical wonders, not buildings or districts',()=>{
   const s=setup(),n=s.nations[0],city=s.cities.find(c=>c.owner===0);n.civic.push('stateworkforce');n.policies=['labor',null];const base=w.yields(s,city).production;
@@ -109,7 +109,7 @@ test('rationalism boosts campus BUILDINGS only at 15 population and/or raw +4 ad
   const s=setup(),n=s.nations[0],city=s.cities.find(c=>c.owner===0),at=w.neighbors(s,city.tile)[0];
   city.buildings=['campus','library','university'];s.tiles[at].district='campus';s.tiles[at].territory=city.id;s.tiles[at].owner=0;city.pop=15;n.civic.push('theenlightenment','recordedhistory');
   for(const i of w.neighbors(s,at))Object.assign(s.tiles[i],{terrain:'grass',district:'',city:-1,feature:'',resource:''});
-  const mult=()=>w.yields(s,city).happy>=5?1.2:w.yields(s,city).happy>=3?1.1:w.yields(s,city).happy<=-5?0.7:w.yields(s,city).happy<=-3?0.8:w.yields(s,city).happy<0?0.9:1;
+  const mult=()=>{const delta=w.yields(s,city).happy;return delta>=5?1.2:delta>=3?1.1:delta>=-1?1:delta>=-3?.9:delta>=-5?.8:delta>=-7?.7:.6;};
   const base=w.yields(s,city).science;n.policies=[null,'rational'];assert(Math.abs(w.yields(s,city).science-base-3*mult())<1e-9);
   city.pop=14;n.policies=[];const below=w.yields(s,city).science;n.policies=['rational'];assert.equal(w.yields(s,city).science,below);
   const ns=w.neighbors(s,at);s.tiles[ns[0]].terrain='mountain';s.tiles[ns[1]].terrain='mountain';n.policies=['rational','naturalphilosophy'];

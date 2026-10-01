@@ -438,6 +438,9 @@ export const items: Item[] = [
     repeat: true,
     icon: "science",
   },
+  {id:'repairDefenses',name:'修复外部防御',cost:50,kind:'project',needs:'walls',repeat:true,
+    description:'连续3回合未受攻击后修复城墙；本版每2点损伤消耗1生产',icon:'shield',
+    source:'https://www.civilopedia.net/zh-CN/gathering-storm/wonders/project_repair_outer_defenses/'},
 ];
 for (const item of items) {
   const reference = itemReference.find(r=>r.id===item.id);

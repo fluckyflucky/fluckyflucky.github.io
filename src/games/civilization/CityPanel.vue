@@ -16,8 +16,11 @@ import {
   jobCost,
   productionRate,
   active,
+  growthCost,
+  underSiege,
 } from "./world";
 import CivIcon from "./CivIcon.vue";
+import CivHelp from './CivHelp.vue';
 const props = defineProps<{ state: State; city: City }>();
 const emit = defineEmits<{
   place: [string];
@@ -127,36 +130,43 @@ watch(
         ><span>住房</span>
       </div>
       <div>
-        <strong :class="{ warning: output.happy < 0 }"
+        <strong :class="{ warning: output.happy < -1 }"
           >{{ output.amenities }} / {{ output.requiredAmenities }}</strong
-        ><span>宜居度</span>
+        ><span>宜居度 · {{ output.happiness }}</span>
       </div>
       <div>
         <strong>{{ Math.round(city.hp) }}</strong
-        ><span>生命 / 200</span>
+        ><span>生命 / 200<template v-if="city.buildings.includes('walls')"> · 墙 {{ Math.round(city.walls) }}</template></span>
       </div>
     </div>
     <div class="growth">
       <div>
-        <span>人口增长</span
-        ><span>{{ Math.floor(city.food) }} / {{ 12 + city.pop * 6 }}</span>
+        <span>人口增长</span>
+        <CivHelp label="城市增长规则" :text="`每人口消耗2粮食。住房至少多2时正常增长，多1时减半，不足时仅25%，超出5时停长；半点住房向下取整。宜居度需求每2人口1点（向上取整），本城${output.happiness}。奢侈品按城市缺口自动分配，每种最多4城，同种重复不叠加。`" />
+        <span>{{ Math.floor(city.food) }} / {{ growthCost(state,city) }}</span>
       </div>
       <div class="meter">
         <i
           :style="{
-            width: Math.min(100, (city.food / (12 + city.pop * 6)) * 100) + '%',
+            width: Math.min(100, (city.food / growthCost(state,city)) * 100) + '%',
           }"
         />
       </div>
       <small v-if="output.growing > 0"
         >预计
-        {{ Math.ceil((12 + city.pop * 6 - city.food) / output.growing) }} 回合 ·
+        {{ Math.max(1,Math.ceil((growthCost(state,city) - city.food) / output.growing)) }} 回合 ·
         每回合 +{{ output.growing.toFixed(1) }} 储粮</small
       ><small v-else class="warning">{{
         output.food < city.pop * 2
           ? "粮食短缺：调整市民焦点或建农场"
+          : city.pop >= Math.floor(output.housing)+5 ? "住房不足，人口停止增长"
+          : output.happy <= -6 ? "城市动荡，人口停止增长"
           : "粮食收支平衡，暂不增长"
       }}</small>
+    </div>
+    <div v-if="city.hp<200 || city.buildings.includes('walls')" class="city-defense-status">
+      <small>{{ underSiege(state,city) ? '被围城：停止回血' : '补给畅通：生命 +10 / 回合' }}</small>
+      <CivHelp label="围城与城墙维修" text="周围所有可通行地块都被敌方军队占据或控制才算围城；山脉不提供补给，沿海城市还需封锁水路。城墙不自动回血，连续3回合未遭攻击后，在生产·项目中修复外部防御。河流边的控制阻隔尚未实现。" />
     </div>
     <div class="city-yields">
       <span

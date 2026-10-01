@@ -14,6 +14,128 @@ function setup(options={}) {
   return s;
 }
 const own=s=>s.cities.find(c=>c.owner===0);
+test('GS growth buckets are nonlinear, speed-scaled, and housing uses whole points with a hard stop',()=>{
+  const s=setup(),city=own(s);
+  for(const [pop,expected] of [[1,24],[2,33],[4,55],[10,126]]) {city.pop=pop;assert.equal(w.growthCost(s,city),expected);}
+  s.options.speed='quick';city.pop=1;assert.equal(w.growthCost(s,city),16);city.pop=4;assert.equal(w.growthCost(s,city),36);
+  for(const [housing,pop,mult] of [[6,4,1],[5.5,4,0.5],[5,5,0.25],[5,9,0.25],[5,10,0],[5.5,10,0]]) assert.equal(w.housingGrowth(housing,pop),mult);
+});
+test('GS amenities require every citizen pair from population one, and use August 2020 boundary values',()=>{
+  const city=own(setup());for(const [pop,needed] of [[1,1],[2,1],[3,2],[5,3],[12,6]]) {city.pop=pop;assert.equal(w.requiredAmenities(city),needed);}
+  for(const [delta,yieldMult,food,growth] of [[5,1.2,1.2,1],[4,1.1,1.1,1],[3,1.1,1.1,1],[2,1,1,1],[-1,1,1,1],[-2,.9,1,.85],[-3,.9,1,.85],[-4,.8,1,.7],[-5,.8,1,.7],[-6,.7,1,0],[-7,.7,1,0],[-8,.6,1,0]]) {
+    const mood=w.happiness(delta);assert.equal(mood.yield,yieldMult);assert.equal(mood.food,food);assert.equal(mood.growth,growth);
+  }
+});
+test('each luxury reaches four needy cities, does not vanish at city five, and duplicates do not stack',()=>{
+  const s=setup({cityStateCount:6}),cities=s.cities.slice(0,5);s.units=[];
+  for(const t of s.tiles){t.resource='';t.improvement='';if(cities.some(c=>c.id===t.territory))t.owner=0;}
+  cities.forEach((c,i)=>{c.owner=0;c.pop=2+i*2;c.buildings=[];});
+  const base=w.amenityAllocation(s,0),a=s.tiles[w.neighbors(s,cities[0].tile)[0]],b=s.tiles[w.neighbors(s,cities[0].tile)[1]];
+  Object.assign(a,{resource:'gems',improvement:'mine',owner:0,pillaged:false});
+  const withOne=w.amenityAllocation(s,0);assert.equal(cities.reduce((sum,c)=>sum+withOne.get(c.id)-base.get(c.id),0),4);
+  assert.equal(withOne.get(cities[0].id),base.get(cities[0].id),'best supplied capital is not prioritized');
+  Object.assign(b,{resource:'gems',improvement:'mine',owner:0,pillaged:false});assert.deepEqual(w.amenityAllocation(s,0),withOne);
+  a.pillaged=true;b.pillaged=true;assert.deepEqual(w.amenityAllocation(s,0),base);
+  a.improvement='';a.city=cities[0].id;assert.deepEqual(w.amenityAllocation(s,0),withOne,'settled luxury needs no improvement');
+});
+test('half housing from plantations and fishing boats survives unworked tiles, but not pillaging',()=>{
+  const s=setup(),city=own(s);for(const t of s.tiles)t.improvement='';const base=w.yields(s,city).housing;
+  const ns=w.neighbors(s,city.tile);for(const [i,kind] of ns.slice(0,4).map((i,j)=>[i,['farm','pasture','plantation','fishery'][j]])) {s.tiles[i].improvement=kind;s.tiles[i].pillaged=false;}
+  assert.equal(w.yields(s,city).housing,base+2);ns.slice(0,4).forEach(i=>s.tiles[i].pillaged=true);assert.equal(w.yields(s,city).housing,base);
+});
+test('founding clears removable features/improvements, but keeps bonus/luxury resources and hill base yields',()=>{
+  for(const resource of ['wheat','gems']) {
+    const s=w.create({seed:42,size:'compact'}),u=s.units.find(u=>u.owner===0&&u.type==='settler'),tile=s.tiles[u.tile];
+    Object.assign(tile,{terrain:'forest',baseTerrain:'plain',hills:true,feature:'forest',resource,improvement:'mine',pillaged:true});
+    assert(w.found(s,u));assert.equal(tile.feature,'');assert.equal(tile.improvement,'');assert.equal(tile.resource,resource);
+    assert.equal(w.tileYield(s,tile).production,2,'plains hill remains, forest/mine do not');assert(saves.valid(s));
+  }
+});
+test('settled strategic resources accumulate after their reveal tech, without an improvement or worker',()=>{
+  const s=setup(),city=own(s),n=s.nations[0],tile=s.tiles[city.tile];tile.resource='iron';tile.improvement='';n.strategic.iron=0;n.tech=[];
+  w.nextTurn(s);assert.equal(n.strategic.iron,0);n.tech.push('bronze');w.nextTurn(s);assert.equal(n.strategic.iron,2);assert(saves.valid(s));
+});
+test('layered defense stacks forested hills and penalizes marshes without applying feature bonuses to city centers',()=>{
+  const s=setup(),u=s.units.find(u=>u.owner===0&&u.type==='warrior'),t=s.tiles[u.tile];Object.assign(t,{terrain:'grass',hills:false,feature:''});const base=w.strength(s,u,1,true);
+  t.hills=true;t.feature='forest';assert.equal(w.strength(s,u,1,true),base+6);t.hills=false;t.feature='marsh';assert.equal(w.strength(s,u,1,true),base-2);
+  const city=own(s);u.tile=city.tile;Object.assign(s.tiles[city.tile],{hills:true,feature:'forest'});assert.equal(w.strength(s,u,1,true),base);
+});
+test('GS positive amenities boost food before consumption, not a second bonus on food surplus',()=>{
+  const s=setup(),city=own(s);city.buildings=[];for(const t of s.tiles)t.resource='';const base=w.yields(s,city);assert.equal(base.happy,1);
+  const id='testAmenities',saved=c.itemMap[id];c.itemMap[id]={id,name:'fixture',cost:1,kind:'building',description:'',icon:'city',amenities:4};city.buildings.push(id);
+  try {const enhanced=w.yields(s,city);assert.equal(enhanced.happy,5);assert(Math.abs(enhanced.food-base.food*1.2)<1e-9);assert(Math.abs(enhanced.growing-(enhanced.food-2)*w.housingGrowth(enhanced.housing,1))<1e-9);}
+  finally {city.buildings.pop();if(saved)c.itemMap[id]=saved;else delete c.itemMap[id];}
+});
+test('growth turn settlement uses the UI bucket, preserves overflow and does not grow a stopped city from old stock',()=>{
+  const s=setup(),city=own(s);city.queue=[];const y=w.yields(s,city);assert(y.growing>0);
+  city.food=w.growthCost(s,city)-.1;const expected=city.food+y.growing-w.growthCost(s,city);w.nextTurn(s);assert.equal(city.pop,2);assert(Math.abs(city.food-expected)<1e-9);
+  city.pop=20;city.food=10000;city.buildings=[];for(const t of s.tiles)if(t.territory===city.id)Object.assign(t,{baseTerrain:'grass',terrain:'grass',feature:'rainforest',improvement:'',resource:''});
+  assert.equal(w.yields(s,city).growing,0);w.nextTurn(s);assert.equal(city.pop,20);assert(saves.valid(s));
+});
+test('resting and waking cannot refill movement; stored remaining moves persist across save/reload',()=>{
+  const s=setup(),u=s.units.find(u=>u.owner===0&&u.type==='warrior');u.moves=1;u.acted=true;
+  assert(w.fortify(s,u));assert.equal(u.moves,0);assert.equal(u.restingMoves,1);assert(saves.valid(s));
+  const loaded=saves.migrate(structuredClone(s)),v=loaded.units.find(v=>v.id===u.id);assert(w.fortify(loaded,v));assert.equal(v.moves,1);
+  assert(w.fortify(s,u));assert.equal(u.moves,1);u.moves=0;assert(w.fortify(s,u));assert(w.fortify(s,u));assert.equal(u.moves,0);
+  assert(w.fortify(s,u));w.nextTurn(s);assert(w.fortify(s,u));assert.equal(u.moves,w.maxMoves(s,u));
+  s.nations[0].tech.push('steam');assert.equal(w.maxMoves(s,u),2,'steam power alone never boosts every unit');
+});
+test('stationary fortification advances 3 then 6 without a button, movement clears it, cavalry cannot fortify',()=>{
+  const s=setup(),u=s.units.find(u=>u.owner===0&&u.type==='warrior');s.tiles[u.tile].terrain='grass';s.tiles[u.tile].hills=false;s.tiles[u.tile].feature='';
+  const base=w.strength(s,u,1,true);w.nextTurn(s);assert.equal(u.fortificationTurns,1);assert.equal(w.strength(s,u,1,true),base+3);
+  w.nextTurn(s);assert.equal(u.fortificationTurns,2);assert.equal(w.strength(s,u,1,true),base+6);
+  const to=w.neighbors(s,u.tile).find(i=>!s.units.some(v=>v.tile===i));Object.assign(s.tiles[to],{terrain:'grass',hills:false,feature:'',river:s.tiles[u.tile].river,owner:0});assert(w.move(s,u,to));assert.equal(u.fortificationTurns,0);
+  u.type='horse';u.fortificationTurns=2;assert(!w.canFortify(u));assert.equal(w.strength(s,u,1,true),36);assert(saves.valid(s));
+});
+test('healing uses districts/own/neutral/rival territory and maritime restrictions without moving or consuming RNG',()=>{
+  const s=setup(),city=own(s),u=s.units.find(u=>u.owner===0&&u.type==='warrior');u.tile=city.tile;u.hp=40;u.acted=false;const tile=s.tiles[u.tile],seed=s.seed;
+  assert.equal(w.healingRate(s,u),20);tile.city=-1;tile.district='campus';assert.equal(w.healingRate(s,u),20);tile.district='';assert.equal(w.healingRate(s,u),15);
+  tile.owner=-1;assert.equal(w.healingRate(s,u),10);tile.owner=1;assert.equal(w.healingRate(s,u),5);
+  tile.terrain='water';u.type='galley';assert.equal(w.healingRate(s,u),0);tile.owner=0;assert.equal(w.healingRate(s,u),15);
+  u.type='warrior';tile.owner=-1;assert.equal(w.healingRate(s,u),0);u.acted=true;tile.owner=0;assert.equal(w.healingRate(s,u),0);
+  assert.equal(u.hp,40);assert.equal(s.seed,seed);
+});
+test('suzerain territory supports healing while mere friendship does not; missionaries and barbarians do not rest-heal',()=>{
+  const s=setup(),u=s.units.find(u=>u.owner===0&&u.type==='warrior'),state=s.cityStates[0],tile=s.tiles[u.tile];tile.city=-1;tile.terrain='grass';tile.district='';tile.owner=state.owner;state.envoys=[3,0,0];
+  assert.equal(w.healingRate(s,u),15);state.envoys=[3,3,0];assert.equal(w.healingRate(s,u),5);tile.owner=1;w.relation(s,0,1).status='friend';assert.equal(w.healingRate(s,u),5);
+  tile.owner=0;u.type='missionary';assert.equal(w.healingRate(s,u),0);u.type='warrior';u.owner=s.nations.length-1;assert.equal(w.healingRate(s,u),0);
+});
+test('siege requires every approach to be blocked, ranged units do not control adjacent tiles, and coast needs ships',()=>{
+  const s=setup(),city=own(s);s.units=[];w.relation(s,0,1).status='war';const ns=w.neighbors(s,city.tile);
+  for(const i of ns)Object.assign(s.tiles[i],{terrain:'grass',hills:false,feature:'',owner:0});
+  w.spawn(s,1,'warrior',ns[0]);assert(!w.underSiege(s,city));
+  ns.slice(1).forEach(i=>w.spawn(s,1,'archer',i));assert(w.underSiege(s,city),'occupation blocks supply even by ranged units');
+  s.units=s.units.filter(u=>u.tile!==ns[3]);assert(!w.underSiege(s,city),'ranged neighbors exert no zone');s.tiles[ns[3]].terrain='mountain';assert(w.underSiege(s,city));
+  s.tiles[ns[3]].terrain='water';assert(!w.underSiege(s,city),'land control cannot blockade coast');w.spawn(s,1,'galley',ns[3]);assert(w.underSiege(s,city));
+});
+test('scouts respect control zones, cavalry/civilians ignore them and embarked armies exert none',()=>{
+  const s=setup(),city=own(s);s.units=[];w.relation(s,0,1).status='war';const ns=w.neighbors(s,city.tile),u=w.spawn(s,0,'scout',city.tile),enemy=w.spawn(s,1,'warrior',ns[0]);
+  assert(!w.ignoresZone(u));assert(w.zone(s,u,city.tile));u.type='horse';assert(w.ignoresZone(u));u.type='settler';assert(w.ignoresZone(u));
+  s.tiles[enemy.tile].terrain='water';assert(!w.zone(s,u,city.tile));
+});
+test('walls never regenerate, repair waits three turns, pauses on a new hit and survives saves',()=>{
+  const s=setup(),city=own(s);city.buildings.push('walls');city.walls=40;city.hp=180;city.queue=[];s.units=s.units.filter(u=>u.owner!==s.nations.length-1);
+  w.nextTurn(s);assert.equal(city.walls,40);assert.equal(city.hp,190);city.lastDamagedTurn=s.turn;
+  assert(w.buildReason(s,city,'repairDefenses'));assert(!w.enqueue(s,city,'repairDefenses'));s.turn+=3;assert(w.enqueue(s,city,'repairDefenses'));
+  const j=city.queue[0];assert.equal(w.jobCost(s,city,j),30);city.invested[w.jobKey(j)]=30;city.lastDamagedTurn=s.turn;
+  w.nextTurn(s);assert.equal(city.walls,40);assert.equal(city.invested[w.jobKey(j)],30);assert(saves.valid(s));
+  const loaded=saves.migrate(structuredClone(s));assert(loaded);const copy=own(loaded);loaded.turn+=3;w.nextTurn(loaded);assert.equal(copy.walls,100);assert.equal(copy.queue.length,0);assert(!copy.buildings.includes('repairDefenses'));assert(saves.valid(loaded));
+});
+test('a legal city attack restarts the defense repair cooldown; rejected attacks cannot mutate it',()=>{
+  const s=setup(),city=s.cities.find(c=>c.owner===1),at=w.neighbors(s,city.tile)[0];s.units=[];
+  Object.assign(s.tiles[at],{terrain:'grass',owner:-1});const u=w.spawn(s,0,'warrior',at);w.relation(s,0,1).status='war';city.buildings.push('walls');city.walls=50;
+  assert(w.attack(s,u,city.tile));assert.equal(city.lastDamagedTurn,s.turn);assert(w.buildReason(s,city,'repairDefenses'));
+  const before=JSON.stringify(s);assert(!w.attack(s,u,city.tile));assert.equal(JSON.stringify(s),before);
+});
+test('AI selects the same legal defense repair project rather than receiving free wall HP',()=>{
+  const s=setup(),city=s.cities.find(c=>c.owner===1);s.turn=10;city.buildings.push('walls');city.walls=30;city.lastDamagedTurn=6;city.queue=[];
+  w.computerTurn(s,1);assert.equal(city.queue[0].item,'repairDefenses');assert.equal(city.walls,30);assert(saves.valid(s));
+});
+test('new rest/repair fields validate strictly; absence preserves genuine old saves without rewriting them',()=>{
+  const s=setup(),u=s.units.find(u=>u.owner===0),city=own(s);delete u.fortificationTurns;delete u.restingMoves;delete city.lastDamagedTurn;
+  const before=JSON.stringify(s);assert(saves.valid(s));assert.equal(JSON.stringify(saves.migrate(s)),before);
+  for(const mutate of [x=>x.units[0].fortificationTurns=3,x=>x.units[0].fortificationTurns=-1,x=>x.units[0].restingMoves=2,x=>{x.units[0].fortified=true;x.units[0].restingMoves=NaN;},x=>own(x).lastDamagedTurn=x.turn+1]) {const bad=structuredClone(s);mutate(bad);assert(!saves.valid(bad));}
+});
 function holy(s,owner=0) {
   const city=s.cities.find(c=>c.owner===owner),at=w.neighbors(s,city.tile)[0];
   s.units=s.units.filter(u=>u.tile!==at);

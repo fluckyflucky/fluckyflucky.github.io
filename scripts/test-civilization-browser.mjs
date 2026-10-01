@@ -318,4 +318,34 @@ try {
     console.log(`✓ ${width}px: scientist recruitment, named unit, physical movement, actual library activation and reload`);
     await context.close();
   }
+  for(const width of (process.env.CIV_TEST_WIDTHS?.split(',').map(Number) ?? [375,768,1024,1440])) {
+    const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===375}),page=await context.newPage(),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    const fixture=rules.create({seed:42,size:'compact',speed:'normal',difficulty:'relaxed'});
+    rules.found(fixture,fixture.units.find(u=>u.owner===0&&u.type==='settler'));
+    const city=fixture.cities.find(c=>c.owner===0),u=fixture.units.find(u=>u.owner===0&&u.type==='warrior');
+    fixture.turn=10;city.buildings.push('walls');city.walls=40;city.lastDamagedTurn=4;city.queue=[];city.food=3;u.moves=1;u.acted=true;u.hp=60;
+    assert(saveRules.valid(fixture));
+    await context.addInitScript(s=>{if(!localStorage.getItem('aoinatsu:civilization:v3'))localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s));},fixture);
+    const cityTab=page.locator('.civ-nav').getByRole('button',{name:/^城市\s*\d*$/});
+    await page.goto(url);await cityTab.click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
+    await page.locator('.city-panel').waitFor();assert.match(await page.locator('.growth').innerText(),/3 \/ 24/);
+    assert.match(await page.locator('.city-summary').innerText(),/2 \/ 1/);assert.match(await page.locator('.city-defense-status').innerText(),/补给畅通/);
+    const help=page.getByRole('button',{name:'城市增长规则',exact:true});await help.click();assert.match(await page.getByRole('tooltip').innerText(),/住房.*超出5.*停长/s);await page.keyboard.press('Escape');
+    await page.getByRole('button',{name:'围城与城墙维修',exact:true}).click();assert.match(await page.getByRole('tooltip').innerText(),/城墙不自动回血.*3回合/s);await page.keyboard.press('Escape');
+    await page.getByLabel('生产分类').selectOption('project');
+    const repair=page.locator('.build-catalog article').filter({hasText:'修复外部防御'});assert.match(await repair.innerText(),/30 生产/);
+    await repair.getByRole('button',{name:'加入队列',exact:true}).click();await page.waitForTimeout(350);
+    let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));assert.equal(saved.cities.find(c=>c.owner===0).queue[0].item,'repairDefenses');assert.equal(saved.cities.find(c=>c.owner===0).walls,40);assert(saveRules.valid(saved));
+    if(process.env.CIV_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`growth-repair-${width}.png`),fullPage:true});
+    await cityTab.click();await page.locator('.unit-roster button').filter({hasText:'勇士'}).first().click();
+    await page.getByRole('button',{name:'驻守',exact:true}).click();await page.waitForTimeout(350);
+    await page.reload();await cityTab.click();await page.locator('.unit-roster button').filter({hasText:'勇士'}).first().click();
+    await page.getByRole('button',{name:'唤醒',exact:true}).click();await page.waitForTimeout(350);
+    saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));assert.equal(saved.units.find(v=>v.id===u.id).moves,1,'reload/wake must not refill movement');
+    assert.match(await page.locator('.unit-rest-status').innerText(),/已行动.*不能休整/);
+    await page.getByRole('button',{name:'驻守与休整',exact:true}).click();assert.match(await page.getByRole('tooltip').innerText(),/唤醒不会.*移动力/);const box=await page.getByRole('tooltip').boundingBox();assert(box.x>=0&&box.x+box.width<=width);await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);assert(saveRules.valid(saved));
+    console.log(`✓ ${width}px: growth/amenity numbers, repair queue, tooltips, save/reload and no wake movement exploit`);await context.close();
+  }
 } finally {await browser.close();}

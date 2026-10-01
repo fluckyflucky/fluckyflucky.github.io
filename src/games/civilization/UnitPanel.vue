@@ -27,6 +27,10 @@ import {
   cost,
   activateScientist,
   scientistReason,
+  fortify as toggleFortify,
+  maxMoves,
+  healingRate,
+  canFortify,
 } from "./world";
 import { scientistById } from './great-people';
 import CivHelp from './CivHelp.vue';
@@ -73,16 +77,7 @@ function action(fn: () => boolean, success: string) {
   emit("status", fn() ? success : "当前不能执行此操作");
 }
 function fortify() {
-  if (!active(props.state)) return;
-  if (props.unit.fortified) {
-    props.unit.fortified = false;
-    props.unit.moves = props.unit.acted
-      ? 0
-      : (d.value.moves ?? 2) + (n.value.tech.includes("steam") ? 1 : 0);
-  } else {
-    props.unit.fortified = true;
-    props.unit.moves = 0;
-  }
+  if (!toggleFortify(props.state,props.unit)) return;
   emit("mode", "inspect");
 }
 </script>
@@ -99,9 +94,13 @@ function fortify() {
       </div>
       <span class="movement-badge"
         >{{ unit.moves }} /
-        {{ (d.moves ?? 2) + (n.tech.includes("steam") ? 1 : 0)
+        {{ maxMoves(state,unit)
         }}<small>移动力</small></span
       >
+    </div>
+    <div class="unit-rest-status">
+      <small>{{ unit.acted ? '本回合已行动，不能休整回血' : `休整回血 +${healingRate(state,unit)} / 回合` }}<template v-if="canFortify(unit)"> · 驻防 +{{ 3*(unit.fortificationTurns??(unit.fortified?2:0)) }}</template></small>
+      <CivHelp label="驻守与休整" text="驻守保留当前剩余移动力，唤醒不会补回已消耗的移动力。整回合未行动才回血；可驻防单位静止一回合防御+3，两回合+6，移动或攻击后清除。城市和区域内回复20，己方或宗主城邦领土15，无主地10，其他领土5；海军及登船单位通常只能在友方领土回复。" />
     </div>
     <div class="unit-health">
       <div class="meter"><i :style="{ width: unit.hp + '%' }" /></div>
