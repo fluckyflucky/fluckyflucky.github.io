@@ -19,6 +19,7 @@ const manualOverrides: Record<string, SidebarGroup> = {
       { text: 'Base64 编解码', link: '/tools/base64' },
       { text: '时间戳转换', link: '/tools/timestamp' },
       { text: '下载速度计算', link: '/tools/download-calc' },
+      { text: '低价机票扫描', link: '/tools/flights' },
     ],
   },
 }

@@ -1,0 +1,422 @@
+{
+  "checked_on": "2026-10-03",
+  "timezone": "Asia/Shanghai",
+  "method": "Public repository/document/config/source review; public API and remote MCP read-only probes; no installation, credentials or bookings",
+  "repositories": [
+    {
+      "repo": "HasData/google-flights-mcp",
+      "url": "https://github.com/HasData/google-flights-mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-09-24T14:15:19Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "salamentic/google-flights-mcp",
+      "url": "https://github.com/salamentic/google-flights-mcp",
+      "default_branch": "main",
+      "pushed_at": "2025-03-05T23:42:36Z",
+      "archived": false,
+      "github_license": null
+    },
+    {
+      "repo": "ookami0210/japan-travel-mcp",
+      "url": "https://github.com/ookami0210/japan-travel-mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-10-02T14:03:43Z",
+      "archived": false,
+      "github_license": "NOASSERTION"
+    },
+    {
+      "repo": "apappascs/mcp-flight-search",
+      "url": "https://github.com/apappascs/mcp-flight-search",
+      "default_branch": "main",
+      "pushed_at": "2025-11-27T15:29:08Z",
+      "archived": false,
+      "github_license": null
+    },
+    {
+      "repo": "youseiushida/japan-transfer-mcp",
+      "url": "https://github.com/youseiushida/japan-transfer-mcp",
+      "default_branch": "main",
+      "pushed_at": "2025-09-25T18:17:35Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "pgallar/amadeus-travelapi-mcp",
+      "url": "https://github.com/pgallar/amadeus-travelapi-mcp",
+      "default_branch": "main",
+      "pushed_at": "2025-08-08T15:18:34Z",
+      "archived": false,
+      "github_license": null
+    },
+    {
+      "repo": "Shuangbing/kayak-headless-mcp-server",
+      "url": "https://github.com/Shuangbing/kayak-headless-mcp-server",
+      "default_branch": "main",
+      "pushed_at": "2026-05-18T07:28:59Z",
+      "archived": false,
+      "github_license": null
+    },
+    {
+      "repo": "TakeruF/japan-rail-mcp",
+      "url": "https://github.com/TakeruF/japan-rail-mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-08-25T13:45:01Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "loosephoto/tokyo-transit-mcp",
+      "url": "https://github.com/loosephoto/tokyo-transit-mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-09-21T07:45:48Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "GHagui/mcp-navitime-rust",
+      "url": "https://github.com/GHagui/mcp-navitime-rust",
+      "default_branch": "main",
+      "pushed_at": "2026-03-23T23:38:34Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "haomingkoo/japan-seasons-mcp",
+      "url": "https://github.com/haomingkoo/japan-seasons-mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-08-28T09:44:27Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "Anchovy-s3/japan-transit-mcp",
+      "url": "https://github.com/Anchovy-s3/japan-transit-mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-06-29T13:23:39Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "kasuganosora/tokyo-transit.skill",
+      "url": "https://github.com/kasuganosora/tokyo-transit.skill",
+      "default_branch": "master",
+      "pushed_at": "2026-09-27T10:50:54Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "stufently/aviasales-mcp",
+      "url": "https://github.com/stufently/aviasales-mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-08-21T13:52:47Z",
+      "archived": false,
+      "github_license": "GPL-3.0"
+    },
+    {
+      "repo": "shadyvb/mcp-skyscanner",
+      "url": "https://github.com/shadyvb/mcp-skyscanner",
+      "default_branch": "main",
+      "pushed_at": "2025-11-30T15:02:14Z",
+      "archived": false,
+      "github_license": null
+    },
+    {
+      "repo": "LetsFG/LetsFG",
+      "url": "https://github.com/LetsFG/LetsFG",
+      "default_branch": "main",
+      "pushed_at": "2026-10-02T14:36:44Z",
+      "archived": false,
+      "github_license": "NOASSERTION"
+    },
+    {
+      "repo": "ValLaboratory/ekispert-api-mcp-server-docs",
+      "url": "https://github.com/ValLaboratory/ekispert-api-mcp-server-docs",
+      "default_branch": "master",
+      "pushed_at": "2026-09-03T01:26:35Z",
+      "archived": false,
+      "github_license": "NOASSERTION"
+    },
+    {
+      "repo": "YogevKr/itamx",
+      "url": "https://github.com/YogevKr/itamx",
+      "default_branch": "main",
+      "pushed_at": "2026-06-21T18:20:44Z",
+      "archived": false,
+      "github_license": "MIT"
+    },
+    {
+      "repo": "tysonwu/norikae-mcp",
+      "url": "https://github.com/tysonwu/norikae-mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-01-21T06:29:38Z",
+      "archived": false,
+      "github_license": null
+    },
+    {
+      "repo": "jimmylang74/flight_search_mcp",
+      "url": "https://github.com/jimmylang74/flight_search_mcp",
+      "default_branch": "main",
+      "pushed_at": "2026-08-11T11:01:37Z",
+      "archived": false,
+      "github_license": null
+    }
+  ],
+  "registries": [
+    {
+      "registry": "npm",
+      "package": "norikae-mcp",
+      "url": "https://registry.npmjs.org/norikae-mcp",
+      "status": 200,
+      "version": "0.1.4"
+    },
+    {
+      "registry": "npm",
+      "package": "japan-transit-mcp",
+      "url": "https://registry.npmjs.org/japan-transit-mcp",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "registry": "npm",
+      "package": "tokyo-transit-mcp",
+      "url": "https://registry.npmjs.org/tokyo-transit-mcp",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "registry": "npm",
+      "package": "japan-travel-mcp",
+      "url": "https://registry.npmjs.org/japan-travel-mcp",
+      "status": 200,
+      "version": "1.4.0"
+    },
+    {
+      "registry": "npm",
+      "package": "japan-seasons-mcp",
+      "url": "https://registry.npmjs.org/japan-seasons-mcp",
+      "status": 200,
+      "version": "0.5.0"
+    },
+    {
+      "registry": "npm",
+      "package": "japan-rail-mcp",
+      "url": "https://registry.npmjs.org/japan-rail-mcp",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "registry": "npm",
+      "package": "japan-transfer-mcp",
+      "url": "https://registry.npmjs.org/japan-transfer-mcp",
+      "status": 200,
+      "version": "0.0.11"
+    },
+    {
+      "registry": "npm",
+      "package": "@hasdata/google-flights-mcp",
+      "url": "https://registry.npmjs.org/@hasdata/google-flights-mcp",
+      "status": 200,
+      "version": "1.0.7"
+    },
+    {
+      "registry": "npm",
+      "package": "letsfg-mcp",
+      "url": "https://registry.npmjs.org/letsfg-mcp",
+      "status": 200,
+      "version": "2026.5.78"
+    },
+    {
+      "registry": "pypi",
+      "package": "aviasales-mcp",
+      "url": "https://pypi.org/pypi/aviasales-mcp/json",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "registry": "pypi",
+      "package": "itamx",
+      "url": "https://pypi.org/pypi/itamx/json",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "registry": "pypi",
+      "package": "fast-flights",
+      "url": "https://pypi.org/pypi/fast-flights/json",
+      "status": 200,
+      "version": "3.1.0"
+    }
+  ],
+  "public_api_probes": [
+    {
+      "name": "transit_health",
+      "url": "https://api.transit.ls8h.com/api/health",
+      "method": "GET",
+      "status": 200,
+      "content_type": "application/json",
+      "seconds": 1.38,
+      "body_bytes": 15,
+      "body_excerpt": "{\"status\":\"ok\"}",
+      "excerpt_truncated": false
+    },
+    {
+      "name": "transit_suggest",
+      "url": "https://api.transit.ls8h.com/api/v1/places/suggest?q=%E6%9D%B1%E4%BA%AC%E9%A7%85",
+      "method": "GET",
+      "status": 200,
+      "content_type": "application/json",
+      "seconds": 2.58,
+      "body_bytes": 3042,
+      "body_excerpt": "{\"places\":[{\"id\":\"osm:query-landmark:%E6%9D%B1%E4%BA%AC%E9%A7%85:35.67971,139.76529\",\"endpoint\":\"geo:35.679705,139.765293\",\"name\":\"東京駅\",\"kind\":\"station\",\"source\":\"osm\",\"lat\":35.67970538869048,\"lon\":139.76529305714288,\"score\":3,\"weight\":840,\"description\":\"駅・停留所 3地点\"},{\"id\":\"osm:cluster:%E6%9D%B1%E4%BA%AC%E9%A7%85:35.67936,139.76461\",\"endpoint\":\"geo:35.679357,139.764611\",\"name\":\"東京駅\",\"kind\":\"station\",\"source\":\"osm\",\"lat\":35.67935743596491,\"lon\":139.76461060789475,\"score\":3,\"weight\":570,\"nameEn\":\"Tokyo Station\",\"description\":\"出入口・停留所・施設 13地点\"},{\"id\":\"osm:node:8694174696\",\"endpoint\":\"geo:36.807701,139.711389\",\"name\":\"東京駅\",\"kind\":\"station\",\"source\":\"osm\",\"lat\":36.8077011,\"lon\":139.7113889,\"score\":3,\"weight\":35,\"description\":\"artwork\"},{\"id\":\"osm:cluster:%E6%9D%B1%E4%BA%AC:35.68061,139.76644\",\"endpoint\":\"geo:35.680611,139.766441\",\"name\":\"東京駅\",\"kind\":\"station\",\"source\":\"osm\",\"lat\":35.680610640000005,\"lon\":139.76644116000003,\"score\":2,\"weight\":225,\"nameEn\":\"Tōkyō\",\"description\":\"駅 5地点\"},{\"id\":\"odpt-ana:odpt.Airport:HND\",\"endpoint\":\"odpt-ana:odpt.Airport:HND\",\"name\":\"東京(羽田)空港\",\"kind\":\"station\",\"source\":\"transit\",\"lat\":35.5494,\"lon\":139.7798,\"score\":2,\"weight\":173,\"feedId\":\"odpt-ana\",\"feedName\":\"odpt.Operator:ANA\"},{\"id\":\"odpt-jal:odpt.Airport:HND\",\"endpoint\":\"odpt-jal:odpt.Airport:HND\",\"name\":\"東京(羽田)空港\",\"kind\":\"station\",\"source\":\"transit\",\"lat\":35.5494,\"lon\":139.7798,\"score\":2,\"weight\":133,\"feedId\":\"odpt-jal\",\"feedName\":\"odpt.Operator:JAL\"},{\"id\":\"osm:cluster:%E6%9D%B1%E4%BA%AC%E3%82%81%E3%81%A8%E3%82%8D%E4%B8%8A%E9%87%8E%E9%A7%85:35.71147,139.77746\",\"endpoint\":\"geo:35.711468,139.777463\",\"name\":\"東京メトロ上野駅\",\"kind\":\"station\",\"source\":\"osm\",\"lat\":35.711467500000005,\"lon\":139.7774627,\"score\":2,\"weight\":90,\"description\":\"出入口 2地点\"},{\"id\":\"scrape-jreast-tohoku-shinkansen:odpt.Station:JR-East.TohokuShinkansen.Tokyo\",\"endpoint\":\"scrape-jreast-tohoku-shinkansen:odpt.Station:JR-East.TohokuShinkansen.Tokyo\",\"name\":\"東京\",\"kind\":\"station\",\"source\":\"transit\",\"lat\":35.681236,\"lon\":139.767125,\"score\":2,\"weight\":80,\"nameKana\":\"とうきょう\",\"feedId\":\"scrape-jreast-tohoku-shinkansen\",\"feedName\":\"東北新幹線\"},{\"id\":\"scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo\",\"endpoint\":\"scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo\",\"name\":\"東京\",\"kind\":\"station\",\"source\":\"transit\",\"lat\":35.681236,\"lon\":139.767125,\"score\":2,\"weight\":70,\"nameKana\":\"とうきょう\",\"feedId\":\"scrape-jreast-keihin-tohoku\",\"feedName\":\"京浜東北線\"},{\"id\":\"scrape-jreast-joban:odpt.Station:JR-East.joban.s1039\",\"endpoint\":\"scrape-jreast-joban:odpt.Station:JR-East.joban.s1039\",\"name\":\"東京\",\"kind\":\"station\",\"source\":\"transit\",\"lat\":35.678601,\"lon\":139.770056,\"score\":2,\"weight\":65,\"nameKana\":\"とうきょう\",\"feedId\":\"scrape-jreast-joban\",\"feedName\":\"常磐線\"}],\"coverage\":{\"sources\":[\"transit\",\"osm\"],\"kinds\":[\"station\",\"stop\",\"place\",\"address\"],\"notices\":[]}}",
+      "excerpt_truncated": false
+    },
+    {
+      "name": "transit_plan",
+      "url": "https://api.transit.ls8h.com/api/v1/plan?from=geo%3A35.681%2C139.767&to=geo%3A35.690%2C139.700",
+      "method": "GET",
+      "status": 200,
+      "content_type": "application/json",
+      "seconds": 19.12,
+      "body_bytes": 2902,
+      "body_excerpt": "{\"date\":\"20261003\",\"type\":\"departure\",\"timezone\":\"Asia/Tokyo\",\"from\":{\"id\":\"geo:35.681,139.767\",\"name\":\"地点(35.6810, 139.7670)\"},\"to\":{\"id\":\"geo:35.690,139.700\",\"name\":\"地点(35.6900, 139.7000)\"},\"journeys\":[{\"departureSecs\":3645,\"arrivalSecs\":9379,\"durationSecs\":5734,\"transferCount\":0,\"legs\":[{\"kind\":\"walk\",\"from\":{\"id\":\"geo:35.681,139.767\",\"name\":\"地点(35.6810, 139.7670)\"},\"to\":{\"id\":\"geo:35.690,139.700\",\"name\":\"地点(35.6900, 139.7000)\"},\"departureSecs\":3645,\"arrivalSecs\":9379}]},{\"departureSecs\":17340,\"arrivalSecs\":19261,\"durationSecs\":1921,\"transferCount\":1,\"legs\":[{\"kind\":\"transit\",\"routeName\":\"山手線（外回り）\",\"mode\":\"rail\",\"color\":\"9acd32\",\"headsign\":\"大崎\",\"tripId\":\"scrape-jreast-yamanote:yamanote-saturdayHoliday-primary-461G-15900\",\"from\":{\"id\":\"scrape-jreast-yamanote:odpt.Station:JR-East.Yamanote.Tokyo\",\"name\":\"東京\"},\"to\":{\"id\":\"scrape-jreast-yamanote:odpt.Station:JR-East.Yamanote.Hamamatsucho\",\"name\":\"浜松町\"},\"departureSecs\":17340,\"arrivalSecs\":17700,\"headwayBased\":false},{\"kind\":\"walk\",\"from\":{\"id\":\"scrape-jreast-yamanote:odpt.Station:JR-East.Yamanote.Hamamatsucho\",\"name\":\"浜松町\"},\"to\":{\"id\":\"mdb-3176-part-01:421\",\"name\":\"大門\"},\"departureSecs\":17700,\"arrivalSecs\":17838},{\"kind\":\"transit\",\"routeName\":\"大江戸線\",\"mode\":\"subway\",\"color\":\"CF3366\",\"headsign\":\"光が丘\",\"tripId\":\"mdb-3176-part-01:420524B0\",\"from\":{\"id\":\"mdb-3176-part-01:421\",\"name\":\"大門\"},\"to\":{\"id\":\"mdb-3176-part-01:428\",\"name\":\"新宿\"},\"departureSecs\":18120,\"arrivalSecs\":19020,\"headwayBased\":false},{\"kind\":\"walk\",\"from\":{\"id\":\"mdb-3176-part-01:428\",\"name\":\"新宿\"},\"to\":{\"id\":\"tokyo-keio-rail:Keio.Keio.Shinjuku\",\"name\":\"新宿 Shinjuku\"},\"departureSecs\":19020,\"arrivalSecs\":19174}],\"accessWalkSecs\":61,\"egressWalkSecs\":87},{\"departureSecs\":17160,\"arrivalSecs\":19269,\"durationSecs\":2109,\"transferCount\":0,\"legs\":[{\"kind\":\"transit\",\"routeName\":\"山手線（内回り）\",\"mode\":\"rail\",\"color\":\"9acd32\",\"headsign\":\"大崎\",\"tripId\":\"scrape-jreast-yamanote:yamanote-saturdayHoliday-secondary-400G-16200\",\"from\":{\"id\":\"scrape-jreast-yamanote:odpt.Station:JR-East.Yamanote.Tokyo\",\"name\":\"東京\"},\"to\":{\"id\":\"scrape-jreast-yamanote:odpt.Station:JR-East.Yamanote.Shinjuku\",\"name\":\"新宿\"},\"departureSecs\":17160,\"arrivalSecs\":19140,\"headwayBased\":false}],\"accessWalkSecs\":61,\"egressWalkSecs\":129},{\"departureSecs\":18060,\"arrivalSecs\":20289,\"durationSecs\":2229,\"transferCount\":0,\"legs\":[{\"kind\":\"transit\",\"routeName\":\"山手線（内回り）\",\"mode\":\"rail\",\"color\":\"9acd32\",\"headsign\":\"大崎\",\"tripId\":\"scrape-jreast-yamanote:yamanote-saturdayHoliday-secondary-402G-17100\",\"from\":{\"id\":\"scrape-jreast-yamanote:odpt.Station:JR-East.Yamanote.Tokyo\",\"name\":\"東京\"},\"to\":{\"id\":\"scrape-jreast-yamanote:odpt.Station:JR-East.Yamanote.Shinjuku\",\"name\":\"新宿\"},\"departureSecs\":18060,\"arrivalSecs\":20160,\"headwayBased\":false}],\"accessWalkSecs\":61,\"egressWalkSecs\":129}]}",
+      "excerpt_truncated": false
+    },
+    {
+      "name": "transit_feeds",
+      "url": "https://api.transit.ls8h.com/api/v1/feeds",
+      "method": "GET",
+      "status": 200,
+      "content_type": "application/json",
+      "seconds": 11.14,
+      "body_bytes": 764744,
+      "body_excerpt": "{\"feeds\":[{\"feedId\":\"abukyu-rail\",\"version\":\"702f139a1b3e3339\",\"name\":\"阿武隈急行\",\"fetchedAt\":\"2026-07-04T06:49:22.724Z\",\"attribution\":\"阿武隈急行公式時刻表PDF\",\"license\":\"公式PDF由来\",\"catalog\":\"manual\",\"country\":\"JP\",\"downloadUrl\":\"http://www.abukyu.co.jp/direction/wp-content/uploads/2026/03/2026kudari.pdf\",\"warningCount\":6,\"bbox\":{\"minLat\":37.75558942,\"minLon\":140.45996127,\"maxLat\":38.078869,\"maxLon\":140.809971},\"serviceStart\":\"20260704\",\"serviceEnd\":\"20270808\",\"coverageCells\":[2002784005511,4000001,1,2000000,1,2000000,2000000,2000001,2000002,1999999,1,1999999,2000000,1999999,2000000],\"stale\":false},{\"feedId\":\"aikan-rail\",\"version\":\"07d83bd564e5b819\",\"name\":\"愛知環状鉄道\",\"fetchedAt\":\"2026-07-04T06:49:25.070Z\",\"attribution\":\"愛知環状鉄道公式時刻表PDF\",\"license\":\"公式PDF由来\",\"catalog\":\"manual\",\"country\":\"JP\",\"downloadUrl\":\"https://www.aikanrailway.co.jp/pdf/timetable/timetable_UD260314.pdf\",\"warningCount\":5,\"bbox\":{\"minLat\":34.925345,\"minLon\":137.04326,\"maxLat\":35.264255,\"maxLon\":137.162703},\"serviceStart\":\"20260704\",\"serviceEnd\":\"20270808\",\"coverageCells\":[2002576005458,1,2000000,1999998,1,1,1999998,2000000,1,1999999,1,1999998,1,1999998,1,1999999,1,1999998,1999999,1,1999999,1999998,1],\"stale\":false},{\"feedId\":\"akita-nairiku-rail\",\"version\":\"72933e3b31f0070a\",\"name\":\"秋田内陸縦貫鉄道\",\"fetchedAt\":\"2026-07-02T09:13:56.580Z\",\"attribution\":\"秋田内陸縦貫鉄道公式時刻表PDF\",\"license\":\"公式PDF由来\",\"catalog\":\"manual\",\"country\":\"JP\",\"downloadUrl\":\"https://www.akita-nairiku.com/timetable/pdf/20250315_timetable.pdf\",\"warningCount\":1,\"bbox\":{\"minLat\":39.591795,\"minLon\":140.33013,\"maxLat\":40.232144,\"maxLon\":140.60276},\"serviceStart\":\"20260702\",\"serviceEnd\":\"20270806\",\"coverageCells\":[2002920005478,1999999,1999999,1999999,4000000,2000000,3999998,1,3999999,1999994,1999999,1,2,1999996,2000000,1999999,1999999,2000000,1,3999999,1999996,2,1999998,1999999,1,1999999],\"stale\":false},{\"feedId\":\"alpico-rail\",\"version\":\"7273992ef020a83e\",\"name\":\"アルピコ交通\",\"fetchedAt\":\"2026-07-04T07:52:09.623Z\",\"attribution\":\"アルピコ交通公式時刻表PDF\",\"license\":\"公式PDF由来\",\"catalog\":\"manual\",\"country\":\"JP\",\"downloadUrl\":\"https://www.alpico.co.jp/traffic/datas/files/2026/02/24/a09bf710cb0b34042bedda3cae98632d1d2d669f.pdf\",\"warningCount\":5,\"bbox\":{\"minLat\":36.189805,\"minLon\":137.821765,\"maxLat\":36.231055,\"maxLon\":137.96378},\"serviceStart\":\"20260704\",\"serviceEnd\":\"20270808\",\"coverageCells\":[2002668005460,2000001,1,2000001,1],\"stale\":false},{\"feedId\":\"amagi-rail\",\"version\":\"1a5659493256d9eb\",\"name\":\"甘木鉄道\",\"fetchedAt\":\"2026-07-04T07:54:05.034Z\",\"attribution\":\"甘木鉄道公式駅別時刻表\",\"license\":\"出典明記・再配布条件は原典規約に従う（スクレイプ由来）\",\"catalog\":\"scrape\",\"country\":\"JP\",\"downloadUrl\":\"https://www.amatetsu.jp/time/\",\"warningCount\":7,\"bbox\":{\"minLat\":33.39759398,\"minLon\":130.532329,\"maxLat\":33.421214,\"maxLon\":130.652902},\"serviceStart\":\"20260704\",\"serviceEnd\":\"20270808\",\"coverageCells\":[2002462005274,1999999,1,1,1,1],\"stale\":false},{\"feedId\":\"aonami-rail\",\"version\":\"e0963ee5228d3ea1\",\"name\":\"名古屋臨海高速鉄道\",\"fetchedAt\":\"2026-07-02T09:13:53.498Z\",\"attribution\":\"あおなみ線 各駅時刻表\",\"license\":\"出典明記・再配布条件は原典規約に従う（スクレイプ由来）\",\"catalog\":\"scrape\",\"country\":\"JP\",\"downloadUrl\":\"https://www.aonamiline.co.jp/train\",\"warningCount\":6,\"bbox\":{\"minLat\":35.048885,\"minLon\":136.849245,\"maxLat\":35.16864,\"maxLon\":136.882582},\"serviceStart\":\"19550321\",\"serviceEnd\":\"20271123\",\"coverageCells\":[2002584005448,1999999,2000000,1,1999999,1,1999999,2000001],\"stale\":false},{\"feedId\":\"chichibu-rail\",\"version\":\"f813d7ffe1052a9f\",\"name\":\"秩父鉄道\",\"fetchedAt\":\"2026-07-02T09:27:11.238Z\",\"attribution\":\"秩父鉄道公式時刻表PDF\",\"license\":\"公式PDF由来\"",
+      "excerpt_truncated": true
+    },
+    {
+      "name": "seasons_forecast",
+      "url": "https://seasons.kooexperience.com/api/sakura/forecast",
+      "method": "GET",
+      "status": 200,
+      "content_type": "application/json",
+      "seconds": 2.1,
+      "body_bytes": 18864,
+      "body_excerpt": "{\"source\":\"Japan Meteorological Corporation (n-kishou.co.jp)\",\"regions\":[{\"code\":\"01\",\"name\":\"北海道地方\",\"nameEn\":\"Hokkaido\",\"comment\":[\"既に満開となったところがあります\",\"開花は、平年よりかなり早い\",\"満開は、平年よりかなり早い\",\"10月は平年より低め、11月は平年並み、12月は平年より高め、1月は平年並み、2月から3月にかけては平年よりかなり高めの気温でした。4月は平年よりかなり高めの気温が予想されるため、開花・満開は、平年よりかなり早い。\"],\"cities\":[{\"prefCode\":\"01\",\"prefName\":\"Hokkaido\",\"stationCode\":\"47412\",\"cityName\":\"Sapporo\",\"region\":\"Hokkaido\",\"bloom\":{\"normal\":\"5/1\",\"forecast\":\"2026-04-18T00:00:00+09:00\",\"observation\":\"2026-04-18T00:00:00+09:00\"},\"fullBloom\":{\"normal\":\"5/6\",\"forecast\":\"2026-04-23T00:00:00+09:00\",\"observation\":\"2026-04-24T00:00:00+09:00\"},\"status\":\"Ended — petals have fallen\"},{\"prefCode\":\"01\",\"prefName\":\"Hokkaido\",\"stationCode\":\"47423\",\"cityName\":\"Muroran\",\"region\":\"Hokkaido\",\"bloom\":{\"normal\":\"5/4\",\"forecast\":\"2026-04-23T00:00:00+09:00\",\"observation\":\"2026-04-23T00:00:00+09:00\"},\"fullBloom\":{\"normal\":\"5/9\",\"forecast\":\"2026-04-28T00:00:00+09:00\",\"observation\":\"2026-04-28T00:00:00+09:00\"},\"status\":\"Ended — petals have fallen\"},{\"prefCode\":\"01\",\"prefName\":\"Hokkaido\",\"stationCode\":\"47430\",\"cityName\":\"Hakodate\",\"region\":\"Hokkaido\",\"bloom\":{\"normal\":\"4/28\",\"forecast\":\"2026-04-18T00:00:00+09:00\",\"observation\":\"2026-04-18T00:00:00+09:00\"},\"fullBloom\":{\"normal\":\"5/2\",\"forecast\":\"2026-04-20T00:00:00+09:00\",\"observation\":\"2026-04-20T00:00:00+09:00\"},\"status\":\"Ended — petals have fallen\"}]},{\"code\":\"02\",\"name\":\"東北地方\",\"nameEn\":\"Tohoku\",\"comment\":[\"既に満開を迎えています\",\"多くの地点で葉桜となっていますが、東北地方北部の山間部や青森県の一部では見頃を迎えている地点も残っています。\"],\"cities\":[{\"prefCode\":\"02\",\"prefName\":\"Aomori\",\"stationCode\":\"47575\",\"cityName\":\"Aomori\",\"region\":\"Tohoku\",\"bloom\":{\"normal\":\"4/22\",\"forecast\":\"2026-04-13T00:00:00+09:00\",\"observation\":\"2026-04-13T00:00:00+09:00\"},\"fullBloom\":{\"normal\":\"4/26\",\"forecast\":\"2026-04-16T00:00:00+09:00\",\"observation\":\"2026-04-16T00:00:00+09:00\"},\"status\":\"Ended — petals have fallen\"},{\"prefCode\":\"03\",\"prefName\":\"Iwate\",\"stationCode\":\"47584\",\"cityName\":\"Morioka\",\"region\":\"Tohoku\",\"bloom\":{\"normal\":\"4/18\",\"forecast\":\"2026-04-07T00:00:00+09:00\",\"observation\":\"2026-04-07T00:00:00+09:00\"},\"fullBloom\":{\"normal\":\"4/24\",\"forecast\":\"2026-04-12T00:00:00+09:00\",\"observation\":\"2026-04-12T00:00:00+09:00\"},\"status\":\"Ended — petals have fallen\"},{\"prefCode\":\"04\",\"prefName\":\"Miyagi\",\"stationCode\":\"47590\",\"cityName\":\"Sendai\",\"region\":\"Tohoku\",\"bloom\":{\"normal\":\"4/8\",\"forecast\":\"2026-03-31T00:00:00+09:00\",\"observation\":\"2026-03-31T00:00:00+09:00\"},\"fullBloom\":{\"normal\":\"4/13\",\"forecast\":\"2026-04-04T00:00:00+09:00\",\"observation\":\"2026-04-04T00:00:00+09:00\"},\"status\":\"Ended — petals have fallen\"},{\"prefCode\":\"05\",\"prefName\":\"Akita\",\"stationCode\":\"47582\",\"cityName\":\"Akita\",\"region\":\"Tohoku\",\"bloom\":{\"normal\":\"4/17\",\"forecast\":\"2026-04-06T00:00:00+09:00\",\"observation\":\"2026-04-06T00:00:00+09:00\"},\"fullBloom\":{\"normal\":\"4/22\",\"forecast\":\"2026-04-09T00:00:00+09:00\",\"observation\":\"2026-04-09T00:00:00+09:00\"},\"status\":\"Ended — petals have fallen\"},{\"prefCode\":\"06\",\"prefName\":\"Yamagata\",\"stationCode\":\"47588\",\"cityName\":\"Yamagata\",\"region\":\"Tohoku\",\"bloom\":{\"normal\":\"4/13\",\"forecast\":\"2026-04-02T00:00:00+09:00\",\"observation\":\"2026-04-02T00:00:00+09:00\"},\"fullBloom\":{\"normal\":\"4/18\",\"forecast\":\"2026-04-06T00:00:00+09:00\",\"observation\":\"2026-04-06T00:00:00+09:00\"},\"status\":\"Ended — petals have fallen\"},{\"prefCode\":\"07\",\"prefName\":\"Fukushima\",\"stationCode\":\"47595\",\"cityName\":\"Fukushima\",\"region\":\"Tohoku\",\"bloom\":{\"normal\":\"4/7\",\"forecast\":\"2026-03-29T00:00:00+09:00\",\"observation\":\"2026-03-29T00:00:00+09:00\"},\"fu",
+      "excerpt_truncated": true
+    },
+    {
+      "name": "seasons_mcp",
+      "url": "https://seasons.kooexperience.com/mcp",
+      "method": "POST",
+      "status": 200,
+      "content_type": "text/event-stream",
+      "seconds": 2.04,
+      "body_bytes": 3159,
+      "body_excerpt": "event: message\ndata: {\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"prompts\":{\"listChanged\":true},\"resources\":{\"listChanged\":true},\"tools\":{\"listChanged\":true},\"completions\":{}},\"serverInfo\":{\"name\":\"japan-seasons-mcp\",\"version\":\"0.5.0\"},\"instructions\":\"You are connected to Japan in Seasons, a read-only MCP server for live Japan seasonal travel data.\\n\\nUse this server when the user needs current timing or locations for cherry blossom, autumn leaves, flowers, festivals, fruit picking, or short-range weather in Japan. This server is especially relevant for broad prompts such as \\\"how is the sakura forecast?\\\", \\\"where should I see cherry blossoms this week?\\\", \\\"how are autumn leaves looking?\\\", \\\"what is blooming in Japan now?\\\", and \\\"what seasonal activities should I plan around?\\\". Do not use it for generic travel planning, hotels, flights, trains, visas, or restaurant recommendations.\\n\\nTool routing:\\n- Use japan_seasonal_answer first for broad Japan seasonal-travel questions, ambiguous \\\"what is good now?\\\" prompts, trip-date prompts, or when the user asks for an answer rather than raw data.\\n- Use sakura_now first for broad or current cherry blossom prompts such as \\\"how is the sakura forecast?\\\", \\\"is sakura blooming now?\\\", or \\\"where should I view sakura today?\\\". It returns city timing plus a short list of specific viewing spots when current spot data is available.\\n- Use sakura_forecast for big-picture sakura timing, bloom progress, and city comparisons.\\n- Use sakura_best_dates when the user gives travel dates and wants the best sakura cities in that window, then use sakura_spots for exact parks and temples.\\n- Use kawazu_forecast for January-February cherry blossom requests or when the user mentions Kawazu-zakura, early blossoms, or Izu.\\n- Use koyo_now first for broad or current autumn leaves prompts such as \\\"how are autumn leaves looking?\\\" or \\\"where is koyo good now?\\\".\\n- Use koyo_forecast for autumn leaves timing by city, and koyo_best_dates when travel dates are provided. Follow with koyo_spots for exact viewing locations.\\n- Use flowers_spots for non-sakura seasonal flowers such as plum, wisteria, hydrangea, lavender, sunflower, and cosmos.\\n- Use festivals_list for recurring fireworks, matsuri, and winter events with official links.\\n- Use fruit_seasons to answer which fruits are in season, and fruit_farms only when the user needs actual farms, GPS coordinates, or booking links.\\n- Use weather_forecast after bloom tools when rain or temperature could change the recommendation, especially because rain can shorten sakura viewing.\\n- Use search and fetch only for ChatGPT/deep-research style retrieval over the Japan in Seasons dataset and documentation.\\n\\nImportant rules:\\n- Sakura and koyo timing changes every year; prefer these tools over generic knowledge.\\n- Sakura spot percentages use the official JMC bloom and full-bloom scales. A 90-100% full-bloom rate means mankai.\\n- Best sakura viewing is usually around full bloom. Best koyo viewing is usually around each spot's peak window.\\n- All tools are read-only and require no authentication.\"},\"jsonrpc\":\"2.0\",\"id\":1}\n\n",
+      "excerpt_truncated": false
+    },
+    {
+      "name": "transfer_mcp",
+      "url": "https://japan-transfer-mcp-server.kawaii-cute.workers.dev/mcp",
+      "method": "POST",
+      "status": 200,
+      "content_type": "text/event-stream",
+      "seconds": 12.11,
+      "body_bytes": 196,
+      "body_excerpt": "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{\"listChanged\":true}},\"serverInfo\":{\"name\":\"japan-transfer-mcp\",\"version\":\"0.0.6\"}}}\n\n",
+      "excerpt_truncated": false
+    }
+  ],
+  "initial_mcp_followups": [
+    {
+      "name": "seasons_tools",
+      "url": "https://seasons.kooexperience.com/mcp",
+      "method": "tools/list",
+      "params": {},
+      "error": "HTTP Error 403: Forbidden",
+      "seconds": 0.9
+    },
+    {
+      "name": "seasons_festivals",
+      "url": "https://seasons.kooexperience.com/mcp",
+      "method": "tools/call",
+      "params": {
+        "name": "festivals_list",
+        "arguments": {
+          "month": 10
+        }
+      },
+      "error": "HTTP Error 403: Forbidden",
+      "seconds": 2.07
+    },
+    {
+      "name": "transfer_tools",
+      "url": "https://japan-transfer-mcp-server.kawaii-cute.workers.dev/mcp",
+      "method": "tools/list",
+      "params": {},
+      "error": "HTTP Error 403: Forbidden",
+      "seconds": 1.03
+    },
+    {
+      "name": "transfer_station",
+      "url": "https://japan-transfer-mcp-server.kawaii-cute.workers.dev/mcp",
+      "method": "tools/call",
+      "params": {
+        "name": "search_station_by_name",
+        "arguments": {
+          "query": "東京",
+          "onlyName": true
+        }
+      },
+      "error": "HTTP Error 403: Forbidden",
+      "seconds": 1.56
+    }
+  ],
+  "complete_mcp_flow": [
+    {
+      "server": "seasons",
+      "method": "initialize",
+      "status": 200,
+      "body": "event: message\ndata: {\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"prompts\":{\"listChanged\":true},\"resources\":{\"listChanged\":true},\"tools\":{\"listChanged\":true},\"completions\":{}},\"serverInfo\":{\"name\":\"japan-seasons-mcp\",\"version\":\"0.5.0\"},\"instructions\":\"You are connected to Japan in Seasons, a read-only MCP server for live Japan seasonal travel data.\\n\\nUse this server when the user needs current timing or locations for cherry blossom, autumn leaves, flowers, festivals, fruit picking, or short-range weather in Japan. This server is especially relevant for broad prompts such as \\\"how is the sakura forecast?\\\", \\\"where should I see cherry blossoms this week?\\\", \\\"how are autumn leaves looking?\\\", \\\"what is blooming in Japan now?\\\", and \\\"what seasonal activities should I plan around?\\\". Do not use it for generic travel planning, hotels, flights, trains, visas, or restaurant recommendations.\\n\\nTool routing:\\n- Use japan_seasonal_answer first for broad Japan seasonal-travel questions, ambiguous \\\"what is good now?\\\" prompts, trip-date prompts, or when the user asks for an answer rather than raw data.\\n- Use sakura_now first for broad or current cherry blossom prompts such as \\\"how is the sakura forecast?\\\", \\\"is sakura blooming now?\\\", or \\\"where should I view sakura today?\\\". It returns city timing plus a short list of specific viewing spots when current spot data is available.\\n- Use sakura_forecast for big-picture sakura timing, bloom progress, and city comparisons.\\n- Use sakura_best_dates when the user gives travel dates and wants the best sakura cities in that window, then use sakura_spots for exact parks and temples.\\n- Use kawazu_forecast for January-February cherry blossom requests or when the user mentions Kawazu-zakura, early blossoms, or Izu.\\n- Use koyo_now first for broad or current autumn leaves prompts such as \\\"how are autumn leaves looking?\\\" or \\\"where is koyo good now?\\\".\\n- Use koyo_forecast for autumn leaves timing by city, and koyo_best_dates when travel dates are provided. Follow with koyo_spots for exact viewing locations.\\n- Use flowers_spots for non-sakura seasonal flowers such as plum, wisteria, hydrangea, lavender, sunflower, and cosmos.\\n- Use festivals_list for recurring fireworks, matsuri, and winter events with official links.\\n- Use fruit_seasons to answer which fruits are in season, and fruit_farms only when the user needs actual farms, GPS coordinates, or booking links.\\n- Use weather_forecast after bloom tools when rain or temperature could change the recommendation, especially because rain can shorten sakura viewing.\\n- Use search and fetch only for ChatGPT/deep-research style retrieval over the Japan in Seasons dataset and documentation.\\n\\nImportant rules:\\n- Sakura and koyo timing changes every year; prefer these tools over generic knowledge.\\n- Sakura spot percentages use the official JMC bloom and full-bloom scales. A 90-100% full-bloom rate means mankai.\\n- Best sakura viewing is usually around full bloom. Best koyo viewing is usually around each spot's peak window.\\n- All tools are read-only and require no authentication.\"},\"jsonrpc\":\"2.0\",\"id\":1}\n\n"
+    },
+    {
+      "server": "seasons",
+      "method": "notifications/initialized",
+      "status": 202,
+      "body": ""
+    },
+    {
+      "server": "seasons",
+      "method": "tools/list",
+      "status": 200,
+      "body": "event: message\ndata: {\"result\":{\"tools\":[{\"name\":\"japan_seasonal_answer\",\"title\":\"Answer Japan Seasonal Travel Question\",\"description\":\"Use this first when the user asks a broad Japan seasonal travel question, including cherry blossom forecasts, autumn leaves, flowers, festivals, fruit picking, or what is good during travel dates. This is the best entry point for natural traveler prompts because it routes to the right live dataset and returns a ready-to-use recommendation. Do not use this for hotels, flights, trains, visas, restaurants, or generic itinerary planning unrelated to seasonal timing.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"question\":{\"description\":\"The user's natural-language question, for example 'How is the sakura forecast?', 'Where should I see autumn leaves in late November?', or 'What seasonal things are good in Japan in June?'\",\"title\":\"Question\",\"type\":\"string\"},\"start_date\":{\"description\":\"Optional trip start date in YYYY-MM-DD format. Provide this when the user gives travel dates.\",\"title\":\"Trip Start Date\",\"type\":\"string\"},\"end_date\":{\"description\":\"Optional trip end date in YYYY-MM-DD format. Provide this when the user gives travel dates.\",\"title\":\"Trip End Date\",\"type\":\"string\"},\"location\":{\"description\":\"Optional city, prefecture, or region such as Tokyo, Kyoto, Hokkaido, Kansai, Tohoku.\",\"title\":\"Location\",\"type\":\"string\"},\"season\":{\"description\":\"Optional explicit season/topic. Use auto unless the user clearly asks for one topic. Use overview for broad questions about what seasonal activities are good in a month.\",\"title\":\"Season Topic\",\"type\":\"string\",\"enum\":[\"auto\",\"overview\",\"sakura\",\"kawazu\",\"koyo\",\"flowers\",\"festivals\",\"fruit\",\"weather\"]}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"sakura_now\",\"title\":\"Sakura Forecast Now\",\"description\":\"Use this first for broad cherry blossom prompts such as 'How is the sakura forecast?', 'Is sakura blooming now?', 'Where should I view sakura today?', 'Where should I see cherry blossoms this week?', or 'How is Kyoto sakura looking?'. Returns a concise current answer from live Japan Meteorological Corporation forecast and observation data, including specific viewing spot suggestions when current spot data is available, plus next-step guidance for the full park list and weather. Do not use this for autumn leaves, non-sakura flowers, hotels, trains, or generic itinerary planning.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"city\":{\"description\":\"Optional city, prefecture, or region filter such as Tokyo, Kyoto, Hokkaido, Kansai, Tohoku. Omit for nationwide status.\",\"title\":\"City or Region\",\"type\":\"string\"},\"start_date\":{\"description\":\"Optional trip start date in YYYY-MM-DD format. Use with end_date when the user gives travel dates.\",\"title\":\"Trip Start Date\",\"type\":\"string\"},\"end_date\":{\"description\":\"Optional trip end date in YYYY-MM-DD format. Use with start_date when the user gives travel dates.\",\"title\":\"Trip End Date\",\"type\":\"string\"}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"koyo_now\",\"title\":\"Autumn Leaves Forecast Now\",\"description\":\"Use this first for broad autumn leaves prompts such as 'How are autumn leaves looking?', 'Where is koyo good now?', 'Kyoto autumn leaves forecast', or 'Where should I see fall foliage in Japan?'. Returns a concise current answer from live Japan Meteorological Corporation maple and ginkgo forecast data. Do not use this for cherry blossoms, fruit picking, hotels, trains, or generic itinerary planning.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"region\":{\"description\":\"Optional city, prefecture, or region filter such as Kyoto, Tokyo, Hokkaido, Kansai, Nikko, Tohoku. Omit for nationwide status.\",\"title\":\"Region or Prefecture\",\"type\":\"string\"},\"start_date\":{\"description\":\"Optional trip start date in YYYY-MM-DD format. Use with end_date when the user gives travel dates.\",\"title\":\"Trip Start Date\",\"type\":\"string\"},\"end_date\":{\"description\":\"Optional trip end date in YYYY-MM-DD format. Use with start_date when the user gives travel dates.\",\"title\":\"Trip End Date\",\"type\":\"string\"}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"search\",\"title\":\"Search Japan in Seasons\",\"description\":\"Use this for ChatGPT/deep-research style retrieval over Japan in Seasons. Searches live seasonal-travel dataset guides and returns result IDs for fetch. Use for questions about Japan cherry blossom forecasts, autumn leaves, seasonal flowers, festivals, fruit picking, weather, or the MCP server itself. Do not use for hotels, flights, trains, visas, or restaurants.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Natural-language search query, for example 'Japan cherry blossom forecast', 'Kyoto autumn leaves', or 'fruit picking in Japan in September'.\",\"title\":\"Query\"}},\"required\":[\"query\"]},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"fetch\",\"title\":\"Fetch Japan in Seasons Result\",\"description\":\"Use this after search to retrieve a full Japan in Seasons result with citation URL and text. For live sakura or autumn leaves result IDs, this fetches the current forecast answer from live JMC data.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\",\"description\":\"Result ID returned by search, such as sakura-now, koyo-now, flowers, festivals, fruit, or mcp-install.\",\"title\":\"Result ID\"}},\"required\":[\"id\"]},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"sakura_forecast\",\"title\":\"Cherry Blossom Forecast\",\"description\":\"Use this when the user asks about cherry blossom timing, peak bloom, whether sakura has started, or how cities compare across Japan. Returns Japan Meteorological Corporation forecast bloom dates, full-bloom dates, observed dates when available, historical averages, and status for 48 observation cities. Do not use this for specific parks or temples; call sakura_spots next for prefecture-level viewing spots.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"city\":{\"description\":\"Optional city, prefecture, or region filter such as 'Tokyo', 'Kyoto', 'Hokkaido', or 'Tohoku'. Partial case-insensitive matches are supported across city, prefecture, and region names. Omit to return all observation cities.\",\"title\":\"City or Region Filter\",\"type\":\"string\"}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"sakura_spots\",\"title\":\"Cherry Blossom Viewing Spots\",\"description\":\"Use this when the user already knows the prefecture and needs exact cherry blossom viewing spots with current status and GPS coordinates. Each spot uses JMC reporter observations as the primary status when filed within the last 48 hours (states: pre-bloom through hazakura/green leaves); falls back to the JMC bloom-meter estimate otherwise, with any stale observation shown as secondary context. Also returns the prefecture's JMA reference station summary. Do not use this for nationwide timing comparisons or date matching; use sakura_forecast or sakura_best_dates first.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"prefecture\":{\"type\":\"string\",\"description\":\"Required prefecture filter. Accepts English prefecture name or numeric prefecture code such as 'Tokyo', 'Kyoto', 'Hokkaido', or '13'. This tool returns one prefecture at a time.\",\"title\":\"Prefecture Name or Code\"}},\"required\":[\"prefecture\"]},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"sakura_best_dates\",\"title\":\"Best Cherry Blossom Dates for Trip\",\"description\":\"Use this when the user provides travel dates and wants to know where sakura is likely to be best during that trip. Returns cities whose viewing window overlaps the requested date range, based on observed or forecast full-bloom dates. Do not use this for January-February early-bloom Kawazu requests; use kawazu_forecast for those.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"start_date\":{\"type\":\"string\",\"description\":\"Trip start date in YYYY-MM-DD format, for example '2026-04-08'. The tool compares this against each city's sakura viewing window.\",\"title\":\"Trip Start Date\"},\"end_date\":{\"type\":\"string\",\"description\":\"Trip end date in YYYY-MM-DD format, for example '2026-04-14'. Must be on or after start_date.\",\"title\":\"Trip End Date\"}},\"required\":[\"start_date\",\"end_date\"]},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"kawazu_forecast\",\"title\":\"Kawazu Early Cherry Blossom Forecast\",\"description\":\"Use this for January-February cherry blossom requests or when the user specifically asks about Kawazu-zakura, early blossoms, or the Izu Peninsula. Returns the Japan Meteorological Corporation forecast comment, forecast map links, and Kawazu cherry spots with bloom percentages, full-bloom percentages, forecast dates, and coordinates. Do not use this for standard Somei-Yoshino sakura elsewhere in Japan.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"include_spots\":{\"description\":\"Whether to include the full list of Kawazu viewing spots. Defaults to true. Set false when the user only needs the overall forecast summary and map.\",\"title\":\"Include Spot Listings\",\"type\":\"boolean\"},\"spot_name\":{\"description\":\"Optional case-insensitive substring filter for a specific Kawazu landmark or area, such as '原木', '駅前', 'iZoo', or '七滝'. Use this when the user asks about one named spot instead of the full list.\",\"title\":\"Spot Name Filter\",\"type\":\"string\"}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"koyo_forecast\",\"title\":\"Autumn Leaves Forecast\",\"description\":\"Use this when the user asks when autumn leaves peak, whether one city colors earlier than another, or wants a national overview for October-December. Returns city-level maple and ginkgo forecast dates, forecast maps, and regional commentary from Japan Meteorological Corporation. Do not use this for specific temples, gardens, or GPS-tagged locations; call koyo_spots next for those.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"region\":{\"description\":\"Optional case-insensitive filter for a region, prefecture, or city such as 'Kyoto', 'Tokyo', 'Hokkaido', 'Kansai'. Use this when the user only cares about one part of Japan instead of the full national forecast.\",\"title\":\"Region or Prefecture Filter\",\"type\":\"string\"},\"tree_type\":{\"description\":\"Optional tree filter. Use 'maple' for momiji-only dates, 'ginkgo' for ginkgo-only dates, or omit/use 'all' to return both.\",\"title\":\"Tree Type Filter\",\"type\":\"string\",\"enum\":[\"all\",\"maple\",\"ginkgo\"]}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"koyo_spots\",\"title\":\"Autumn Leaves Viewing Spots\",\"description\":\"Use this when the user already knows the prefecture and needs exact autumn leaves viewing spots. Returns Japan Meteorological Corporation koyo spots for one prefecture with best start, peak, and end dates, leaf type, popularity rating, and GPS coordinates. Omit prefecture to get a top-destinations guide. Do not use this for cross-city date matching; use koyo_forecast or koyo_best_dates first.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"prefecture\":{\"description\":\"Prefecture filter. Accepts English name or numeric code such as 'Kyoto', 'Tokyo', 'Hokkaido', or '26'. Omit to receive a curated list of top koyo destinations across Japan.\",\"title\":\"Prefecture Name or Code (optional)\",\"type\":\"string\"}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"koyo_best_dates\",\"title\":\"Best Autumn Leaves Dates for Trip\",\"description\":\"Use this when the user gives autumn travel dates and wants the best cities during that window. Returns cities whose maple or ginkgo viewing windows overlap the trip, based on forecast peak dates. Do not use this for general climate questions or for exact park recommendations without dates; use koyo_spots when the prefecture is already known.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"start_date\":{\"type\":\"string\",\"description\":\"Trip start date in YYYY-MM-DD format, for example '2026-11-20'. The tool checks whether each city's koyo window overlaps this date.\",\"title\":\"Trip Start Date\"},\"end_date\":{\"type\":\"string\",\"description\":\"Trip end date in YYYY-MM-DD format, for example '2026-11-27'. Must be on or after start_date.\",\"title\":\"Trip End Date\"}},\"required\":[\"start_date\",\"end_date\"]},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"weather_forecast\",\"title\":\"Japan Weather Forecast\",\"description\":\"Use this when short-range weather could change the recommendation, especially for sakura petal fall, rain risk, or packing advice. Returns the next 3 days of Japan Meteorological Agency forecast text, temperatures, and 6-hour rain probabilities for one supported city. Do not use this for seasonal bloom timing months in advance; use the sakura or koyo forecast tools for that.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\",\"description\":\"Supported city name such as 'Tokyo', 'Kyoto', 'Osaka', or 'Sapporo'. Partial case-insensitive matching is accepted. Full supported list: Sapporo, Hakodate, Asahikawa, Kushiro, Obihiro, Aomori, Morioka, Sendai, Akita, Yamagata, Fukushima, Mito, Utsunomiya, Maebashi, Saitama, Chiba, Tokyo, Yokohama, Niigata, Toyama, Kanazawa, Fukui, Kofu, Nagano, Gifu, Shizuoka, Nagoya, Tsu, Otsu, Kyoto, Osaka, Kobe, Nara, Wakayama, Tottori, Matsue, Okayama, Hiroshima, Shimonoseki, Tokushima, Takamatsu, Matsuyama, Kochi, Fukuoka, Saga, Nagasaki, Kumamoto, Oita, Miyazaki, Kagoshima, Naha\",\"title\":\"City Name\"}},\"required\":[\"city\"]},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"flowers_spots\",\"title\":\"Seasonal Flower Spots\",\"description\":\"Use this for non-sakura flower trips such as plum, wisteria, hydrangea, lavender, sunflower, or cosmos. Returns curated flower spots with peak windows, official URLs, notes, and GPS coordinates. Do not use this for cherry blossom or autumn leaves timing; use the sakura or koyo tools for those live forecasts.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"type\":{\"description\":\"Optional flower type filter. Allowed values: 'all', 'plum', 'nanohana', 'wisteria', 'iris', 'hydrangea', 'lavender', 'sunflower', or 'cosmos'. Omit or use 'all' to return every flower type.\",\"title\":\"Flower Type\",\"type\":\"string\",\"enum\":[\"all\",\"plum\",\"nanohana\",\"wisteria\",\"iris\",\"hydrangea\",\"lavender\",\"sunflower\",\"cosmos\"]},\"prefecture\":{\"description\":\"Optional prefecture filter such as 'Kanagawa', 'Kyoto', 'Tokyo', or 'Hokkaido'. Partial case-insensitive matches are supported.\",\"title\":\"Prefecture Filter\",\"type\":\"string\"},\"month\":{\"description\":\"Optional month number from 1 to 12. Returns only flower types whose curated season includes that month, for example 4 for wisteria or 6 for hydrangea.\",\"title\":\"Month Number\",\"type\":\"integer\",\"minimum\":1,\"maximum\":12}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"fruit_seasons\",\"title\":\"Fruit Picking Season Calendar\",\"description\":\"Use this when the user asks what fruit is in season in a given month or which month is best for strawberries, grapes, peaches, apples, and similar picking trips. Returns the fruit season calendar, peak months, best regions, and notes for 14 fruits. Call fruit_farms next if the user needs actual farm listings, map coordinates, or booking links.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"month\":{\"description\":\"Optional month number from 1 to 12. Returns fruits in season during that month plus fruits starting the following month. Omit to return the full year calendar.\",\"title\":\"Month Number\",\"type\":\"integer\",\"minimum\":1,\"maximum\":12}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"festivals_list\",\"title\":\"Japan Seasonal Festivals\",\"description\":\"Use this when the user wants recurring Japan events to plan around, such as fireworks, matsuri, or winter festivals. Returns curated events with typical dates, attendance, official URLs, notes, and GPS coordinates. Do not use this for bloom timing, one-off concerts, or weather forecasts.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"month\":{\"description\":\"Optional month number from 1 to 12. Useful examples: 7 or 8 for fireworks season, 10 or 11 for autumn matsuri, and 1 or 2 for winter events.\",\"title\":\"Month Number\",\"type\":\"integer\",\"minimum\":1,\"maximum\":12},\"type\":{\"description\":\"Optional event type filter. Allowed values: 'all', 'fireworks', 'matsuri', or 'winter'. Omit or use 'all' to return every event type.\",\"title\":\"Event Type\",\"type\":\"string\",\"enum\":[\"all\",\"fireworks\",\"matsuri\",\"winter\"]},\"prefecture\":{\"description\":\"Optional prefecture filter such as 'Tokyo', 'Kyoto', 'Osaka', or 'Hokkaido'. Partial case-insensitive matches are supported.\",\"title\":\"Prefecture Filter\",\"type\":\"string\"}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}},{\"name\":\"fruit_farms\",\"title\":\"Fruit Picking Farms\",\"description\":\"Use this when the user needs actual fruit-picking farms, booking links, and map coordinates. Returns farms from the local dataset, and month filtering automatically narrows results to fruits that are in season. If the user only asks which fruit is in season, call fruit_seasons first.\",\"inputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"month\":{\"description\":\"Optional travel month from 1 to 12. Filters to farms with at least one fruit in season during that month, for example 5 for May strawberry farms.\",\"title\":\"Travel Month\",\"type\":\"integer\",\"minimum\":1,\"maximum\":12},\"fruit\":{\"description\":\"Optional fruit name such as 'Strawberry', 'Apple', 'Grape', 'Peach', 'Cherry', or 'Mikan'. Matching is case-insensitive. Use with or instead of month.\",\"title\":\"Fruit Name\",\"type\":\"string\"},\"region\":{\"description\":\"Optional prefecture, city, or region substring such as 'Yamanashi', 'Nagano', 'Aomori', or 'Tokyo'. Partial case-insensitive matching is supported against farm names and addresses.\",\"title\":\"Region Filter\",\"type\":\"string\"},\"limit\":{\"description\":\"Optional maximum number of farms to return. Default is 30 and the hard maximum is 100.\",\"title\":\"Result Limit\",\"type\":\"integer\",\"minimum\":1,\"maximum\":100}}},\"annotations\":{\"readOnlyHint\":true,\"idempotentHint\":true},\"execution\":{\"taskSupport\":\"forbidden\"},\"outputSchema\":{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\",\"description\":\"The tool's user-facing answer as Markdown or JSON text.\"}},\"required\":[\"answer\"],\"additionalProperties\":false}}]},\"jsonrpc\":\"2.0\",\"id\":2}\n\n"
+    },
+    {
+      "server": "seasons",
+      "method": "tools/call",
+      "status": 200,
+      "body": "event: message\ndata: {\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"# Japan Festivals — Oct\\nSource: seasons.kooexperience.com | 7 events\\n\\n## Tips\\n- Book accommodation months ahead for major festivals (Gion Matsuri, Nebuta, Sumida Fireworks)\\n- Fireworks season peaks July–August; winter events peak January–February\\n\\n## 🎆 Fireworks (3)\\n\\n### Tsuchiura All-Japan Fireworks (土浦全国花火競技大会)\\n- **When:** Oct — First Saturday of October\\n- **Location:** Ibaraki (Kanto)\\n- **Attendance:** ~500,000 visitors\\n- **Note:** Autumn fireworks competition — one of Japan's three major competitions alongside Nagaoka and Omagari. Held over Lake Kasumigaura.\\n- **Official site:** https://www.tsuchiura-hanabi.jp/\\n- **GPS:** 36.0867, 140.2036 · https://www.google.com/maps/search/?api=1&query=36.0867,140.2036\\n\\n### Atami Sea Fireworks (熱海海上花火大会)\\n- **When:** Feb, Apr, Jul, Aug, Oct, Dec — Multiple times per year (Feb, Apr, Jul, Aug, Oct, Dec)\\n- **Location:** Shizuoka (Kanto)\\n- **Attendance:** ~30,000 visitors\\n- **Note:** Unique: held year-round in Atami Bay. The bowl-shaped bay amplifies sound and creates a spectacular visual. Close to Tokyo — easy day trip.\\n- **Official site:** https://www.ataminews.gr.jp/\\n- **GPS:** 35.095, 139.0733 · https://www.google.com/maps/search/?api=1&query=35.095,139.0733\\n\\n### Lake Toya Long-Run Fireworks (洞爺湖ロングラン花火大会)\\n- **When:** Apr, May, Jun, Jul, Aug, Sep, Oct — Every night Apr 28 – Oct 31 at 8:45PM\\n- **Location:** Hokkaido (Hokkaido)\\n- **Attendance:** ~500 visitors\\n- **Note:** Japan's most unique fireworks — launched over Lake Toya every single night for 6 months. Small but intimate; can be seen from lakeside ryokan.\\n- **Official site:** https://toyako.biz/\\n- **GPS:** 42.5833, 140.8 · https://www.google.com/maps/search/?api=1&query=42.5833,140.8\\n\\n## 🏮 Matsuri (4)\\n\\n### Takayama Autumn Festival (高山祭（秋）)\\n- **When:** Oct — October 9–10\\n- **Location:** Gifu (Chubu)\\n- **Attendance:** ~130,000 visitors\\n- **Note:** Autumn version of the Takayama festival — same spectacular floats but set against autumn foliage. Often considered the more beautiful of the two.\\n- **Official site:** https://www.hidatakayama.or.jp/\\n- **GPS:** 36.145, 137.2521 · https://www.google.com/maps/search/?api=1&query=36.145,137.2521\\n\\n### Jidai Matsuri (時代祭)\\n- **When:** Oct — October 22\\n- **Location:** Kyoto (Kansai)\\n- **Attendance:** ~120,000 visitors\\n- **Note:** One of Kyoto's three great festivals. 2,000 participants in historical costumes spanning 1,200 years of history march from Kyoto Imperial Palace to Heian Shrine.\\n- **Official site:** https://www.heianjingu.or.jp/\\n- **GPS:** 35.0282, 135.7822 · https://www.google.com/maps/search/?api=1&query=35.0282,135.7822\\n\\n### Kurama Fire Festival (鞍馬の火祭)\\n- **When:** Oct — October 22\\n- **Location:** Kyoto (Kansai)\\n- **Attendance:** ~20,000 visitors\\n- **Note:** One of Kyoto's most dramatic festivals. Villagers carry torches through the mountain village of Kurama at night. Same date as Jidai Matsuri — do both.\\n- **Official site:** https://www.yukijinjya.jp/\\n- **GPS:** 35.1208, 135.7698 · https://www.google.com/maps/search/?api=1&query=35.1208,135.7698\\n\\n### Nagasaki Kunchi (長崎くんち)\\n- **When:** Oct — October 7–9\\n- **Location:** Nagasaki (Kyushu)\\n- **Attendance:** ~700,000 visitors\\n- **Note:** Unique festival showing Nagasaki's Chinese and Dutch heritage — dragon dances, Dutch ship floats, and exotic performances at Suwa Shrine.\\n- **Official site:** https://www.nagasaki-kunchi.com/\\n- **GPS:** 32.7503, 129.8779 · https://www.google.com/maps/search/?api=1&query=32.7503,129.8779\\n\\n\"}],\"structuredContent\":{\"answer\":\"# Japan Festivals — Oct\\nSource: seasons.kooexperience.com | 7 events\\n\\n## Tips\\n- Book accommodation months ahead for major festivals (Gion Matsuri, Nebuta, Sumida Fireworks)\\n- Fireworks season peaks July–August; winter events peak January–February\\n\\n## 🎆 Fireworks (3)\\n\\n### Tsuchiura All-Japan Fireworks (土浦全国花火競技大会)\\n- **When:** Oct — First Saturday of October\\n- **Location:** Ibaraki (Kanto)\\n- **Attendance:** ~500,000 visitors\\n- **Note:** Autumn fireworks competition — one of Japan's three major competitions alongside Nagaoka and Omagari. Held over Lake Kasumigaura.\\n- **Official site:** https://www.tsuchiura-hanabi.jp/\\n- **GPS:** 36.0867, 140.2036 · https://www.google.com/maps/search/?api=1&query=36.0867,140.2036\\n\\n### Atami Sea Fireworks (熱海海上花火大会)\\n- **When:** Feb, Apr, Jul, Aug, Oct, Dec — Multiple times per year (Feb, Apr, Jul, Aug, Oct, Dec)\\n- **Location:** Shizuoka (Kanto)\\n- **Attendance:** ~30,000 visitors\\n- **Note:** Unique: held year-round in Atami Bay. The bowl-shaped bay amplifies sound and creates a spectacular visual. Close to Tokyo — easy day trip.\\n- **Official site:** https://www.ataminews.gr.jp/\\n- **GPS:** 35.095, 139.0733 · https://www.google.com/maps/search/?api=1&query=35.095,139.0733\\n\\n### Lake Toya Long-Run Fireworks (洞爺湖ロングラン花火大会)\\n- **When:** Apr, May, Jun, Jul, Aug, Sep, Oct — Every night Apr 28 – Oct 31 at 8:45PM\\n- **Location:** Hokkaido (Hokkaido)\\n- **Attendance:** ~500 visitors\\n- **Note:** Japan's most unique fireworks — launched over Lake Toya every single night for 6 months. Small but intimate; can be seen from lakeside ryokan.\\n- **Official site:** https://toyako.biz/\\n- **GPS:** 42.5833, 140.8 · https://www.google.com/maps/search/?api=1&query=42.5833,140.8\\n\\n## 🏮 Matsuri (4)\\n\\n### Takayama Autumn Festival (高山祭（秋）)\\n- **When:** Oct — October 9–10\\n- **Location:** Gifu (Chubu)\\n- **Attendance:** ~130,000 visitors\\n- **Note:** Autumn version of the Takayama festival — same spectacular floats but set against autumn foliage. Often considered the more beautiful of the two.\\n- **Official site:** https://www.hidatakayama.or.jp/\\n- **GPS:** 36.145, 137.2521 · https://www.google.com/maps/search/?api=1&query=36.145,137.2521\\n\\n### Jidai Matsuri (時代祭)\\n- **When:** Oct — October 22\\n- **Location:** Kyoto (Kansai)\\n- **Attendance:** ~120,000 visitors\\n- **Note:** One of Kyoto's three great festivals. 2,000 participants in historical costumes spanning 1,200 years of history march from Kyoto Imperial Palace to Heian Shrine.\\n- **Official site:** https://www.heianjingu.or.jp/\\n- **GPS:** 35.0282, 135.7822 · https://www.google.com/maps/search/?api=1&query=35.0282,135.7822\\n\\n### Kurama Fire Festival (鞍馬の火祭)\\n- **When:** Oct — October 22\\n- **Location:** Kyoto (Kansai)\\n- **Attendance:** ~20,000 visitors\\n- **Note:** One of Kyoto's most dramatic festivals. Villagers carry torches through the mountain village of Kurama at night. Same date as Jidai Matsuri — do both.\\n- **Official site:** https://www.yukijinjya.jp/\\n- **GPS:** 35.1208, 135.7698 · https://www.google.com/maps/search/?api=1&query=35.1208,135.7698\\n\\n### Nagasaki Kunchi (長崎くんち)\\n- **When:** Oct — October 7–9\\n- **Location:** Nagasaki (Kyushu)\\n- **Attendance:** ~700,000 visitors\\n- **Note:** Unique festival showing Nagasaki's Chinese and Dutch heritage — dragon dances, Dutch ship floats, and exotic performances at Suwa Shrine.\\n- **Official site:** https://www.nagasaki-kunchi.com/\\n- **GPS:** 32.7503, 129.8779 · https://www.google.com/maps/search/?api=1&query=32.7503,129.8779\\n\\n\"}},\"jsonrpc\":\"2.0\",\"id\":3}\n\n"
+    },
+    {
+      "server": "transfer",
+      "method": "initialize",
+      "status": 200,
+      "body": "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{\"listChanged\":true}},\"serverInfo\":{\"name\":\"japan-transfer-mcp\",\"version\":\"0.0.6\"}}}\n\n"
+    },
+    {
+      "server": "transfer",
+      "method": "notifications/initialized",
+      "status": 202,
+      "body": ""
+    },
+    {
+      "server": "transfer",
+      "method": "tools/list",
+      "status": 200,
+      "body": "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"tools\":[{\"name\":\"search_station_by_name\",\"title\":\"Search for stations by name\",\"description\":\"Search for stations by name\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"The name of the station to search for (must be in Japanese)\"},\"maxTokens\":{\"type\":\"number\",\"description\":\"The maximum number of tokens to return\"},\"onlyName\":{\"type\":\"boolean\",\"description\":\"Whether to only return the name of the station. If you do not need detailed information, it is generally recommended to set this to true.\"}},\"required\":[\"query\"],\"additionalProperties\":false,\"$schema\":\"http://json-schema.org/draft-07/schema#\"},\"execution\":{\"taskSupport\":\"forbidden\"}},{\"name\":\"search_route_by_station_name\",\"title\":\"Search for routes by station name\",\"description\":\"Search for routes by station name\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"from\":{\"type\":\"string\",\"description\":\"The name of the departure station. The value must be a name obtained from search_station_by_name.\"},\"to\":{\"type\":\"string\",\"description\":\"The name of the arrival station. The value must be a name obtained from search_station_by_name.\"},\"datetimeType\":{\"type\":\"string\",\"enum\":[\"departure\",\"arrival\",\"first\",\"last\"],\"description\":\"The type of datetime to use for the search\"},\"datetime\":{\"type\":\"string\",\"description\":\"The datetime to use for the search. Format: YYYY-MM-DD HH:MM:SS. If not provided, the current time in Japan will be used.\"},\"maxTokens\":{\"type\":\"number\",\"description\":\"The maximum number of tokens to return\"}},\"required\":[\"from\",\"to\",\"datetimeType\"],\"additionalProperties\":false,\"$schema\":\"http://json-schema.org/draft-07/schema#\"},\"execution\":{\"taskSupport\":\"forbidden\"}}]}}\n\n"
+    },
+    {
+      "server": "transfer",
+      "method": "tools/call",
+      "status": 200,
+      "body": "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"東京,東京駅鍛冶橋駐車場〔高速バス〕,東急ステイ渋谷新南口,東京テレポート,東京駅ＪＲ高速バスのりば〔高速バス〕,東急ステイ池袋,東京ビッグサイト,東京駅ＪＲ高速バスのりば〔空港連絡バス〕,東急ステイ札幌大通,東京国際クルーズターミナル,東京駅鉄鋼ビル〔高速バス〕,東急ステイ大阪本町,東京ディズニーシー,東京駅鉄鋼ビル〔空港連絡バス〕,東急ステイ飛騨高山結の湯,東京ディズニーランド,東京駅丸の内〔高速バス〕,東京都庁,東京駅丸の内北口〔高速バス〕,東京大神宮,東京駅丸の内北口〔空港連絡バス〕,東京体育館,東京駅八重洲口〔空港連絡バス〕,東京湾観音,東京駅八重洲通り〔高速バス〕,東京ビッグサイト（東京国際展示場）\"}]}}\n\n"
+    }
+  ]
+}

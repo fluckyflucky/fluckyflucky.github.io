@@ -20,6 +20,7 @@ const routes = [
   { path: '/tools/base64', name: 'tool-base64', component: ToolBase64 },
   { path: '/tools/timestamp', name: 'tool-timestamp', component: ToolTimestamp },
   { path: '/tools/download-calc', name: 'tool-download-calc', component: ToolDownloadCalc },
+  { path: '/tools/flights', name: 'tool-flights', component: () => import('../pages/ToolFlights.vue') },
   { path: '/tools/:slug', name: 'tool', component: MarkdownPage, props: (route: RouteLocationNormalized) => ({ category: 'tools', slug: route.params.slug }) },
   { path: '/jmdict', name: 'jmdict', component: JMdictSearch },
   { path: '/games', name: 'games', component: () => import('../pages/Games.vue') },

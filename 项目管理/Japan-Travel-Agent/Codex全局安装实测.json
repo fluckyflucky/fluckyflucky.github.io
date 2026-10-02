@@ -1,0 +1,82 @@
+[
+  {
+    "name": "japan-transit",
+    "checked_at": "2026-10-02T17:04:37.911Z",
+    "tools": [
+      "suggest_places",
+      "suggest_stations",
+      "reverse_places",
+      "plan_route",
+      "guidance_plan",
+      "get_station",
+      "station_departures",
+      "list_feeds",
+      "list_operators",
+      "health"
+    ],
+    "isError": false,
+    "call": {
+      "name": "suggest_places",
+      "arguments": {
+        "q": "東京駅"
+      }
+    },
+    "response": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\n  \"places\": [\n    {\n      \"id\": \"osm:query-landmark:%E6%9D%B1%E4%BA%AC%E9%A7%85:35.67971,139.76529\",\n      \"endpoint\": \"geo:35.679705,139.765293\",\n      \"name\": \"東京駅\",\n      \"kind\": \"station\",\n      \"source\": \"osm\",\n      \"lat\": 35.67970538869048,\n      \"lon\": 139.76529305714288,\n      \"score\": 3,\n      \"weight\": 840,\n      \"description\": \"駅・停留所 3地点\"\n    },\n    {\n      \"id\": \"osm:cluster:%E6%9D%B1%E4%BA%AC%E9%A7%85:35.67936,139.76461\",\n      \"endpoint\": \"geo:35.679357,139.764611\",\n      \"name\": \"東京駅\",\n      \"kind\": \"station\",\n      \"source\": \"osm\",\n      \"lat\": 35.67935743596491,\n      \"lon\": 139.76461060789475,\n      \"score\": 3,\n      \"weight\": 570,\n      \"nameEn\": \"Tokyo Station\",\n      \"description\": \"出入口・停留所・施設 13地点\"\n    },\n    {\n      \"id\": \"osm:node:8694174696\",\n      \"endpoint\": \"geo:36.807701,139.711389\",\n      \"name\": \"東京駅\",\n      \"kind\": \"station\",\n      \"source\": \"osm\",\n      \"lat\": 36.8077011,\n      \"lon\": 139.7113889,\n      \"score\": 3,\n      \"weight\": 35,\n      \"description\": \"artwork\"\n    },\n    {\n      \"id\": \"odpt-ana:odpt.Airport:HND\",\n      \"endpoint\": \"odpt-ana:odpt.Airport:HND\",\n      \"name\": \"東京(羽田)空港\",\n      \"kind\": \"station\",\n      \"source\": \"transit\",\n      \"lat\": 35.5494,\n      \"lon\": 139.7798,\n      \"score\": 2,\n      \"weight\": 272,\n      \"feedId\": \"odpt-ana\",\n      \"feedName\": \"odpt.Operator:ANA\"\n    },\n    {\n      \"id\": \"osm:cluster:%E6%9D%B1%E4%BA%AC:35.68061,139.76644\",\n      \"endpoint\": \"geo:35.680611,139.766441\",\n      \"name\": \"東京駅\",\n      \"kind\": \"station\",\n      \"source\": \"osm\",\n      \"lat\": 35.680610640000005,\n      \"lon\": 139.76644116000003,\n      \"score\": 2,\n      \"weight\": 225,\n      \"nameEn\": \"Tōkyō\",\n      \"description\": \"駅 5地点\"\n    },\n    {\n      \"id\": \"odpt-jal:odpt.Airport:HND\",\n      \"endpoint\": \"odpt-jal:odpt.Airport:HND\",\n      \"name\": \"東京(羽田)空港\",\n      \"kind\": \"station\",\n      \"source\": \"transit\",\n      \"lat\": 35.5494,\n      \"lon\": 139.7798,\n      \"score\": 2,\n      \"weight\": 137,\n      \"feedId\": \"odpt-jal\",\n      \"feedName\": \"odpt.Operator:JAL\"\n    },\n    {\n      \"id\": \"osm:cluster:%E6%9D%B1%E4%BA%AC%E3%82%81%E3%81%A8%E3%82%8D%E4%B8%8A%E9%87%8E%E9%A7%85:35.71147,139.77746\",\n      \"endpoint\": \"geo:35.711468,139.777463\",\n      \"name\": \"東京メトロ上野駅\",\n      \"kind\": \"station\",\n      \"source\": \"osm\",\n      \"lat\": 35.711467500000005,\n      \"lon\": 139.7774627,\n      \"score\": 2,\n      \"weight\": 90,\n      \"description\": \"出入口 2地点\"\n    },\n    {\n      \"id\": \"scrape-jreast-tohoku-shinkansen:odpt.Station:JR-East.TohokuShinkansen.Tokyo\",\n      \"endpoint\": \"scrape-jreast-tohoku-shinkansen:odpt.Station:JR-East.TohokuShinkansen.Tokyo\",\n      \"name\": \"東京\",\n      \"kind\": \"station\",\n      \"source\": \"transit\",\n      \"lat\": 35.681236,\n      \"lon\": 139.767125,\n      \"score\": 2,\n      \"weight\": 80,\n      \"nameKana\": \"とうきょう\",\n      \"feedId\": \"scrape-jreast-tohoku-shinkansen\",\n      \"feedName\": \"東北新幹線\"\n    },\n    {\n      \"id\": \"scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo\",\n      \"endpoint\": \"scrape-jreast-keihin-tohoku:odpt.Station:JR-East.KeihinTohokuNegishi.Tokyo\",\n      \"name\": \"東京\",\n      \"kind\": \"station\",\n      \"source\": \"transit\",\n      \"lat\": 35.681236,\n      \"lon\": 139.767125,\n      \"score\": 2,\n      \"weight\": 70,\n      \"nameKana\": \"とうきょう\",\n      \"feedId\": \"scrape-jreast-keihin-tohoku\",\n      \"feedName\": \"京浜東北線\"\n    },\n    {\n      \"id\": \"scrape-jreast-joban:odpt.Station:JR-East.joban.s1039\",\n      \"endpoint\": \"scrape-jreast-joban:odpt.Station:JR-East.joban.s1039\",\n      \"name\": \"東京\",\n      \"kind\": \"station\",\n      \"source\": \"transit\",\n      \"lat\": 35.678601,\n      \"lon\": 139.770056,\n      \"score\": 2,\n      \"weight\": 65,\n      \"nameKana\": \"とうきょう\",\n      \"feedId\": \"scrape-jreast-joban\",\n      \"feedName\": \"常磐線\"\n    }\n  ],\n  \"coverage\": {\n    \"sources\": [\n      \"transit\",\n      \"osm\"\n    ],\n    \"kinds\": [\n      \"station\",\n      \"stop\",\n      \"place\",\n      \"address\"\n    ],\n    \"notices\": []\n  }\n}"
+        }
+      ]
+    },
+    "passed": true
+  },
+  {
+    "name": "japan-seasons",
+    "checked_at": "2026-10-02T17:04:37.913Z",
+    "tools": [
+      "japan_seasonal_answer",
+      "sakura_now",
+      "koyo_now",
+      "search",
+      "fetch",
+      "sakura_forecast",
+      "sakura_spots",
+      "sakura_best_dates",
+      "kawazu_forecast",
+      "koyo_forecast",
+      "koyo_spots",
+      "koyo_best_dates",
+      "weather_forecast",
+      "flowers_spots",
+      "fruit_seasons",
+      "festivals_list",
+      "fruit_farms"
+    ],
+    "isError": false,
+    "call": {
+      "name": "festivals_list",
+      "arguments": {
+        "month": 10
+      }
+    },
+    "response": {
+      "content": [
+        {
+          "type": "text",
+          "text": "# Japan Festivals — Oct\nSource: seasons.kooexperience.com | 7 events\n\n## Tips\n- Book accommodation months ahead for major festivals (Gion Matsuri, Nebuta, Sumida Fireworks)\n- Fireworks season peaks July–August; winter events peak January–February\n\n## 🎆 Fireworks (3)\n\n### Tsuchiura All-Japan Fireworks (土浦全国花火競技大会)\n- **When:** Oct — First Saturday of October\n- **Location:** Ibaraki (Kanto)\n- **Attendance:** ~500,000 visitors\n- **Note:** Autumn fireworks competition — one of Japan's three major competitions alongside Nagaoka and Omagari. Held over Lake Kasumigaura.\n- **Official site:** https://www.tsuchiura-hanabi.jp/\n- **GPS:** 36.0867, 140.2036 · https://www.google.com/maps/search/?api=1&query=36.0867,140.2036\n\n### Atami Sea Fireworks (熱海海上花火大会)\n- **When:** Feb, Apr, Jul, Aug, Oct, Dec — Multiple times per year (Feb, Apr, Jul, Aug, Oct, Dec)\n- **Location:** Shizuoka (Kanto)\n- **Attendance:** ~30,000 visitors\n- **Note:** Unique: held year-round in Atami Bay. The bowl-shaped bay amplifies sound and creates a spectacular visual. Close to Tokyo — easy day trip.\n- **Official site:** https://www.ataminews.gr.jp/\n- **GPS:** 35.095, 139.0733 · https://www.google.com/maps/search/?api=1&query=35.095,139.0733\n\n### Lake Toya Long-Run Fireworks (洞爺湖ロングラン花火大会)\n- **When:** Apr, May, Jun, Jul, Aug, Sep, Oct — Every night Apr 28 – Oct 31 at 8:45PM\n- **Location:** Hokkaido (Hokkaido)\n- **Attendance:** ~500 visitors\n- **Note:** Japan's most unique fireworks — launched over Lake Toya every single night for 6 months. Small but intimate; can be seen from lakeside ryokan.\n- **Official site:** https://toyako.biz/\n- **GPS:** 42.5833, 140.8 · https://www.google.com/maps/search/?api=1&query=42.5833,140.8\n\n## 🏮 Matsuri (4)\n\n### Takayama Autumn Festival (高山祭（秋）)\n- **When:** Oct — October 9–10\n- **Location:** Gifu (Chubu)\n- **Attendance:** ~130,000 visitors\n- **Note:** Autumn version of the Takayama festival — same spectacular floats but set against autumn foliage. Often considered the more beautiful of the two.\n- **Official site:** https://www.hidatakayama.or.jp/\n- **GPS:** 36.145, 137.2521 · https://www.google.com/maps/search/?api=1&query=36.145,137.2521\n\n### Jidai Matsuri (時代祭)\n- **When:** Oct — October 22\n- **Location:** Kyoto (Kansai)\n- **Attendance:** ~120,000 visitors\n- **Note:** One of Kyoto's three great festivals. 2,000 participants in historical costumes spanning 1,200 years of history march from Kyoto Imperial Palace to Heian Shrine.\n- **Official site:** https://www.heianjingu.or.jp/\n- **GPS:** 35.0282, 135.7822 · https://www.google.com/maps/search/?api=1&query=35.0282,135.7822\n\n### Kurama Fire Festival (鞍馬の火祭)\n- **When:** Oct — October 22\n- **Location:** Kyoto (Kansai)\n- **Attendance:** ~20,000 visitors\n- **Note:** One of Kyoto's most dramatic festivals. Villagers carry torches through the mountain village of Kurama at night. Same date as Jidai Matsuri — do both.\n- **Official site:** https://www.yukijinjya.jp/\n- **GPS:** 35.1208, 135.7698 · https://www.google.com/maps/search/?api=1&query=35.1208,135.7698\n\n### Nagasaki Kunchi (長崎くんち)\n- **When:** Oct — October 7–9\n- **Location:** Nagasaki (Kyushu)\n- **Attendance:** ~700,000 visitors\n- **Note:** Unique festival showing Nagasaki's Chinese and Dutch heritage — dragon dances, Dutch ship floats, and exotic performances at Suwa Shrine.\n- **Official site:** https://www.nagasaki-kunchi.com/\n- **GPS:** 32.7503, 129.8779 · https://www.google.com/maps/search/?api=1&query=32.7503,129.8779\n\n"
+        }
+      ],
+      "structuredContent": {
+        "answer": "# Japan Festivals — Oct\nSource: seasons.kooexperience.com | 7 events\n\n## Tips\n- Book accommodation months ahead for major festivals (Gion Matsuri, Nebuta, Sumida Fireworks)\n- Fireworks season peaks July–August; winter events peak January–February\n\n## 🎆 Fireworks (3)\n\n### Tsuchiura All-Japan Fireworks (土浦全国花火競技大会)\n- **When:** Oct — First Saturday of October\n- **Location:** Ibaraki (Kanto)\n- **Attendance:** ~500,000 visitors\n- **Note:** Autumn fireworks competition — one of Japan's three major competitions alongside Nagaoka and Omagari. Held over Lake Kasumigaura.\n- **Official site:** https://www.tsuchiura-hanabi.jp/\n- **GPS:** 36.0867, 140.2036 · https://www.google.com/maps/search/?api=1&query=36.0867,140.2036\n\n### Atami Sea Fireworks (熱海海上花火大会)\n- **When:** Feb, Apr, Jul, Aug, Oct, Dec — Multiple times per year (Feb, Apr, Jul, Aug, Oct, Dec)\n- **Location:** Shizuoka (Kanto)\n- **Attendance:** ~30,000 visitors\n- **Note:** Unique: held year-round in Atami Bay. The bowl-shaped bay amplifies sound and creates a spectacular visual. Close to Tokyo — easy day trip.\n- **Official site:** https://www.ataminews.gr.jp/\n- **GPS:** 35.095, 139.0733 · https://www.google.com/maps/search/?api=1&query=35.095,139.0733\n\n### Lake Toya Long-Run Fireworks (洞爺湖ロングラン花火大会)\n- **When:** Apr, May, Jun, Jul, Aug, Sep, Oct — Every night Apr 28 – Oct 31 at 8:45PM\n- **Location:** Hokkaido (Hokkaido)\n- **Attendance:** ~500 visitors\n- **Note:** Japan's most unique fireworks — launched over Lake Toya every single night for 6 months. Small but intimate; can be seen from lakeside ryokan.\n- **Official site:** https://toyako.biz/\n- **GPS:** 42.5833, 140.8 · https://www.google.com/maps/search/?api=1&query=42.5833,140.8\n\n## 🏮 Matsuri (4)\n\n### Takayama Autumn Festival (高山祭（秋）)\n- **When:** Oct — October 9–10\n- **Location:** Gifu (Chubu)\n- **Attendance:** ~130,000 visitors\n- **Note:** Autumn version of the Takayama festival — same spectacular floats but set against autumn foliage. Often considered the more beautiful of the two.\n- **Official site:** https://www.hidatakayama.or.jp/\n- **GPS:** 36.145, 137.2521 · https://www.google.com/maps/search/?api=1&query=36.145,137.2521\n\n### Jidai Matsuri (時代祭)\n- **When:** Oct — October 22\n- **Location:** Kyoto (Kansai)\n- **Attendance:** ~120,000 visitors\n- **Note:** One of Kyoto's three great festivals. 2,000 participants in historical costumes spanning 1,200 years of history march from Kyoto Imperial Palace to Heian Shrine.\n- **Official site:** https://www.heianjingu.or.jp/\n- **GPS:** 35.0282, 135.7822 · https://www.google.com/maps/search/?api=1&query=35.0282,135.7822\n\n### Kurama Fire Festival (鞍馬の火祭)\n- **When:** Oct — October 22\n- **Location:** Kyoto (Kansai)\n- **Attendance:** ~20,000 visitors\n- **Note:** One of Kyoto's most dramatic festivals. Villagers carry torches through the mountain village of Kurama at night. Same date as Jidai Matsuri — do both.\n- **Official site:** https://www.yukijinjya.jp/\n- **GPS:** 35.1208, 135.7698 · https://www.google.com/maps/search/?api=1&query=35.1208,135.7698\n\n### Nagasaki Kunchi (長崎くんち)\n- **When:** Oct — October 7–9\n- **Location:** Nagasaki (Kyushu)\n- **Attendance:** ~700,000 visitors\n- **Note:** Unique festival showing Nagasaki's Chinese and Dutch heritage — dragon dances, Dutch ship floats, and exotic performances at Suwa Shrine.\n- **Official site:** https://www.nagasaki-kunchi.com/\n- **GPS:** 32.7503, 129.8779 · https://www.google.com/maps/search/?api=1&query=32.7503,129.8779\n\n"
+      }
+    },
+    "passed": true
+  },
+  {
+    "name": "japan-transfer",
+    "checked_at": "2026-10-02T17:04:37.914Z",
+    "passed": false,
+    "error": "TypeError: fetch failed"
+  }
+]

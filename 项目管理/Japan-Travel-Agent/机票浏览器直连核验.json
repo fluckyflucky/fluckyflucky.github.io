@@ -1,0 +1,138 @@
+{
+  "date": "2026-10-03",
+  "scope": "HTTP requests with synthetic GitHub Pages-shaped Origin; not actual browser fetch end-to-end",
+  "cors_probes": [
+    {
+      "name": "Google Flights HTML",
+      "url": "https://www.google.com/travel/flights",
+      "method": "GET",
+      "origin": "https://example.github.io",
+      "status": 200,
+      "cors": {},
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "name": "Matrix HTML",
+      "url": "https://matrix.itasoftware.com/",
+      "method": "GET",
+      "origin": "https://example.github.io",
+      "status": 200,
+      "cors": {},
+      "content_type": "text/html; charset=utf-8"
+    },
+    {
+      "name": "Matrix API preflight",
+      "url": "https://content-alkalimatrix-pa.googleapis.com/batch",
+      "method": "OPTIONS",
+      "origin": "https://example.github.io",
+      "status": 200,
+      "cors": {
+        "Access-Control-Allow-Origin": "https://example.github.io",
+        "Access-Control-Allow-Methods": "DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT",
+        "Access-Control-Allow-Headers": "content-type",
+        "Access-Control-Max-Age": "3600"
+      },
+      "content_type": "text/html"
+    },
+    {
+      "name": "KAYAK poll preflight",
+      "url": "https://www.kayak.co.jp/i/api/search/dynamic/flights/poll",
+      "method": "OPTIONS",
+      "origin": "https://example.github.io",
+      "status": 200,
+      "cors": {},
+      "content_type": null
+    },
+    {
+      "name": "HasData preflight",
+      "url": "https://mcp.hasdata.com/mcp?apis=google_travel_flights",
+      "method": "OPTIONS",
+      "origin": "https://example.github.io",
+      "status": 204,
+      "cors": {
+        "Access-Control-Allow-Origin": "https://example.github.io",
+        "Access-Control-Allow-Methods": "POST,GET,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Authorization,Content-Type,Accept,x-api-key,MCP-Protocol-Version,Mcp-Method,Mcp-Name,Mcp-Session-Id,Last-Event-ID",
+        "Access-Control-Max-Age": "86400",
+        "Access-Control-Expose-Headers": "WWW-Authenticate,Mcp-Session-Id,MCP-Protocol-Version"
+      },
+      "content_type": null
+    },
+    {
+      "name": "Travelpayouts preflight",
+      "url": "https://api.travelpayouts.com/aviasales/v3/prices_for_dates",
+      "method": "OPTIONS",
+      "origin": "https://example.github.io",
+      "status": 404,
+      "cors": {},
+      "content_type": "text/plain; charset=utf-8"
+    }
+  ],
+  "matrix": {
+    "origin": "https://example.github.io",
+    "public_app_key_source": "repository_public_fallback",
+    "public_app_key_found": true,
+    "steps": [
+      {
+        "path": "/v1/locationTypes/CITIES_AND_AIRPORTS/partialNames/Tokyo/locations?pageSize=5",
+        "outer_method": "POST",
+        "status": 200,
+        "cors": {
+          "Access-Control-Allow-Origin": "https://example.github.io",
+          "Access-Control-Expose-Headers": "content-length,vary,vary,vary,content-encoding,date,server"
+        },
+        "seconds": 1.9,
+        "body_excerpt": "\r\n--batch_v8sXaw5YNxJRNQVp6-3nKHsBrWr4fEP7\r\nContent-Type: application/http\r\nContent-ID: <response-batchFlightFeasibility20261003+gapiRequest@googleapis.com>\r\n\r\nHTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nVary: Origin\r\nVary: X-Origin\r\nVary: Referer\r\n\r\n{\n  \"locations\": [\n    {\n      \"displayName\": \"Tokyo, Japan - All airports\",\n      \"type\": \"city\",\n      \"code\": \"TYO\",\n      \"cityCode\": \"TYO\",\n      \"cityName\": \"Tokyo\",\n      \"latLng\": {\n        \"latitude\": 35.665303979245287,\n        \"longitude\": 140.10044043396226\n      },\n      \"timezone\": \"Asia/Tokyo\",\n      \"distance\": {\n        \"unit\": \"KILOMETER\"\n      }\n    },\n    {\n      \"displayName\": \"Tokyo Narita International, Japan (NRT)\",\n      \"type\": \"airport\",\n      \"code\": \"NRT\",\n      \"cityCode\": \"TYO\",\n      \"cityName\": \"Tokyo\",\n      \"latLng\": {\n        \"latitude\": 35.7652778,\n        \"longitude\": 140.385556\n      },\n      \"timezone\": \"Asia/Tokyo\",\n      \"distance\": {\n        \"unit\": \"KILOMETER\"\n      }\n    },\n    {\n      \"displayName\": \"Tokyo International (Haneda), Japan (HND)\",\n      \"type\": \"airport\",\n      \"code\": \"HND\",\n      \"cityCode\": \"TYO\",\n      \"cityName\": \"Tokyo\",\n      \"latLng\": {\n        \"latitude\": 35.5533333,\n        \"longitude\": 139.781111\n      },\n      \"timezone\": \"Asia/Tokyo\",\n      \"distance\": {\n        \"unit\": \"KILOMETER\"\n      }\n    }\n  ]\n}\n\r\n--batch_v8sXaw5YNxJRNQVp6-3nKHsBrWr4fEP7--\r\n",
+        "json_keys": [
+          "locations"
+        ],
+        "location_count": 3,
+        "solution_count": 0,
+        "business_error": null,
+        "query_min_price": null
+      },
+      {
+        "path": "/v1/search",
+        "outer_method": "POST",
+        "status": 200,
+        "cors": {
+          "Access-Control-Allow-Origin": "https://example.github.io",
+          "Access-Control-Expose-Headers": "content-length,vary,vary,vary,content-encoding,date,server"
+        },
+        "seconds": 36.46,
+        "body_excerpt": "\r\n--batch_PLOvEOE7G0kyznaIzjCls4vJE13NHaIs\r\nContent-Type: application/http\r\nContent-ID: <response-batchFlightFeasibility20261003+gapiRequest@googleapis.com>\r\n\r\nHTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\nVary: Origin\r\nVary: X-Origin\r\nVary: Referer\r\n\r\n{\n  \"carrierStopMatrix\": {\n    \"columns\": [\n      {\n        \"label\": {\n          \"code\": \"GK\",\n          \"shortName\": \"Jetstar\"\n        }\n      },\n      {\n        \"label\": {\n          \"code\": \"HO\",\n          \"shortName\": \"Juneyao Airlines\"\n        }\n      },\n      {\n        \"label\": {\n          \"code\": \"CZ\",\n          \"shortName\": \"China Southern\"\n        }\n      },\n      {\n        \"label\": {\n          \"code\": \"MU\",\n          \"shortName\": \"China Eastern\"\n        }\n      },\n      {\n        \"label\": {\n          \"code\": \"NH\",\n          \"shortName\": \"ANA\"\n        }\n      }\n    ],\n    \"rows\": [\n      {\n        \"cells\": [\n          {\n            \"minPrice\": \"CNY1300\",\n            \"minPriceInColumn\": true,\n            \"minPriceInGrid\": true,\n            \"minPriceInRow\": true\n          },\n          {\n            \"minPrice\": \"CNY1437\",\n            \"minPriceInColumn\": true\n          },\n          {\n            \"minPrice\": \"CNY1467\",\n            \"minPriceInColumn\": true\n          },\n          {\n            \"minPrice\": \"CNY1739\",\n            \"minPriceInColumn\": true\n          },\n          {\n            \"minPrice\": \"CNY2084\",\n            \"minPriceInColumn\": true\n          }\n        ],\n        \"label\": 0\n      }\n    ]\n  },\n  \"currencyNotice\": {\n    \"ext\": {\n      \"price\": \"CNY1300\"\n    }\n  },\n  \"durationSliderItinerary\": [\n    {\n      \"groups\": [\n        {\n          \"label\": {\n            \"end\": 156,\n            \"start\": 155\n          },\n          \"minPrice\": \"CNY1437\"\n        },\n        {\n          \"label\": {\n            \"end\": 161,\n            \"start\": 160\n          },\n          \"minPrice\": \"CNY3739\"\n        },\n        {\n          \"label\": {\n            \"end\": 166,\n            \"start\": 165\n          },\n          \"minPrice\": \"CNY1739\"\n        },\n        {\n          \"label\": {\n            \"end\": 171,\n            \"start\": 170\n          },\n          \"minPrice\": \"CNY2084\"\n        },\n        {\n          \"label\": {\n            \"end\": 176,\n            \"start\": 175\n          },\n          \"minPrice\": \"CNY3739\"\n        },\n        {\n          \"label\": {\n            \"end\": 181,\n            \"start\": 180\n          },\n          \"minPrice\": \"CNY1300\",\n          \"minPriceInSummary\": true\n        }\n      ],\n      \"maxDura",
+        "json_keys": [
+          "carrierStopMatrix",
+          "currencyNotice",
+          "durationSliderItinerary",
+          "itineraryArrivalTimeRanges",
+          "itineraryCarrierList",
+          "itineraryDepartureTimeRanges",
+          "itineraryDestinations",
+          "itineraryOrigins",
+          "itineraryPriceSlider",
+          "itineraryStopCountList",
+          "solutionList",
+          "warningsItinerary",
+          "id",
+          "session",
+          "solutionCount",
+          "solutionSet"
+        ],
+        "location_count": 0,
+        "solution_count": 7,
+        "business_error": null,
+        "query_min_price": "CNY1300"
+      }
+    ]
+  },
+  "query": {
+    "from": "PVG",
+    "to": "NRT",
+    "date": "2026-11-10",
+    "adults": 1,
+    "cabin": "COACH",
+    "currency": "CNY",
+    "sorts": "default"
+  }
+}

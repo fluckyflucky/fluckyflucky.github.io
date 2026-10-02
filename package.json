@@ -11,7 +11,8 @@
     "civilization:audit": "node scripts/audit-civilization.mjs",
     "civilization:release-check": "pnpm test:civilization && pnpm build && pnpm civilization:audit",
     "jmdict:rebuild": "node --experimental-strip-types scripts/rebuild-jmdict-shards.ts",
-    "jmdict:rebuild:3": "pnpm jmdict:rebuild 3"
+    "jmdict:rebuild:3": "pnpm jmdict:rebuild 3",
+    "test:flights": "node scripts/test-flights.mjs"
   },
   "dependencies": {
     "highlight.js": "^11.11.1",

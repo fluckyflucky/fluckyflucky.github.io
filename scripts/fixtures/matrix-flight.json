@@ -1,0 +1,516 @@
+{
+  "solutionList": {
+    "pages": {
+      "count": 1,
+      "current": 1
+    },
+    "solutions": [
+      {
+        "ext": {
+          "price": "CNY1300",
+          "pricePerMile": "CNY1.1659192826",
+          "totalPrice": "CNY1300"
+        },
+        "itinerary": {
+          "ext": {
+            "dominantCarrier": {
+              "code": "GK",
+              "shortName": "Jetstar"
+            }
+          },
+          "slices": [
+            {
+              "origin": {
+                "code": "PVG",
+                "name": "Shanghai Pudong International"
+              },
+              "destination": {
+                "code": "NRT",
+                "name": "Tokyo Narita International"
+              },
+              "arrival": "2026-11-10T06:20+09:00",
+              "departure": "2026-11-10T02:20+08:00",
+              "flights": [
+                "GK36"
+              ],
+              "cabins": [
+                "COACH"
+              ],
+              "segments": [
+                {
+                  "pricings": [
+                    {
+                      "paxCount": 1
+                    }
+                  ]
+                }
+              ],
+              "duration": 180
+            }
+          ],
+          "carriers": [
+            {
+              "code": "GK",
+              "shortName": "Jetstar"
+            }
+          ],
+          "singleCarrier": {
+            "code": "GK",
+            "shortName": "Jetstar"
+          },
+          "distance": {
+            "units": "MI",
+            "value": 1115
+          }
+        },
+        "pricings": [
+          {
+            "ext": {
+              "pax": {
+                "adults": 1
+              }
+            },
+            "displayPrice": "CNY1300"
+          }
+        ],
+        "displayTotal": "CNY1300",
+        "id": "RRESMJLqFgIVga9bHGWdt8001",
+        "passengerCount": 1
+      },
+      {
+        "ext": {
+          "price": "CNY1437",
+          "pricePerMile": "CNY1.2887892377",
+          "totalPrice": "CNY1437"
+        },
+        "itinerary": {
+          "ext": {
+            "dominantCarrier": {
+              "code": "HO",
+              "shortName": "Juneyao Airlines"
+            }
+          },
+          "slices": [
+            {
+              "origin": {
+                "code": "PVG",
+                "name": "Shanghai Pudong International"
+              },
+              "destination": {
+                "code": "NRT",
+                "name": "Tokyo Narita International"
+              },
+              "arrival": "2026-11-10T12:00+09:00",
+              "departure": "2026-11-10T08:25+08:00",
+              "flights": [
+                "HO1379"
+              ],
+              "cabins": [
+                "COACH"
+              ],
+              "segments": [
+                {
+                  "pricings": [
+                    {
+                      "paxCount": 1
+                    }
+                  ]
+                }
+              ],
+              "duration": 155
+            }
+          ],
+          "carriers": [
+            {
+              "code": "HO",
+              "shortName": "Juneyao Airlines"
+            }
+          ],
+          "singleCarrier": {
+            "code": "HO",
+            "shortName": "Juneyao Airlines"
+          },
+          "distance": {
+            "units": "MI",
+            "value": 1115
+          }
+        },
+        "pricings": [
+          {
+            "ext": {
+              "pax": {
+                "adults": 1
+              }
+            },
+            "displayPrice": "CNY1437"
+          }
+        ],
+        "displayTotal": "CNY1437",
+        "id": "RRESMJLqFgIVga9bHGWdt8002",
+        "passengerCount": 1
+      },
+      {
+        "ext": {
+          "price": "CNY1467",
+          "pricePerMile": "CNY1.3156950673",
+          "totalPrice": "CNY1467"
+        },
+        "itinerary": {
+          "ext": {
+            "dominantCarrier": {
+              "code": "CZ",
+              "shortName": "China Southern"
+            }
+          },
+          "slices": [
+            {
+              "origin": {
+                "code": "PVG",
+                "name": "Shanghai Pudong International"
+              },
+              "destination": {
+                "code": "NRT",
+                "name": "Tokyo Narita International"
+              },
+              "arrival": "2026-11-10T13:15+09:00",
+              "departure": "2026-11-10T09:15+08:00",
+              "flights": [
+                "CZ8309"
+              ],
+              "cabins": [
+                "COACH"
+              ],
+              "segments": [
+                {
+                  "pricings": [
+                    {
+                      "paxCount": 1
+                    }
+                  ]
+                }
+              ],
+              "duration": 180
+            }
+          ],
+          "carriers": [
+            {
+              "code": "CZ",
+              "shortName": "China Southern"
+            }
+          ],
+          "singleCarrier": {
+            "code": "CZ",
+            "shortName": "China Southern"
+          },
+          "distance": {
+            "units": "MI",
+            "value": 1115
+          }
+        },
+        "pricings": [
+          {
+            "ext": {
+              "pax": {
+                "adults": 1
+              }
+            },
+            "displayPrice": "CNY1467"
+          }
+        ],
+        "displayTotal": "CNY1467",
+        "id": "RRESMJLqFgIVga9bHGWdt8003",
+        "passengerCount": 1
+      },
+      {
+        "ext": {
+          "price": "CNY1739",
+          "pricePerMile": "CNY1.5596412557",
+          "totalPrice": "CNY1739"
+        },
+        "itinerary": {
+          "ext": {
+            "dominantCarrier": {
+              "code": "MU",
+              "shortName": "China Eastern"
+            }
+          },
+          "slices": [
+            {
+              "origin": {
+                "code": "PVG",
+                "name": "Shanghai Pudong International"
+              },
+              "destination": {
+                "code": "NRT",
+                "name": "Tokyo Narita International"
+              },
+              "arrival": "2026-11-10T20:55+09:00",
+              "departure": "2026-11-10T17:10+08:00",
+              "flights": [
+                "MU271"
+              ],
+              "cabins": [
+                "COACH"
+              ],
+              "segments": [
+                {
+                  "pricings": [
+                    {
+                      "paxCount": 1
+                    }
+                  ]
+                }
+              ],
+              "duration": 165
+            }
+          ],
+          "carriers": [
+            {
+              "code": "MU",
+              "shortName": "China Eastern"
+            }
+          ],
+          "singleCarrier": {
+            "code": "MU",
+            "shortName": "China Eastern"
+          },
+          "distance": {
+            "units": "MI",
+            "value": 1115
+          }
+        },
+        "pricings": [
+          {
+            "ext": {
+              "pax": {
+                "adults": 1
+              }
+            },
+            "displayPrice": "CNY1739"
+          }
+        ],
+        "displayTotal": "CNY1739",
+        "id": "RRESMJLqFgIVga9bHGWdt8004",
+        "passengerCount": 1
+      },
+      {
+        "ext": {
+          "price": "CNY2084",
+          "pricePerMile": "CNY1.869058296",
+          "totalPrice": "CNY2084"
+        },
+        "itinerary": {
+          "ext": {
+            "dominantCarrier": {
+              "code": "NH",
+              "shortName": "ANA"
+            }
+          },
+          "slices": [
+            {
+              "origin": {
+                "code": "PVG",
+                "name": "Shanghai Pudong International"
+              },
+              "destination": {
+                "code": "NRT",
+                "name": "Tokyo Narita International"
+              },
+              "arrival": "2026-11-10T17:25+09:00",
+              "departure": "2026-11-10T13:35+08:00",
+              "flights": [
+                "NH920"
+              ],
+              "cabins": [
+                "COACH"
+              ],
+              "segments": [
+                {
+                  "pricings": [
+                    {
+                      "paxCount": 1
+                    }
+                  ]
+                }
+              ],
+              "duration": 170
+            }
+          ],
+          "carriers": [
+            {
+              "code": "NH",
+              "shortName": "ANA"
+            }
+          ],
+          "singleCarrier": {
+            "code": "NH",
+            "shortName": "ANA"
+          },
+          "distance": {
+            "units": "MI",
+            "value": 1115
+          }
+        },
+        "pricings": [
+          {
+            "ext": {
+              "pax": {
+                "adults": 1
+              }
+            },
+            "displayPrice": "CNY2084"
+          }
+        ],
+        "displayTotal": "CNY2084",
+        "id": "RRESMJLqFgIVga9bHGWdt8005",
+        "passengerCount": 1
+      },
+      {
+        "ext": {
+          "price": "CNY3739",
+          "pricePerMile": "CNY3.3533632287",
+          "totalPrice": "CNY3739"
+        },
+        "itinerary": {
+          "ext": {
+            "dominantCarrier": {
+              "code": "MU",
+              "shortName": "China Eastern"
+            }
+          },
+          "slices": [
+            {
+              "origin": {
+                "code": "PVG",
+                "name": "Shanghai Pudong International"
+              },
+              "destination": {
+                "code": "NRT",
+                "name": "Tokyo Narita International"
+              },
+              "arrival": "2026-11-10T12:50+09:00",
+              "departure": "2026-11-10T09:10+08:00",
+              "flights": [
+                "MU523"
+              ],
+              "cabins": [
+                "COACH"
+              ],
+              "segments": [
+                {
+                  "pricings": [
+                    {
+                      "paxCount": 1
+                    }
+                  ]
+                }
+              ],
+              "duration": 160
+            }
+          ],
+          "carriers": [
+            {
+              "code": "MU",
+              "shortName": "China Eastern"
+            }
+          ],
+          "singleCarrier": {
+            "code": "MU",
+            "shortName": "China Eastern"
+          },
+          "distance": {
+            "units": "MI",
+            "value": 1115
+          }
+        },
+        "pricings": [
+          {
+            "ext": {
+              "pax": {
+                "adults": 1
+              }
+            },
+            "displayPrice": "CNY3739"
+          }
+        ],
+        "displayTotal": "CNY3739",
+        "id": "RRESMJLqFgIVga9bHGWdt8006",
+        "passengerCount": 1
+      },
+      {
+        "ext": {
+          "price": "CNY3739",
+          "pricePerMile": "CNY3.3533632287",
+          "totalPrice": "CNY3739"
+        },
+        "itinerary": {
+          "ext": {
+            "dominantCarrier": {
+              "code": "MU",
+              "shortName": "China Eastern"
+            }
+          },
+          "slices": [
+            {
+              "origin": {
+                "code": "PVG",
+                "name": "Shanghai Pudong International"
+              },
+              "destination": {
+                "code": "NRT",
+                "name": "Tokyo Narita International"
+              },
+              "arrival": "2026-11-10T15:55+09:00",
+              "departure": "2026-11-10T12:00+08:00",
+              "flights": [
+                "MU521"
+              ],
+              "cabins": [
+                "COACH"
+              ],
+              "segments": [
+                {
+                  "pricings": [
+                    {
+                      "paxCount": 1
+                    }
+                  ]
+                }
+              ],
+              "duration": 175
+            }
+          ],
+          "carriers": [
+            {
+              "code": "MU",
+              "shortName": "China Eastern"
+            }
+          ],
+          "singleCarrier": {
+            "code": "MU",
+            "shortName": "China Eastern"
+          },
+          "distance": {
+            "units": "MI",
+            "value": 1115
+          }
+        },
+        "pricings": [
+          {
+            "ext": {
+              "pax": {
+                "adults": 1
+              }
+            },
+            "displayPrice": "CNY3739"
+          }
+        ],
+        "displayTotal": "CNY3739",
+        "id": "RRESMJLqFgIVga9bHGWdt8007",
+        "passengerCount": 1
+      }
+    ],
+    "minPrice": "CNY1300",
+    "solutionCount": 7
+  }
+}
