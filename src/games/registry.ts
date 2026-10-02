@@ -10,6 +10,7 @@ import dragonLarge from './dragonMerge/images/dragon-8.jpg'
 import frogSmall from './dragonMerge/images/frog-0.jpg'
 import frogMedium from './dragonMerge/images/frog-4.jpg'
 import frogLarge from './dragonMerge/images/frog-8.jpg'
+import { frogTiles, sideEye, smiling } from './frogArt/art'
 
 export interface GameDefinition {
   id: string
@@ -27,6 +28,28 @@ export interface GameDefinition {
 
 // The lobby and player both read this list. Add a game here to give it a card and URL.
 export const games: GameDefinition[] = [
+  {
+    id: 'frog-link',
+    title: '奶蛙连连看',
+    description: '',
+    category: '连线消除',
+    coverText: '连连看',
+    coverImages: [frogTiles[4].image, frogTiles[6].image, frogTiles[7].image],
+    accent: '#c8d595',
+    controls: '',
+    load: () => import('./frogLink/GameFrogLink.vue'),
+  },
+  {
+    id: 'frog-blocks',
+    title: '奶龙似方块',
+    description: '',
+    category: '下落方块',
+    coverText: '方块',
+    coverImages: [sideEye, smiling],
+    accent: '#e3ca85',
+    controls: '',
+    load: () => import('./frogBlocks/GameFrogBlocks.vue'),
+  },
   {
     id: 'poker',
     title: '德州扑克',

@@ -35,8 +35,8 @@ document.title = '小游戏 · 青い夏'
         </div>
         <div class="p-5">
           <h3 class="font-semibold text-lg text-stone-100">{{ game.title }}</h3>
-          <p class="mt-2 text-sm text-stone-400 leading-relaxed">{{ game.description }}</p>
-          <p class="mt-4 text-xs text-stone-500">{{ game.controls }}</p>
+          <p v-if="game.description" class="mt-2 text-sm text-stone-400 leading-relaxed">{{ game.description }}</p>
+          <p v-if="game.controls" class="mt-4 text-xs text-stone-500">{{ game.controls }}</p>
           <div class="mt-5 flex items-center justify-between text-sm font-medium text-cyan-300">
             <span>开始玩</span>
             <span aria-hidden="true" class="group-hover:translate-x-1 transition-transform">→</span>
