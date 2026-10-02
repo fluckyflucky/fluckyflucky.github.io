@@ -197,24 +197,27 @@ export function valid(value: unknown): value is State {
               Object.prototype.hasOwnProperty.call(itemMap, j.item) &&
               !itemMap[j.item].greatPerson &&
               integer(j.tile, -1, s.tiles.length - 1) &&
+              (j.repair===undefined || typeof j.repair==='boolean') &&
+              (!j.repair || itemMap[j.item].kind==='district' && c.buildings.includes(j.item) && j.tile>=0 && s.tiles[j.tile].district===j.item && s.tiles[j.tile].territory===c.id && integer(c.productionCosts?.[`repair:${j.item}:${j.tile}`],1)) &&
               (!["district", "wonder"].includes(itemMap[j.item].kind) ||
                 j.tile >= 0),
           ) &&
           record(c.invested) &&
           (c.productionCosts === undefined || record(c.productionCosts) && Object.entries(c.productionCosts).every(([k,v]) => {
-            const match = /^([A-Za-z][A-Za-z0-9]*):(-?\d+)$/.exec(k);
-            return !!match && itemIds.has(match[1]) && !itemMap[match[1]].greatPerson && integer(Number(match[2]),-1,s.tiles.length-1) && integer(v,1);
+            const match = /^(repair:)?([A-Za-z][A-Za-z0-9]*):(-?\d+)$/.exec(k);
+            return !!match && itemIds.has(match[2]) && !itemMap[match[2]].greatPerson && (!match[1] || itemMap[match[2]].kind==='district') && integer(Number(match[3]),match[1]?0:-1,s.tiles.length-1) && integer(v,1);
           })) &&
           (c.districtPlacements===undefined || record(c.districtPlacements) && Object.entries(c.districtPlacements).every(([id,at])=>
             itemMap[id]?.kind==='district' && integer(at,0,s.tiles.length-1) && s.tiles[at].territory===c.id && s.tiles[at].city<0 && !s.tiles[at].district && !c.buildings.includes(id) && integer(c.productionCosts?.[`${id}:${at}`],1)) &&
             new Set(Object.values(c.districtPlacements)).size===Object.keys(c.districtPlacements).length) &&
           Object.entries(c.invested).every(([k, v]) => {
-            const match = /^([A-Za-z][A-Za-z0-9]*):(-?\d+)$/.exec(k);
+            const match = /^(repair:)?([A-Za-z][A-Za-z0-9]*):(-?\d+)$/.exec(k);
             return (
               !!match &&
-              itemIds.has(match[1]) &&
-              !itemMap[match[1]].greatPerson &&
-              integer(Number(match[2]), -1, s.tiles.length - 1) &&
+              itemIds.has(match[2]) &&
+              !itemMap[match[2]].greatPerson &&
+              (!match[1] || itemMap[match[2]].kind==='district') &&
+              integer(Number(match[3]), match[1]?0:-1, s.tiles.length - 1) &&
               finite(v)
             );
           }) &&

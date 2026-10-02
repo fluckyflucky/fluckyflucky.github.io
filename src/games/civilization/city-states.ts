@@ -45,9 +45,9 @@ const buildings: Record<CityState['type'],string[][]> = {
   trade:[['market','lighthouse'],['bank','shipyard'],['stockexchange','seaport']],
   industrial:[['workshop'],['factory'],['coalplant','oilplant','nuclearplant']],military:[['barracks','stable'],['armory'],['militaryacademy']],
 };
-function usable(s:State,c:City,id:string) {
+export function activeBuilding(s:State,c:City,id:string) {
   if (!c.buildings.includes(id)) return false;
-  const district=itemMap[id]?.needs;
+  const district=itemMap[id]?.kind==='district' ? id : itemMap[id]?.needs;
   // Walk prerequisite buildings to the parent district (e.g. lab -> university).
   let parent=district;
   while(parent && itemMap[parent]?.kind==='building') parent=itemMap[parent].needs;
@@ -61,9 +61,9 @@ export function envoyBonus(s:State,c:City,kind:CityState['type']) {
     if(cs.type!==kind || !count || war(s,c.owner,cs.owner) || ally!==null && war(s,c.owner,ally) || !s.cities.some(c=>c.owner===cs.owner)) continue;
     const capital=s.cities.find(city=>city.owner===c.owner && city.capital===c.owner) ?? s.cities.find(city=>city.owner===c.owner);
     const tiers=buildings[kind];
-    if(count>=1) total+=Number(capital?.id===c.id)+Number(tiers[0].some(id=>usable(s,c,id)));
-    if(count>=3) total+=2*(Number(tiers[1].some(id=>usable(s,c,id)))+Number(usable(s,c,'consulate')));
-    if(count>=6) total+=3*(Number(tiers[2].some(id=>usable(s,c,id)))+Number(usable(s,c,'chancery')));
+    if(count>=1) total+=Number(capital?.id===c.id)+Number(tiers[0].some(id=>activeBuilding(s,c,id)));
+    if(count>=3) total+=2*(Number(tiers[1].some(id=>activeBuilding(s,c,id)))+Number(activeBuilding(s,c,'consulate')));
+    if(count>=6) total+=3*(Number(tiers[2].some(id=>activeBuilding(s,c,id)))+Number(activeBuilding(s,c,'chancery')));
   }
   return total*(kind==='trade'?2:1);
 }

@@ -521,82 +521,91 @@ export const resources: Record<
     type: "bonus" | "luxury" | "strategic";
     improvement: string;
     unlock?: string;
+    yields: Partial<Yield>;
+    perTurn?: number;
   }
 > = {
-  wheat: { name: "小麦", type: "bonus", improvement: "farm" },
+  wheat: { name: "小麦", type: "bonus", improvement: "farm", yields: {food:1} },
   cattle: {
     name: "牲畜",
     type: "bonus",
     improvement: "pasture",
     unlock: "animals",
+    yields: {food:1},
   },
   horses: {
     name: "马",
     type: "strategic",
     improvement: "pasture",
     unlock: "animals",
+    yields: {food:1,production:1}, perTurn:2,
   },
   iron: {
     name: "铁",
     type: "strategic",
     improvement: "mine",
     unlock: "bronze",
+    yields: {science:1}, perTurn:2,
   },
   spices: {
     name: "香料",
     type: "luxury",
     improvement: "plantation",
     unlock: "irrigation",
+    yields: {food:2},
   },
-  gems: { name: "宝石", type: "luxury", improvement: "mine", unlock: "mining" },
+  gems: { name: "钻石", type: "luxury", improvement: "mine", unlock: "mining", yields:{gold:3} },
   fish: {
     name: "鱼",
     type: "bonus",
     improvement: "fishery",
     unlock: "sailing",
+    yields: {food:1},
   },
   coal: {
     name: "煤",
     type: "strategic",
     improvement: "mine",
     unlock: "industry",
+    yields: {production:2}, perTurn:3,
   },
   oil: {
     name: "石油",
     type: "strategic",
     improvement: "oilwell",
-    unlock: "combustion",
+    unlock: "refining",
+    yields: {production:3}, perTurn:3,
   },
 };
 export const improvements: Record<
   string,
   { name: string; unlock: string; description: string }
 > = {
-  farm: { name: "农场", unlock: "", description: "粮食 +2；封建主义后额外 +1" },
+  farm: { name: "农场", unlock: "", description: "粮食 +1、住房 +0.5；封建主义与零件规格化提升相邻农场收益" },
   mine: {
     name: "矿山",
     unlock: "mining",
-    description: "生产 +2；开采战略与奢侈资源",
+    description: "生产 +1；学徒、工业化、智能材料各再 +1",
   },
-  pasture: { name: "牧场", unlock: "animals", description: "粮食 +1、生产 +1" },
+  pasture: { name: "牧场", unlock: "animals", description: "生产 +1、住房 +0.5；马镫与机器人各 +1粮食，零件规格化 +1生产" },
   plantation: {
     name: "种植园",
     unlock: "irrigation",
-    description: "金币 +2、粮食 +1；提供奢侈资源",
+    description: "金币 +2、住房 +0.5；封建主义与科学理论各 +1粮食，全球化 +2金币",
   },
   lumber: {
     name: "伐木场",
     unlock: "construction",
-    description: "森林生产 +2",
+    description: "生产 +2；钢铁与控制论各再 +1；重商主义后可建在雨林",
   },
   fishery: {
     name: "渔船",
     unlock: "sailing",
-    description: "水域粮食 +2、金币 +1",
+    description: "鱼资源粮食 +1、住房 +0.5；制图学 +2金币、殖民主义 +1生产、塑料 +1粮食",
   },
   oilwell: {
     name: "油井",
-    unlock: "combustion",
-    description: "生产 +2，提供石油",
+    unlock: "refining",
+    description: "陆地石油生产 +2、每回合石油 +3；预测系统再 +1生产",
   },
 };

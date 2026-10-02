@@ -14,6 +14,12 @@ import {
   jobKey,
   cost,
   jobCost,
+  jobName,
+  jobReason,
+  districtTile,
+  districtRepairCost,
+  districtRepairReason,
+  enqueueDistrictRepair,
   productionRate,
   active,
   growthCost,
@@ -207,7 +213,7 @@ watch(
         >
           <div class="queue-number">{{ index + 1 }}</div>
           <div class="queue-description">
-            <strong>{{ info(job.item).name }}</strong
+            <strong>{{ jobName(job) }}</strong
             ><small
               >{{ Math.floor(city.invested[jobKey(job)] ?? 0) }} /
               {{ jobCost(state, city, job) }} ·
@@ -237,9 +243,9 @@ watch(
               />
             </div>
             <small
-              v-if="buildReason(state, city, job.item, true)"
+              v-if="jobReason(state, city, job)"
               class="warning"
-              >{{ buildReason(state, city, job.item, true) }}</small
+              >{{ jobReason(state, city, job) }}</small
             >
           </div>
           <div class="queue-actions">
@@ -247,7 +253,7 @@ watch(
               v-if="index > 0"
               class="icon-button"
               :disabled="!active(state)"
-              :aria-label="`提前生产${info(job.item).name}`"
+              :aria-label="`提前生产${jobName(job)}`"
               @click="
                 city.queue.splice(index - 1, 0, city.queue.splice(index, 1)[0])
               "
@@ -256,7 +262,7 @@ watch(
             ><button
               class="icon-button"
               :disabled="!active(state)"
-              :aria-label="`移出队列${info(job.item).name}`"
+              :aria-label="`移出队列${jobName(job)}`"
               @click="
                 city.queue.splice(index, 1);
                 emit('status', '项目投入已保留，可重新加入');
@@ -376,9 +382,14 @@ watch(
           <div>
             <strong>{{ d.name }}</strong>
             <p>{{ d.description }}</p>
+            <template v-if="d.kind==='district' && state.tiles[districtTile(state,city,d.id)]?.pillaged">
+              <small class="warning">已被劫掠</small>
+              <button :disabled="city.queue.length>=5 || !!districtRepairReason(state,city,d.id)" @click="emit('status',enqueueDistrictRepair(state,city,d.id)?`已加入队列：修复${d.name}`:'当前不能维修')">修复{{ d.name }} · {{ districtRepairCost(state,city,d.id) }}生产</button>
+            </template>
           </div>
         </article>
       </div>
+      <CivHelp v-if="done.some(d=>d.kind==='district')" label="区域维修" text="受损区域在这里安排生产维修，不能由建造者直接修复。移出队列保留维修投入；敌军占据区域时暂停。本版按当前区域造价的25%锁定维修价，尚未区分区域内各栋建筑的单独受损。" />
       <p v-if="!done.length" class="empty">还没有建筑。</p>
       <p class="hint">
         专业区域容量：{{

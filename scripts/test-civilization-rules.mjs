@@ -14,6 +14,117 @@ function setup(options={}) {
   return s;
 }
 const own=s=>s.cities.find(c=>c.owner===0);
+function builderFixture() {
+  const s=setup(),city=own(s),n=s.nations[0],at=w.neighbors(s,city.tile)[0];
+  s.units=[];const t=s.tiles[at];Object.assign(t,{terrain:'grass',baseTerrain:'grass',feature:'',hills:false,resource:'',improvement:'',district:'',pillaged:false});
+  const u=w.spawn(s,0,'builder',at);return {s,city,n,t,u,at};
+}
+test('existing GS resources use independent base yields, reveal gates and 2/3 strategic extraction',()=>{
+  const {s,n,t}=builderFixture();
+  for(const [id,food,production,science,gold,perTurn] of [
+    ['wheat',1,0,0,0],['cattle',1,0,0,0],['fish',1,0,0,0],['spices',2,0,0,0],['gems',0,0,0,3],
+    ['horses',1,1,0,0,2],['iron',0,0,1,0,2],['coal',0,2,0,0,3],['oil',0,3,0,0,3],
+  ]) {
+    t.resource=id;n.tech=[];const hidden=w.tileYield(s,t);
+    if(c.resources[id].type==='strategic') {assert.equal(hidden.food,2);assert.equal(hidden.production,0);assert.equal(hidden.science,0);}
+    if(c.resources[id].unlock)n.tech.push(c.resources[id].unlock);
+    const y=w.tileYield(s,t);assert.equal(y.food,2+food,id);assert.equal(y.production,production,id);assert.equal(y.science,science,id);assert.equal(y.gold,gold,id);
+    if(perTurn)assert.equal(c.resources[id].perTurn,perTurn);
+  }
+  assert.equal(c.resources.oil.unlock,'refining');
+});
+test('all seven existing improvements apply their actual base and research increments, not advance bonuses early',()=>{
+  const {s,n,t}=builderFixture();
+  const cases=[
+    ['farm',[],[],[1,0,0]],['mine',[],[],[0,1,0]],['mine',['apprentice','industry','smartmaterials'],[],[0,4,0]],
+    ['pasture',[],[],[0,1,0]],['pasture',['stirrups','robotics','replaceableparts'],[],[2,2,0]],
+    ['plantation',[],[],[0,0,2]],['plantation',['scientifictheory'],['feudal','globalization'],[2,0,4]],
+    ['lumber',[],[],[0,2,0]],['lumber',['steel','cybernetics'],[],[0,4,0]],
+    ['fishery',[],[],[1,0,0]],['fishery',['cartography','plastics'],['colonialism'],[2,1,2]],
+    ['oilwell',[],[],[0,2,0]],['oilwell',['predictivesystems'],[],[0,3,0]],
+  ];
+  for(const [id,tech,civic,[food,production,gold]] of cases) {
+    n.tech=tech;n.civic=civic;t.improvement='';const base=w.tileYield(s,t);t.improvement=id;const y=w.tileYield(s,t);
+    assert.equal(y.food-base.food,food,id);assert.equal(y.production-base.production,production,id);assert.equal(y.gold-base.gold,gold,id);
+    t.pillaged=true;assert.deepEqual(w.tileYield(s,t),base);t.pillaged=false;
+  }
+  assert(cases.flatMap(row=>row[1]).every(id=>c.techs.some(d=>d.id===id)));assert(cases.flatMap(row=>row[2]).every(id=>c.civics.some(d=>d.id===id)));
+});
+test('farms require valid layered terrain and late hill unlock; river desert alone is not floodplains',()=>{
+  const {s,n,t,u}=builderFixture();assert.equal(w.improvementReason(s,u,'farm'),'');
+  t.terrain='hill';t.hills=true;assert(w.improvementReason(s,u,'farm'));n.civic=['civilengineering'];assert.equal(w.improvementReason(s,u,'farm'),'');
+  t.terrain='desert';t.baseTerrain='desert';t.hills=false;t.river=true;assert(w.improvementReason(s,u,'farm'));t.feature='floodplains';assert.equal(w.improvementReason(s,u,'farm'),'');
+  t.feature='forest';assert(w.improvementReason(s,u,'farm'));t.feature='';t.baseTerrain='tundra';assert(w.improvementReason(s,u,'farm'));
+});
+test('resource improvements are exclusive without leaking unrevealed resources; woods mines need resource exceptions',()=>{
+  const {s,n,t,u}=builderFixture();n.tech=['mining'];t.resource='cattle';assert.match(w.improvementReason(s,u,'farm'),/牧场/);
+  const before=structuredClone(s);assert(!w.improve(s,u,'farm'));assert.deepEqual(s,before);
+  t.resource='horses';assert.equal(w.improvementReason(s,u,'farm'),'');n.tech.push('animals');assert.match(w.improvementReason(s,u,'farm'),/牧场/);assert.equal(w.improvementReason(s,u,'pasture'),'');
+  t.resource='';t.terrain='hill';t.hills=true;t.feature='forest';assert(w.improvementReason(s,u,'mine'));t.resource='iron';n.tech.push('bronze');assert.equal(w.improvementReason(s,u,'mine'),'');
+  t.resource='gems';t.hills=false;t.terrain='grass';t.feature='rainforest';assert.equal(w.improvementReason(s,u,'mine'),'');
+});
+test('lumber mills recognize wooded hills and rainforest unlock; fishing boats need fish and oil wells need land/refining',()=>{
+  const {s,n,t,u}=builderFixture();n.tech=['construction','sailing','refining'];t.terrain='hill';t.hills=true;t.feature='forest';assert.equal(w.improvementReason(s,u,'lumber'),'');
+  t.feature='rainforest';assert(w.improvementReason(s,u,'lumber'));n.civic=['mercantilism'];assert.equal(w.improvementReason(s,u,'lumber'),'');
+  Object.assign(t,{terrain:'water',baseTerrain:'coast',hills:false,feature:'',resource:''});assert(w.improvementReason(s,u,'fishery'));t.resource='fish';assert.equal(w.improvementReason(s,u,'fishery'),'');
+  t.resource='oil';assert(w.improvementReason(s,u,'oilwell'));t.terrain='grass';t.baseTerrain='desert';assert.equal(w.improvementReason(s,u,'oilwell'),'');n.tech=['combustion'];assert(w.improvementReason(s,u,'oilwell'));
+});
+test('reserved district tiles reject improvements/chops without spending charges or mutating the queue',()=>{
+  const {s,n,t,u,city,at}=builderFixture();n.tech=['writing','mining'];city.queue=[];assert(w.enqueue(s,city,'campus',at));t.feature='forest';
+  const before=structuredClone(s);assert(w.improvementReason(s,u,'farm'));assert(!w.improve(s,u,'farm'));assert(!w.chop(s,u));assert.deepEqual(s,before);
+});
+test('builder repairs and removes only owned improvements, for no charges; districts require city production',()=>{
+  const {s,t,u,city}=builderFixture();t.improvement='mine';t.pillaged=true;const charges=u.charges;assert(w.repair(s,u));assert.equal(u.charges,charges);assert(!t.pillaged);assert.equal(u.moves,0);
+  u.moves=2;assert(w.removeImprovement(s,u));assert.equal(u.charges,charges);assert.equal(t.improvement,'');
+  u.moves=2;t.district='campus';t.pillaged=true;city.buildings.push('campus');const before=structuredClone(s);assert.match(w.repairReason(s,u),/城市生产/);assert(!w.repair(s,u));assert(!w.removeImprovement(s,u));assert.deepEqual(s,before);
+});
+test('wooded-hill chopping uses the shared action gate and preserves underlying terrain/resources',()=>{
+  const {s,n,t,u,city}=builderFixture();n.tech=['mining'];t.terrain='hill';t.hills=true;t.baseTerrain='tundra';t.feature='forest';t.resource='gems';
+  const charges=u.charges;assert.equal(w.chopReason(s,u),'');assert(w.chop(s,u));assert.equal(t.feature,'');assert.equal(t.baseTerrain,'tundra');assert.equal(t.hills,true);assert.equal(t.resource,'gems');assert.equal(u.charges,charges-1);assert.equal(city.invested['monument:-1'],25);
+});
+test('district repair is a priced production job, preserves investment/locked price on cancel/reload, and does not rebuild the district',()=>{
+  const {s,n,t,city}=builderFixture();city.queue=[];city.buildings.push('campus','library');t.district='campus';t.pillaged=true;n.tech=['writing'];
+  assert(w.enqueueDistrictRepair(s,city,'campus'));const job=city.queue[0],key=w.jobKey(job),price=w.jobCost(s,city,job);assert.equal(price,15);assert.equal(key,`repair:campus:${job.tile}`);
+  const before=structuredClone(s);assert(!w.enqueueDistrictRepair(s,city,'campus'));assert.deepEqual(s,before);city.invested[key]=7;city.queue=[];
+  n.tech=c.techs.map(d=>d.id);assert.equal(w.districtRepairCost(s,city,'campus'),price,'resume button must show the locked price');assert(w.enqueueDistrictRepair(s,city,'campus'));assert.equal(w.jobCost(s,city,job),price);assert.equal(city.invested[key],7);assert(saves.valid(s));
+  const loaded=saves.migrate(structuredClone(s));assert(loaded);const dest=own(loaded),j=dest.queue[0];dest.invested[w.jobKey(j)]=price;w.nextTurn(loaded);
+  assert(!loaded.tiles[j.tile].pillaged);assert.equal(dest.queue.length,0);assert.equal(dest.buildings.filter(id=>id==='campus').length,1);assert.equal(dest.productionCosts[w.jobKey(j)],undefined);assert(saves.valid(loaded));
+});
+test('enemy occupation pauses district repair without spending investment; AI uses the same repair queue',()=>{
+  const {s,t,city,at}=builderFixture();city.queue=[];city.buildings.push('campus');t.district='campus';t.pillaged=true;assert(w.enqueueDistrictRepair(s,city,'campus'));const j=city.queue[0],key=w.jobKey(j);city.invested[key]=4;
+  s.units=[];w.relation(s,0,1).status='war';w.spawn(s,1,'warrior',at).moves=0;w.nextTurn(s);assert(t.pillaged);assert.equal(city.invested[key],4);assert.match(w.jobReason(s,city,j),/敌军/);assert(saves.valid(s));
+  const ai=setup(),other=ai.cities.find(c=>c.owner===1),tile=ai.tiles[w.neighbors(ai,other.tile)[0]];other.buildings.push('campus');other.queue=[];Object.assign(tile,{district:'campus',pillaged:true});ai.units=[];
+  w.computerTurn(ai,1);assert.equal(other.queue[0].repair,true);assert.equal(other.queue[0].item,'campus');assert(saves.valid(ai));
+});
+test('repair jobs reject nonboolean flags, unit repairs, unrelated target tiles and corrupt production keys',()=>{
+  const {s,t,city}=builderFixture();city.queue=[];city.buildings.push('campus');t.district='campus';t.pillaged=true;assert(w.enqueueDistrictRepair(s,city,'campus'));
+  for(const mutate of [x=>own(x).queue[0].repair='yes',x=>own(x).queue[0].item='warrior',x=>own(x).queue[0].tile=own(x).tile,x=>own(x).invested['repair:warrior:0']=5,x=>own(x).productionCosts['repair:campus:-1']=5,x=>delete own(x).productionCosts]) {const copy=structuredClone(s);mutate(copy);assert(!saves.valid(copy));}
+});
+test('pillaged districts suspend parent-chain yields, housing, amenities and new buildings until production repair',()=>{
+  const {s,n,t,city,at}=builderFixture();city.queue=[];n.tech=['writing','education'];city.buildings=['campus','library','university'];t.district='campus';s.cityStates.forEach(state=>state.envoys[0]=0);for(const i of w.neighbors(s,at))Object.assign(s.tiles[i],{terrain:'grass',baseTerrain:'grass',feature:'',hills:false,district:''});const normal=w.yields(s,city);t.pillaged=true;
+  assert.equal(normal.science-w.yields(s,city).science,6);assert.equal(w.scientistPoints(s,city),0);assert.match(w.buildReason(s,city,'lab'),/修复|需要/);
+  t.district='aqueduct';city.buildings=['aqueduct'];const damaged=w.baseHousing(s,city);t.pillaged=false;assert(w.baseHousing(s,city)>damaged);
+  city.buildings=['entertainment'];t.district='entertainment';const amenities=w.amenities(s,city);t.pillaged=true;assert(w.amenities(s,city)<amenities);
+});
+test('industrial envoy production uses the same latest amenity boundaries as city yields',()=>{
+  const s=setup({cityStateCount:6}),city=own(s),state=s.cityStates.find(cs=>cs.type==='industrial'),n=s.nations[0];city.pop=20;city.buildings=['workshop'];for(const t of s.tiles)t.resource='';
+  const id='fixtureAmenities';c.itemMap[id]={id,name:'fixture',kind:'building',cost:1,icon:'city',description:'',amenities:0};city.buildings.push(id);
+  try {for(const [delta,mult] of [[-8,.6],[-7,.7],[-5,.8],[-3,.9],[-1,1],[3,1.1],[5,1.2]]) {
+    c.itemMap[id].amenities=10+delta-2;state.envoys[0]=0;const base=w.productionRate(s,city,'monument');state.envoys[0]=1;assert(Math.abs(w.productionRate(s,city,'monument')-base-2*mult)<1e-8,`delta ${delta}`);
+  }} finally {delete c.itemMap[id];}
+});
+test('builders embark with Sailing, cannot cross deep ocean before Cartography, and AI actually reaches and repairs pillaged improvements',()=>{
+  const {s,n,t,u,city,at}=builderFixture();const water=w.neighbors(s,at).find(i=>i!==city.tile);Object.assign(s.tiles[water],{terrain:'water',baseTerrain:'coast'});
+  assert(!w.passable(s,u,water));n.tech=['sailing'];assert(w.passable(s,u,water));s.tiles[water].baseTerrain='ocean';assert(!w.passable(s,u,water));n.tech.push('cartography');assert(w.passable(s,u,water));
+  const ai=setup(),owner=1,home=ai.cities.find(c=>c.owner===owner),target=w.neighbors(ai,home.tile)[0];ai.units=[];for(const tile of ai.tiles)if(tile.owner===owner&&tile.city<0)tile.improvement='farm';
+  Object.assign(ai.tiles[target],{terrain:'grass',baseTerrain:'grass',hills:false,feature:'',improvement:'mine',pillaged:true,district:''});const builder=w.spawn(ai,owner,'builder',home.tile),charges=builder.charges;
+  w.computerTurn(ai,owner);assert.equal(builder.tile,target);builder.moves=2;w.computerTurn(ai,owner);assert(!ai.tiles[target].pillaged);assert.equal(builder.charges,charges);assert(saves.valid(ai));
+});
+test('coal and oil extraction each supply three stock per turn, only after reveal and while connected',()=>{
+  const {s,n,t}=builderFixture();n.tech=['refining','industry'];for(const tile of s.tiles)tile.resource='';
+  for(const [id,imp] of [['oil','oilwell'],['coal','mine']]) {t.resource=id;t.improvement=imp;t.pillaged=false;n.strategic[id]=0;w.nextTurn(s);assert.equal(n.strategic[id],3);t.pillaged=true;w.nextTurn(s);assert.equal(n.strategic[id],3);}
+  assert(saves.valid(s));
+});
 test('GS growth buckets are nonlinear, speed-scaled, and housing uses whole points with a hard stop',()=>{
   const s=setup(),city=own(s);
   for(const [pop,expected] of [[1,24],[2,33],[4,55],[10,126]]) {city.pop=pop;assert.equal(w.growthCost(s,city),expected);}

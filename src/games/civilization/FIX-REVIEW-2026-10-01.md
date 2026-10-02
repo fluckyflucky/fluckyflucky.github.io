@@ -132,3 +132,33 @@
 - 最终生产包在375/768/1024/1440px通过原有交互、随机文明与AI数量、宗教、科学家、迁移与读档回归；新增增长/宜居数值、维修队列、说明、驻守刷新后唤醒流程均通过，无横向溢出及页面脚本错误。另检查375px截图，测试使用独立4184上下文，不触碰用户4173存档。
 - `git diff --check`通过。对齐审查仍退出1：51/126提升未支持，12项系统级阻断仍在，阶段发布不等于完整复刻。
 - 本次提交仅包含文明游戏及其测试、记录；工作区并行开发的奶蛙游戏文件不纳入。
+
+## 10月2日再对照：地块改良与区域维修
+
+本批继续按《风云变幻》规则核对 Wiki 与游戏文本百科，集中修已经存在但行为不正确的经营操作。按用户本轮要求发布阶段版，不据测试数量报整体对齐分数。
+
+| 问题 | 本批修改 |
+| --- | --- |
+| 牧场、种植园、渔船提前给后期收益，多个科技升级没有实际效果 | 现有七种改良按基础值与各自科技/市政增量结算：牧场马镫/机器人/零件规格化、种植园封建/科学理论/全球化、渔船制图/殖民/塑料、矿山智能材料、伐木场钢铁/控制论、油井预测系统。描述同步，不提前发放升级产出。 |
+| 铁错误产生产，香料错误产金币，煤/油库存都按2计算 | 九种现有资源基础产出逐项校正，铁+1科技、马+1粮1生产、香料+2粮、钻石+3金币、煤+2生产、油+3生产；煤与油每回合各供3库存。油揭示和陆地油井改为精炼；未揭示、劫掠和改良不匹配不供库存。`gems`内部ID保留，显示名明确为钻石，旧档不删资源。 |
+| 改良只看单层terrain，允许渔船铺满空水域、农场压牧场资源 | 共用底层地形/特征读取；资源只能建其对应改良，但不泄露未揭示战略资源。渔船需鱼；丘陵农场需土木工程，临河沙漠不冒充泛滥平原；树林矿山需清除特征，资源矿例外；雨林伐木场需重商主义；油井限陆地。 |
+| 建造者可能在已预留区域上继续改良；丘陵树林砍伐按钮错误禁用 | 预留区域拒绝改良和砍伐，UI与实际砍伐使用同一检查；保留丘陵、底层苔原等与资源。已有改良需先拆除，新增拆除操作不消耗次数。砍伐收益仍是本版固定25生产，未将其称作原作成长公式。 |
+| 建造者可以直接修区域；停用后没有其他维修路径 | 建造者只免费修己方受损改良。城市·建筑可排区域维修，沿用生产队列，以`repair:`分离新建/维修投资；锁价、取消、续建、刷新读档均保留，不重复增加区域。敌军占据时暂停；AI通过同一入口维修。 |
+| 受损区域内部分建筑、住房、宜居和产点继续运转 | 复用城邦收益已有的父区域检查，暂停父链建筑产出、区域住房/宜居、剧院/圣地的对应产点，并阻止继续建区域内建筑；维修恢复。不是重新增加一套泛用兜底层。 |
+| AI建造者追最近空地而非合法目标，在目标旁边徘徊 | 搜索实际可改良或可维修目标，优先维修，沿路径到目标本格；不能通行的目标继续换下一个。允许航海术后的建造者下近海，制图学前仍不能进深海。 |
+| 工业城邦专项生产仍使用上轮旧宜居边界 | 专项生产与城市结算共用`happiness`，独立断言覆盖-8/-7/-5/-3/-1/+3/+5。 |
+
+### 来源与未完成部分
+
+- Wiki：[建造者](https://civilization.fandom.com/wiki/Builder_%28Civ6%29)、[农场](https://civilization.fandom.com/wiki/Farm_%28Civ6%29)、[矿山](https://civilization.fandom.com/wiki/Mine_%28Civ6%29)、[地块改良](https://civilization.fandom.com/wiki/Tile_improvement_%28Civ6%29)、[资源清单](https://civilization.fandom.com/wiki/List_of_resources_in_Civ6)。部分直接页面仍受限，使用可读取索引并以百科游戏数据交叉核验，没有声称全 Wiki 逐条审计。
+- 游戏文本百科：[牧场](https://www.civilopedia.net/en-US/gathering-storm/improvements/improvement_pasture/)、[种植园](https://www.civilopedia.net/en-US/gathering-storm/improvements/improvement_plantation/)、[渔船](https://www.civilopedia.net/en-US/gathering-storm/improvements/improvement_fishing_boats/)、[矿山](https://www.civilopedia.net/en-US/gathering-storm/improvements/improvement_mine/)、[伐木场](https://www.civilopedia.net/en-US/gathering-storm/improvements/improvement_lumber_mill/)、[油井](https://www.civilopedia.net/en-US/gathering-storm/improvements/improvement_oil_well/)。
+- 资源：[铁](https://www.civilopedia.net/en-US/gathering-storm/resources/resource_iron/)、[马](https://www.civilopedia.net/en-US/gathering-storm/resources/resource_horses/)、[香料](https://www.civilopedia.net/en-US/gathering-storm/resources/resource_spices/)、[钻石](https://www.civilopedia.net/en-US/gathering-storm/resources/resource_diamonds/)、[煤](https://www.civilopedia.net/en-US/gathering-storm/resources/resource_coal/)、[油](https://www.civilopedia.net/en-US/gathering-storm/resources/resource_oil/)。
+- [劫掠概念页](https://www.civilopedia.net/en-US/gathering-storm/concepts/combat_13/)说明城市生产修复及建筑25%维修价；本版区域维修明确按当前区域造价25%锁价，不将它当成完整原作区域维修计价证据。现有单一地块pillaged字段仍不能逐栋建筑劫掠/修复，修区域会恢复整块。本轮没有改写劫掠掠夺收益、研究项目、地区专家或贸易系统。
+- 尚缺其他资源及改良、采石场正常开局的砌砖提升路径、奖励资源收获、雨林/沼泽清除、植树、建造者/开拓者递增造价、海上油井等。保留原系统阻断和审查阈值。
+
+### 验收
+
+- 33项引擎、29项事实/规则、69项补充规则，共131项通过。本轮15组新增回归包含资源独立数值、科技增量、合法选址、无效操作不变、建造者次数、AI实际到达维修、区域维修锁价/取消/读档/完成/敌军暂停及严格存档字段。
+- 类型检查和生产构建通过；独立输出`/tmp/aoinatsu-civ-improvements-20261002-build`，保留原vendor体积警告。
+- 375/768/1024/1440px生产包浏览器回归通过，原树/政体/随机AI/宗教/科学家/增长/城墙流程均保留；新增区域维修排队刷新、树林丘陵操作、说明与免费拆除。375px用真实触摸事件长按，检查弹层不越视口、无横向溢出和脚本错误，人工查看截图。沿用UI/UX技能的44px触控/焦点/视口检查项；技能包缺少搜索脚本，未安装替代包。
+- 对齐审查仍退出1：51/126提升未支持、12项系统级阻断；阶段push不代表通过完整对齐门槛。独立4184测试上下文未触碰用户4173存档。

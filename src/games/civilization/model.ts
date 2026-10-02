@@ -40,6 +40,7 @@ export interface Unit {
 export interface Job {
   item: string;
   tile: number;
+  repair?: boolean;
 }
 export type Focus = "balanced" | "food" | "production" | "gold";
 export interface City {

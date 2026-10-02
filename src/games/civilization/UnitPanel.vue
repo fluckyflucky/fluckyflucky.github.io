@@ -9,7 +9,10 @@ import {
   improvementReason,
   improve,
   repair,
+  repairReason,
+  removeImprovement,
   chop,
+  chopReason,
   pillage,
   promote,
   upgrade,
@@ -156,7 +159,7 @@ function fortify() {
       </p></template
     >
     <template v-if="unit.type === 'builder'"
-      ><h3>改良地块 · 剩余 {{ unit.charges }} 次</h3>
+      ><div class="inspector-title"><h3>改良地块 · 剩余 {{ unit.charges }} 次</h3><CivHelp label="建造者操作" text="建造和砍伐消耗1次，维修和拆除改良不消耗次数。资源地块只能建对应改良；矿山通常需先清除树林，资源矿可保留树林。区域维修在城市·建筑中安排。" /></div>
       <div class="improvements">
         <button
           v-for="(d, id) in improvements"
@@ -173,21 +176,19 @@ function fortify() {
       </div>
       <div class="unit-commands">
         <button
-          :disabled="!tile.pillaged || !unit.moves || !active(state)"
+          :disabled="!!repairReason(state,unit)"
+          :title="repairReason(state,unit)"
           @click="action(() => repair(state, unit), '地块已修复')"
         >
           修复</button
         ><button
-          :disabled="
-            tile.terrain !== 'forest' ||
-            !n.tech.includes('mining') ||
-            !unit.moves ||
-            !active(state)
-          "
+          :disabled="!!chopReason(state,unit)"
+          :title="chopReason(state,unit)"
           @click="action(() => chop(state, unit), '砍伐提供 25 生产')"
         >
           砍伐森林
         </button>
+        <button :disabled="!tile.improvement || tile.owner!==unit.owner || !unit.moves || !active(state)" @click="action(()=>removeImprovement(state,unit),'改良已拆除，使用次数不变')">拆除改良</button>
       </div></template
     >
     <template v-if="unit.type === 'trader'"

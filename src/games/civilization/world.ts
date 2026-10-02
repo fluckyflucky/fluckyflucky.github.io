@@ -17,7 +17,7 @@ import {
 import { distance, neighbors, random } from "./hex";
 import { satisfiedBoosts } from './boosts';
 import { majorIds, civilizedIds, barbarianOwner, aiStrategy } from './participants';
-import { cityStateRoster, cityStateYields, envoyBonus, suzerain, hasSuzerainBonus, influenceRate, civicEnvoyRewards } from './city-states';
+import { cityStateRoster, cityStateYields, envoyBonus, suzerain, hasSuzerainBonus, influenceRate, civicEnvoyRewards, activeBuilding } from './city-states';
 export { suzerain, influenceRate } from './city-states';
 import { pantheons, availableBeliefs, beliefs, cityBelief, activeReligiousBuildings, founderYield } from './religion';
 import { currentScientist, scientistCost, scientistById, scientistBuildingBonus, scientistPoints } from './great-people';
@@ -96,6 +96,7 @@ export function cost(s: State, id: string, city?: City) {
   return Math.round(d.cost * speedMultiplier(s));
 }
 export function jobCost(s: State, c: City, j: Job) {
+  if (j.repair) return c.productionCosts![jobKey(j)];
   if (j.item === 'repairDefenses') return cost(s,j.item,c);
   // Old v3 queues were priced at the base cost. Preserve that contract when loading.
   return c.productionCosts?.[jobKey(j)] ?? Math.round(info(j.item).cost * speedMultiplier(s));
@@ -534,46 +535,47 @@ export function resourceVisible(n: Nation, t: Tile) {
     !!d && (!d.unlock || n.tech.includes(d.unlock) || d.type !== "strategic")
   );
 }
+const tileBase = (t: Tile) => t.baseTerrain ?? (t.terrain==='forest' ? 'grass' : t.terrain==='hill' ? 'plain' : t.terrain==='water' ? 'coast' : t.terrain);
+const tileFeature = (t: Tile) => t.feature ?? (t.terrain==='forest' ? 'forest' : '');
 export function tileYield(s: State, t: Tile, o = 0): Yield {
   const y = emptyYield(),
     n = s.nations[o];
-  const base = t.baseTerrain ?? (t.terrain==='forest' ? 'grass' : t.terrain==='hill' ? 'plain' : t.terrain==='water' ? 'coast' : t.terrain);
+  const base = tileBase(t);
   y.food = base==='grass' ? 2 : ['plain','tundra','coast','ocean','lake'].includes(base) ? 1 : 0;
   y.production = base==='plain' ? 1 : 0;
   if (t.hills || t.terrain==='hill') y.production++;
-  if (t.city<0 && (t.feature==='forest' || t.terrain==='forest')) y.production++;
-  if (t.city<0 && (t.feature==='rainforest' || t.feature==='marsh')) y.food++;
+  if (t.city<0 && tileFeature(t)==='forest') y.production++;
+  if (t.city<0 && ['rainforest','marsh'].includes(tileFeature(t))) y.food++;
   if (base==='coast' || base==='lake') y.gold=1;
   if (base==='mountain' || t.terrain==='mountain') return emptyYield();
   if (resourceVisible(n, t)) {
-    if (["wheat", "cattle", "fish"].includes(t.resource)) y.food++;
-    if (["iron", "horses", "coal", "oil"].includes(t.resource)) y.production++;
-    if (["spices", "gems"].includes(t.resource)) y.gold += 2;
+    for (const [key,value] of Object.entries(resources[t.resource].yields)) y[key as keyof Yield] += value;
   }
   if (!t.pillaged && t.city<0) {
     if (t.improvement === "farm") {
       const adjacent = neighbors(s,s.tiles.indexOf(t)).filter(i=>s.tiles[i].improvement==='farm' && !s.tiles[i].pillaged).length;
       y.food += 1 + (n.tech.includes('replaceableparts') ? adjacent : n.civic.includes('feudal') ? Math.floor(adjacent/2) : 0);
     }
-    if (t.improvement==='mine') y.production += 1 + (n.tech.includes('apprentice') ? 1 : 0) + (n.tech.includes('industry') ? 1 : 0);
-    if (t.improvement==='lumber') y.production += 2;
-    if (t.improvement==='oilwell') y.production += 2;
+    if (t.improvement==='mine') y.production += 1 + ['apprentice','industry','smartmaterials'].filter(id=>n.tech.includes(id)).length;
+    if (t.improvement==='lumber') y.production += 2 + ['steel','cybernetics'].filter(id=>n.tech.includes(id)).length;
+    if (t.improvement==='oilwell') y.production += 2 + Number(n.tech.includes('predictivesystems'));
     if (t.improvement && t.improvement===resources[t.resource]?.improvement && resourceVisible(n,t) && resources[t.resource]?.type==='strategic' && n.pantheon==='crafts') {y.production++;y.faith++;}
     if (t.improvement==='fishery' && n.pantheon==='sea') y.production++;
     if (t.improvement==='pasture' && n.pantheon==='sky') y.culture++;
     if (t.improvement==='plantation' && n.pantheon==='festivals') y.culture++;
     if (t.improvement==='quarry' && n.pantheon==='stone') y.faith+=2;
     if (t.improvement === "pasture") {
-      y.food++;
-      y.production++;
+      y.food += ['stirrups','robotics'].filter(id=>n.tech.includes(id)).length;
+      y.production += 1 + Number(n.tech.includes('replaceableparts'));
     }
     if (t.improvement === "plantation") {
-      y.food++;
-      y.gold += 2;
+      y.food += Number(n.civic.includes('feudal')) + Number(n.tech.includes('scientifictheory'));
+      y.gold += 2 + 2*Number(n.civic.includes('globalization'));
     }
     if (t.improvement === "fishery") {
-      y.food += 2;
-      y.gold++;
+      y.food += 1 + Number(n.tech.includes('plastics'));
+      y.gold += 2*Number(n.tech.includes('cartography'));
+      y.production += Number(n.civic.includes('colonialism'));
     }
   }
   if(t.city>=0) {y.food=Math.max(2,y.food);y.production=Math.max(1,y.production);}
@@ -607,7 +609,7 @@ export function baseHousing(s: State, c: City) {
   const tile = s.tiles[c.tile];
   const fresh = tile.river || neighbors(s,c.tile).some(i=>s.tiles[i].baseTerrain==='lake' || s.tiles[i].feature==='oasis');
   const coastal = neighbors(s,c.tile).some(i=>s.tiles[i].terrain==='water' && s.tiles[i].baseTerrain!=='lake');
-  return c.buildings.includes('aqueduct') ? fresh ? 7 : 6 : fresh ? 5 : coastal ? 3 : 2;
+  return activeBuilding(s,c,'aqueduct') ? fresh ? 7 : 6 : fresh ? 5 : coastal ? 3 : 2;
 }
 export function palaceCity(s: State, owner: number) {
   const cities=ownCities(s,owner);
@@ -660,7 +662,7 @@ function localAmenities(s: State, c: City) {
   return (
     (cityBelief(s,c,'zen') && specialtyDistricts(c)>=2 ? 1 : 0) +
     (palaceCity(s,c.owner)?.id === c.id ? 2 : 0) +
-    c.buildings.reduce((v, b) => v + (info(b).amenities ?? 0), 0) +
+    c.buildings.filter(b=>activeBuilding(s,c,b)).reduce((v, b) => v + (info(b).amenities ?? 0), 0) +
     (n.government === "republic" && hasDistrict(c) ? 1 : 0) +
     (n.government === 'digital' ? 2 : 0) +
     (hasPolicy(n,'liberalism') && specialtyDistricts(c)>=2 ? 1 : 0) +
@@ -705,9 +707,8 @@ export function yields(s: State, c: City) {
   for (const b of c.buildings) {
     const d = info(b),
       tile = s.tiles.findIndex((t) => t.territory === c.id && t.district === b);
-    if (tile >= 0 && s.tiles[tile].pillaged) continue;
+    if (!activeBuilding(s,c,b)) continue;
     if (['shrine','temple'].includes(b) && !activeReligiousBuildings(s,c).includes(b)) continue;
-    if (['library','university','lab'].includes(b) && s.tiles.some(t=>t.territory===c.id && t.district==='campus' && t.pillaged)) continue;
     for (const [k, v] of Object.entries(d.yields ?? {})) {
       const campusTile=s.tiles.findIndex(t=>t.territory===c.id && t.district==='campus');
       const rational = k==='science' && ['library','university','lab'].includes(b) && hasPolicy(n,'rational')
@@ -778,7 +779,7 @@ export function yields(s: State, c: City) {
   const housing =
     (cityBelief(s,c,'feed') ? religiousBuildings.length*2 : 0) +
     baseHousing(s, c) + (hasPalace ? 1 : 0) +
-    c.buildings.reduce((v, b) => v + (info(b).housing ?? 0), 0) +
+    c.buildings.filter(b=>activeBuilding(s,c,b)).reduce((v, b) => v + (info(b).housing ?? 0), 0) +
     (n.government==='republic' && hasDistrict(c) ? 1 : 0) +
     (n.government==='monarchy' && c.buildings.includes('walls') ? 1 : 0) +
     (hasPolicy(n,'insulae') && specialtyDistricts(c)>=2 ? 1 : 0) +
@@ -859,6 +860,7 @@ export function buildReason(s: State, c: City, id: string, queued = false) {
     return `需要${[...techs, ...civics].find((t) => t.id === d.unlock)?.name}`;
   if (d.needs && !(info(d.needs)?.kind==='project' ? ownCities(s,c.owner).some(city=>city.buildings.includes(d.needs!)) : c.buildings.includes(d.needs)))
     return `需要${info(d.needs).name}`;
+  if(d.kind==='building' && d.needs && !activeBuilding(s,c,d.needs)) return '先修复所属区域';
   if (d.kind !== "unit" && !d.repeat && c.buildings.includes(id))
     return "已建成";
   if (d.kind==='project' && !d.repeat && ownCities(s,c.owner).some(city=>city.buildings.includes(id))) return '已建成';
@@ -912,7 +914,31 @@ export function enqueue(s: State, c: City, id: string, tile = -1) {
   c.queue.push(job);
   return true;
 }
-export const jobKey = (j: Job) => `${j.item}:${j.tile}`;
+export const jobKey = (j: Job) => `${j.repair ? 'repair:' : ''}${j.item}:${j.tile}`;
+export const jobName = (j: Job) => `${j.repair ? '修复' : ''}${info(j.item).name}`;
+export const districtTile = (s: State, c: City, id: string) => s.tiles.findIndex(t=>t.territory===c.id && t.district===id);
+export const districtRepairCost = (s: State, c: City, id: string) => c.productionCosts?.[`repair:${id}:${districtTile(s,c,id)}`] ?? Math.max(1,Math.ceil(cost(s,id,c)/4));
+export function districtRepairReason(s: State, c: City, id: string, queued=false) {
+  if(!active(s)) return '游戏已结束';
+  const at=districtTile(s,c,id), t=s.tiles[at];
+  if(info(id)?.kind!=='district' || !c.buildings.includes(id) || !t || t.owner!==c.owner) return '需要本城已建区域';
+  if(!t.pillaged) return '区域未受损';
+  if(s.units.some(u=>u.tile===at && atWar(s,c.owner,u.owner))) return '敌军占据区域';
+  if(!queued && c.queue.some(j=>j.repair && j.item===id)) return '已在维修队列中';
+  return '';
+}
+export function enqueueDistrictRepair(s: State, c: City, id: string) {
+  if(c.queue.length>=5 || districtRepairReason(s,c,id)) return false;
+  const j: Job={item:id,tile:districtTile(s,c,id),repair:true};
+  c.productionCosts ??={};c.productionCosts[jobKey(j)] ??=districtRepairCost(s,c,id);
+  c.queue.push(j);
+  return true;
+}
+export function jobReason(s: State, c: City, j: Job) {
+  if(!j.repair) return buildReason(s,c,j.item,true);
+  if(j.tile!==districtTile(s,c,j.item)) return '维修目标已改变';
+  return districtRepairReason(s,c,j.item,true);
+}
 export function productionRate(s: State, c: City, id: string) {
   const n = s.nations[c.owner],
     d = info(id);
@@ -936,7 +962,7 @@ export function productionRate(s: State, c: City, id: string) {
   if (n.civ==='egypt' && ['wonder','district'].includes(d.kind) && s.tiles[c.queue.find(j=>j.item===id)?.tile ?? -1]?.river) bonus+=0.15;
   const csProduction=d.kind==='unit'?envoyBonus(s,c,'military'):['wonder','building','district'].includes(d.kind)?envoyBonus(s,c,'industrial'):0;
   const output=yields(s,c), happy=output.happy;
-  const mult=happy>=5?1.2:happy>=3?1.1:happy<=-5?0.7:happy<=-3?0.8:happy<0?0.9:1;
+  const mult=happiness(happy).yield;
   return (output.production+csProduction*mult)*(1+bonus);
 }
 export function spawnTile(s: State, c: City, d: Item) {
@@ -958,7 +984,8 @@ export function spawnTile(s: State, c: City, d: Item) {
 function complete(s: State, c: City, j: Job) {
   const n = s.nations[c.owner],
     d = info(j.item);
-  if (buildReason(s, c, j.item, true)) return false;
+  if (jobReason(s, c, j)) return false;
+  if(j.repair) {s.tiles[j.tile].pillaged=false;return true;}
   if (["district", "wonder"].includes(d.kind)) {
     const t = s.tiles[j.tile];
     if (!t || t.territory !== c.id || t.district || t.city >= 0) return false;
@@ -1125,9 +1152,10 @@ export function passable(s: State, u: Unit, i: number, ignoreUnits = false) {
   if (
     d.domain !== "sea" &&
     t.terrain === "water" &&
-    !s.nations[u.owner].tech.includes("shipbuilding")
+    !(u.type==='builder' ? s.nations[u.owner].tech.includes('sailing') : s.nations[u.owner].tech.includes('shipbuilding'))
   )
     return false;
+  if(t.baseTerrain==='ocean' && !s.nations[u.owner].tech.includes('cartography')) return false;
   if (!ignoreUnits && s.units.some((v) => v.id !== u.id && v.tile === i))
     return false;
   const c = s.cities.find((c) => c.tile === i);
@@ -1506,35 +1534,38 @@ export function upgrade(s: State, u: Unit) {
   u.fortificationTurns=0;
   return true;
 }
-export function improvementReason(s: State, u: Unit, id: string) {
-  const t = s.tiles[u.tile],
+export function improvementReason(s: State, u: Unit, id: string, at=u.tile) {
+  const t = s.tiles[at],
     n = s.nations[u.owner],
     d = improvements[id];
   if (!active(s) || u.type !== "builder" || !u.moves || !u.charges)
     return "需要有行动力的建造者";
   if (!d) return "未知改良";
-  if (t.owner !== u.owner || t.city >= 0 || t.district)
+  if (!t || t.owner !== u.owner || t.city >= 0 || t.district || s.cities.some(c=>Object.values(c.districtPlacements??{}).includes(at)))
     return "需要己方空闲地块";
   if (t.improvement) return t.pillaged ? "先修复现有改良" : "已有地块改良";
   if (d.unlock && !n.tech.includes(d.unlock)) return "尚未研究对应科技";
-  if (
-    id === "farm" &&
-    !["grass", "plain"].includes(t.terrain) &&
-    !(t.terrain === "desert" && t.river)
-  )
-    return "农场需要草原、平原或临河沙漠";
+  const res=resourceVisible(n,t) ? resources[t.resource] : undefined,
+    base=tileBase(t), feature=tileFeature(t), hills=t.hills || t.terrain==='hill';
+  if(res && res.improvement!==id) return `需要${improvements[res.improvement].name}`;
+  if(id!=='fishery' && ['coast','ocean','lake','mountain'].includes(base)) return '需要陆地';
+  if(id==='farm') {
+    if(['forest','rainforest','marsh'].includes(feature)) return '先清除地貌';
+    if(!['grass','plain'].includes(base) && feature!=='floodplains' && res?.improvement!=='farm') return '农场需要草原、平原或泛滥平原';
+    if(hills && !n.civic.includes('civilengineering') && res?.improvement!=='farm') return '丘陵农场需要土木工程';
+  }
   if (
     id === "mine" &&
-    t.terrain !== "hill" &&
-    !["iron", "coal", "gems"].includes(t.resource)
+    !hills && res?.improvement!=='mine'
   )
     return "需要丘陵或矿产资源";
-  if (id === "pasture" && !["horses", "cattle"].includes(t.resource))
+  if(id==='mine' && ['forest','rainforest'].includes(feature) && res?.improvement!=='mine') return '先清除树林或雨林';
+  if (id === "pasture" && res?.improvement!=='pasture')
     return "需要马或牲畜";
-  if (id === "plantation" && t.resource !== "spices") return "需要香料";
-  if (id === "lumber" && t.terrain !== "forest") return "需要森林";
-  if (id === "fishery" && t.terrain !== "water") return "需要水域";
-  if (id === "oilwell" && t.resource !== "oil") return "需要石油";
+  if (id === "plantation" && res?.improvement!=='plantation') return "需要香料";
+  if (id === "lumber" && feature!=='forest' && !(feature==='rainforest' && n.civic.includes('mercantilism'))) return "需要树林；雨林需重商主义";
+  if (id === "fishery" && (t.terrain !== "water" || res?.improvement!=='fishery')) return "需要水域鱼资源";
+  if (id === "oilwell" && res?.improvement!=='oilwell') return "需要已揭示的陆地石油";
   return "";
 }
 export function improve(s: State, u: Unit, id: string) {
@@ -1549,22 +1580,29 @@ export function improve(s: State, u: Unit, id: string) {
   if (!u.charges) s.units = s.units.filter((v) => v.id !== u.id);
   return true;
 }
-export function repair(s: State, u: Unit) {
+export function repairReason(s: State, u: Unit) {
   const t = s.tiles[u.tile];
-  if (
-    !active(s) ||
-    u.type !== "builder" ||
-    !u.moves ||
-    t.owner !== u.owner ||
-    !t.pillaged
-  )
-    return false;
+  if(!active(s) || u.type!=='builder' || !u.moves) return '需要有行动力的建造者';
+  if(t.owner!==u.owner) return '需要己方地块';
+  if(t.district) return '区域需由城市生产维修';
+  if(!t.improvement || !t.pillaged) return '没有受损的地块改良';
+  return '';
+}
+export function repair(s: State, u: Unit) {
+  if(repairReason(s,u)) return false;
+  const t=s.tiles[u.tile];
   t.pillaged = false;
   u.moves = 0;
   u.acted = true;
   return true;
 }
-export function chop(s: State, u: Unit) {
+export function removeImprovement(s: State, u: Unit) {
+  const t=s.tiles[u.tile];
+  if(!active(s) || u.type!=='builder' || !u.moves || t.owner!==u.owner || !t.improvement || t.city>=0 || t.district) return false;
+  t.improvement='';t.pillaged=false;u.moves=0;u.acted=true;
+  return true;
+}
+export function chopReason(s: State, u: Unit) {
   const t = s.tiles[u.tile],
     c = s.cities.find((c) => c.id === t.territory);
   if (
@@ -1572,16 +1610,24 @@ export function chop(s: State, u: Unit) {
     u.type !== "builder" ||
     !u.moves ||
     !u.charges ||
-    (t.terrain !== "forest" && t.feature !== 'forest') ||
+    tileFeature(t) !== 'forest' ||
     t.owner !== u.owner ||
     !s.nations[u.owner].tech.includes("mining") ||
     !c?.queue.length ||
-    t.district
+    c.owner !== u.owner ||
+    t.district || t.city>=0 || t.improvement || s.cities.some(city=>Object.values(city.districtPlacements??{}).includes(u.tile))
   )
-    return false;
+    return '需要本城空闲树林、有次数的建造者、采矿科技和生产队列';
+  return '';
+}
+export function chop(s: State, u: Unit) {
+  if(chopReason(s,u)) return false;
+  const t=s.tiles[u.tile],c=s.cities.find(c=>c.id===t.territory)!;
   const key = jobKey(c.queue[0]);
   c.invested[key] = (c.invested[key] ?? 0) + 25;
   t.feature = '';
+  t.baseTerrain ??=tileBase(t);
+  t.hills ??=t.terrain==='hill';
   t.terrain = t.hills ? 'hill' : t.baseTerrain==='plain' ? 'plain' : t.baseTerrain==='desert' ? 'desert' : 'grass';
   t.improvement = "";
   u.charges--;
@@ -2043,7 +2089,7 @@ export function nextTurn(s: State) {
       )
         n.strategic[tile.resource] = Math.min(
           100,
-          (n.strategic[tile.resource] ?? 0) + 2 + (n.government==='corporate'?1:0),
+          (n.strategic[tile.resource] ?? 0) + res.perTurn! + (n.government==='corporate'?1:0),
         );
     }
     for (const c of ownCities(s, o)) {
@@ -2065,7 +2111,7 @@ export function nextTurn(s: State) {
       if (c.queue.length) {
         const j = c.queue[0],
           d = info(j.item),
-          reason = buildReason(s, c, j.item, true);
+          reason = jobReason(s, c, j);
         if (reason === "已被其他城市建成" || reason === "已建成") {
           n.gold += (c.invested[jobKey(j)] ?? 0) * 0.5;
           delete c.invested[jobKey(j)];
@@ -2107,11 +2153,10 @@ export function nextTurn(s: State) {
         gov = n.government === "republic" ? 1.15 : 1;
       n.great.science += scientistPoints(s,c);
       n.great.culture +=
-        (c.buildings.includes("theater") ? 1 : 0) * oracle * gov;
+        (activeBuilding(s,c,'theater') ? 1 : 0) * oracle * gov;
       if (!n.religion && !n.prophetRecruited) n.great.prophet +=
-        (c.buildings.includes("holy") ? 1 : 0) +
-        (c.buildings.includes("shrine") ? 1 : 0);
-      if (!n.religion && !n.prophetRecruited) n.great.prophet += n.government==='republic' ? ((c.buildings.includes('holy')?1:0)+(c.buildings.includes('shrine')?1:0))*0.15 : 0;
+        Number(activeBuilding(s,c,'holy')) + Number(activeBuilding(s,c,'shrine'));
+      if (!n.religion && !n.prophetRecruited) n.great.prophet += n.government==='republic' ? (Number(activeBuilding(s,c,'holy'))+Number(activeBuilding(s,c,'shrine')))*0.15 : 0;
     }
     if (hasPolicy(n, "revelation") && !n.religion && !n.prophetRecruited) n.great.prophet += 2;
     if (hasPolicy(n,'inspiration')) n.great.science+=2*(n.government==='republic'?1.15:1);
@@ -2361,7 +2406,11 @@ export function computerTurn(s: State, o: number) {
     if (!n.culture || !(n.researchProgress[n.culture] > 0)) n.culture=aiResearch(s,o,true);
   }
   for (const c of cs) {
-    if (c.queue.length < 1) chooseBuild(s, c);
+    if (c.queue.length < 1) {
+      const damaged=c.buildings.find(id=>!districtRepairReason(s,c,id));
+      if(damaged) enqueueDistrictRepair(s,c,damaged);
+      else chooseBuild(s,c);
+    }
     if (c.walls > 0 && !c.attacked) {
       const target = s.units.find(
         (u) =>
@@ -2458,17 +2507,22 @@ export function computerTurn(s: State, o: number) {
         .filter(
           ({ t, i }) =>
             t.owner === o &&
-            !t.improvement &&
+            (!t.improvement || t.pillaged) &&
             !t.district &&
             t.city < 0 &&
-            !["water", "mountain"].includes(t.terrain) &&
-            passable(s, u, i),
+            passable(s, u, i) &&
+            (t.pillaged && !!t.improvement || Object.keys(improvements).some(id=>!improvementReason(s,u,id,i))),
         )
         .sort(
           (a, b) =>
-            distance(a.t, s.tiles[u.tile]) - distance(b.t, s.tiles[u.tile]),
+            Number(b.t.pillaged)-Number(a.t.pillaged) || distance(a.t, s.tiles[u.tile]) - distance(b.t, s.tiles[u.tile]),
         );
-      if (candidates.length) aiMoveToward(s, u, candidates[0].i);
+      for(const target of candidates) {
+        const route=path(s,u,target.i,(s.width+s.height)*2,true);
+        if(route.length<2) continue;
+        followPath(s,u,route);
+        break;
+      }
       continue;
     }
     if (u.type === 'missionary') {

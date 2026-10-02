@@ -348,4 +348,35 @@ try {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);assert(saveRules.valid(saved));
     console.log(`✓ ${width}px: growth/amenity numbers, repair queue, tooltips, save/reload and no wake movement exploit`);await context.close();
   }
+  for(const width of (process.env.CIV_TEST_WIDTHS?.split(',').map(Number) ?? [375,768,1024,1440])) {
+    const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===375}),page=await context.newPage(),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    const fixture=rules.create({seed:42,size:'compact',speed:'normal',difficulty:'relaxed'});rules.found(fixture,fixture.units.find(u=>u.owner===0&&u.type==='settler'));
+    const city=fixture.cities.find(c=>c.owner===0),ns=rules.neighbors(fixture,city.tile),at=ns[0],district=ns[1];
+    fixture.units=[];city.queue=[];city.buildings.push('campus','library');fixture.nations[0].tech=['writing','mining','construction'];
+    Object.assign(fixture.tiles[at],{terrain:'hill',baseTerrain:'grass',hills:true,feature:'forest',resource:'',district:'',improvement:'',pillaged:false});
+    Object.assign(fixture.tiles[district],{terrain:'grass',baseTerrain:'grass',hills:false,feature:'',resource:'',district:'campus',pillaged:true});
+    const builder=rules.spawn(fixture,0,'builder',at);assert(saveRules.valid(fixture));
+    await page.addInitScript(state=>{if(!localStorage.getItem('aoinatsu:civilization:v3'))localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(state));},fixture);
+    await page.goto(url);const cityTab=page.locator('.civ-nav').getByRole('button',{name:/^城市\s*\d*$/});
+    await cityTab.click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
+    await page.locator('.inspector-tabs').getByRole('button',{name:'建筑',exact:true}).click();
+    const repair=page.getByRole('button',{name:/^修复学院 · \d+生产$/});assert(await repair.isEnabled());await repair.click();await page.waitForTimeout(350);
+    await page.getByRole('button',{name:'区域维修',exact:true}).click();assert.match(await page.getByRole('tooltip').innerText(),/建造者.*25%.*单独受损/s);await page.keyboard.press('Escape');
+    await page.locator('.inspector-tabs').getByRole('button',{name:'生产',exact:true}).click();assert.match(await page.locator('.production-queue').innerText(),/修复学院/);assert.doesNotMatch(await page.locator('.production-queue').innerText(),/已建成/);
+    await page.reload();await cityTab.click();await page.getByRole('button',{name:'管理',exact:true}).first().click();assert.match(await page.locator('.production-queue').innerText(),/修复学院/);
+    let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));assert.equal(saved.cities.find(c=>c.owner===0).queue[0].repair,true);assert(saveRules.valid(saved));
+    await cityTab.click();await page.locator('.unit-roster button').filter({hasText:'建造者'}).first().click();
+    assert(await page.getByRole('button',{name:'砍伐森林',exact:true}).isEnabled(),'wooded hills must share the actual chop gate');
+    const lumber=page.locator('.improvements button').filter({hasText:'伐木场'});assert(await lumber.isEnabled());await lumber.click();await page.waitForTimeout(350);
+    saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));assert.equal(saved.tiles[at].improvement,'lumber');assert.equal(saved.units.find(u=>u.id===builder.id).charges,builder.charges-1);assert(saveRules.valid(saved));
+    const help=page.getByRole('button',{name:'建造者操作',exact:true});await help.scrollIntoViewIfNeeded();
+    if(width===375) {const touch=await context.newCDPSession(page),box=await help.boundingBox(),x=box.x+box.width/2,y=box.y+box.height/2;await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});await page.waitForTimeout(650);await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await touch.detach();} else await help.click();
+    assert.match(await page.getByRole('tooltip').innerText(),/维修和拆除.*不消耗次数/);const tip=await page.getByRole('tooltip').boundingBox();assert(tip.x>=0&&tip.x+tip.width<=width);await page.keyboard.press('Escape');
+    await page.getByRole('button',{name:'下一回合',exact:true}).click();const confirm=page.getByRole('button',{name:'直接结束回合',exact:true});if(await confirm.isVisible())await confirm.click();await page.waitForTimeout(350);
+    await page.getByRole('button',{name:'拆除改良',exact:true}).click();await page.waitForTimeout(350);saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));assert.equal(saved.tiles[at].improvement,'');assert.equal(saved.units.find(u=>u.id===builder.id).charges,builder.charges-1);assert(saveRules.valid(saved));
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
+    if(process.env.CIV_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`builder-district-${width}.png`),fullPage:true});
+    console.log(`✓ ${width}px: district repair queue/reload, wooded-hill builder actions, long-press help and charge-free removal`);await context.close();
+  }
 } finally {await browser.close();}
