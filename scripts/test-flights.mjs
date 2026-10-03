@@ -11,22 +11,36 @@ try {
   if (process.env.FLIGHTS_LIVE === '1') {
     const context = await browser.newContext(), page = await context.newPage(), errors = []
     page.on('pageerror', error => errors.push(error.message))
+    const liveParallel = process.env.FLIGHTS_LIVE_PARALLEL === '1', starts = [], finishes = []
+    page.on('request', request => { if (request.url().includes('content-alkalimatrix-pa.googleapis.com')) starts.push(Date.now()) })
+    page.on('response', response => { if (response.url().includes('content-alkalimatrix-pa.googleapis.com')) finishes.push(Date.now()) })
     await page.goto(url)
     await page.getByLabel('出发城市 / 机场').fill('PVG')
-    await page.getByLabel('目的城市 / 机场').fill('NRT')
+    await page.getByLabel('目的城市 / 机场').fill(liveParallel ? 'NRT, KIX' : 'NRT')
     await page.getByLabel('开始日期').fill('2026-11-10')
     await page.getByLabel('结束日期').fill('2026-11-10')
+    if (liveParallel) {
+      await page.getByLabel('最短请求间隔（秒）').fill('1')
+      await page.getByLabel('最长请求间隔（秒）').fill('1')
+      await page.getByLabel('最多同时查询').fill('2')
+    }
     await page.getByLabel('重新打开时自动刷新上次的查询').uncheck()
     await page.getByRole('button', { name: '扫描 / 刷新全部', exact: true }).click()
-    await page.getByText('扫描完成：1 项成功，0 项失败。', { exact: true }).waitFor({ timeout: 100000 })
+    await page.getByText(`扫描完成：${liveParallel ? 2 : 1} 项成功，0 项失败。`, { exact: true }).waitFor({ timeout: 100000 })
     const cache = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), cacheKey)
     const result = cache['2026-11-10:PVG:NRT']
     assert(result && result.price > 0, JSON.stringify(cache))
     assert.deepEqual(errors, [])
     console.log('LIVE browser fetch + cache passed:', JSON.stringify(result))
+    if (liveParallel) {
+      assert.equal(Object.keys(cache).length, 2)
+      assert.equal(starts.length, 2)
+      assert(starts[1] < finishes[0], 'second real request must start before first completes')
+      console.log('LIVE parallel starts passed:', JSON.stringify({startIntervalMs: starts[1] - starts[0], firstResponseMs: finishes[0] - starts[0], prices: Object.values(cache).map(value => ({to: value.to, price: value.price}))}))
+    }
     await page.reload()
     await page.getByText('本地缓存', { exact: true }).first().waitFor()
-    assert((await page.locator('.price-detail').innerText()).includes(result.price.toLocaleString('zh-CN')), 'formatted cached price should survive reload')
+    assert((await page.locator('.result-list').innerText()).includes(result.price.toLocaleString('zh-CN')), 'formatted cached price should survive reload')
     await page.screenshot({ path: '/tmp/flight-feasibility/flights-live-desktop.png', fullPage: true })
     await page.setViewportSize({ width: 375, height: 900 })
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile overflow')
@@ -64,10 +78,19 @@ try {
     await page.getByText('扫描完成：0 项成功，4 项失败。', { exact: true }).waitFor()
     assert.equal(await page.evaluate(key => localStorage.getItem(key), cacheKey), cacheBefore, 'failure must retain previous successful cache')
     assert.equal(await page.getByText('刷新失败', { exact: true }).count(), 4)
+    mode = 'success'
+    await page.getByRole('button', { name: /继续未完成 \/ 重试失败/ }).click()
+    await page.getByText('扫描完成：4 项成功，0 项失败。', { exact: true }).waitFor()
+    assert.equal(calls.length, 12, 'retry should only dispatch failed entries')
+    await page.getByLabel('只看有报价').check()
+    assert.equal(await page.locator('.result-row').count(), 2)
+    await page.getByLabel('只看有报价').uncheck()
+    await page.getByLabel('排序', { exact: true }).selectOption('date')
+    assert.match(await page.locator('.result-row').first().innerText(), /PVG → KIX/)
     mode = 'wait'
     await page.getByRole('button', { name: '扫描 / 刷新全部', exact: true }).click()
     await page.getByRole('button', { name: '停止', exact: true }).click()
-    await page.getByText('已停止，已完成的结果已保存。', { exact: true }).waitFor()
+    await page.getByText('已停止，已完成的结果已保存，可继续未完成项。', { exact: true }).waitFor()
     mode = 'success'
     await page.getByLabel('重新打开时自动刷新上次的查询').check()
     await page.reload()
@@ -86,5 +109,72 @@ try {
     assert.deepEqual(errors, [])
     console.log('PASS: task combinations, scan progress, empty quotes, persistence, failure retention, stop, reopen refresh, Chinese aliases, mobile layout.')
     await context.close()
+
+    // Hold responses to prove dispatch spacing, overlap, capacity and cancellation.
+    const parallelContext = await browser.newContext(), parallelPage = await parallelContext.newPage()
+    parallelPage.on('pageerror', error => errors.push(error.message))
+    await parallelPage.goto(url)
+    await parallelPage.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), {
+      key: settingsKey, value: { ...settings, minDelay: 0.2, maxDelay: 0.2, concurrency: 2 },
+    })
+    await parallelPage.reload()
+    const held = []
+    await parallelPage.route('https://content-alkalimatrix-pa.googleapis.com/**', async route => {
+      const body = route.request().postData()
+      const payload = JSON.parse(body.slice(body.indexOf('{'), body.lastIndexOf('}') + 1))
+      let release
+      const ready = new Promise(resolve => { release = resolve })
+      const request = { time: Date.now(), task: payload.inputs.slices[0], release, price: 1300 }
+      held.push(request)
+      await ready
+      const reply = structuredClone(fixture)
+      reply.solutionList.minPrice = `CNY ${request.price}`
+      try { await route.fulfill({ status: 200, contentType: 'multipart/mixed', body: `--test\r\n\r\n${JSON.stringify(reply)}\r\n--test--` }) } catch {}
+    })
+    async function dispatched(count) {
+      for (let attempt = 0; held.length < count && attempt < 100; attempt++) await parallelPage.waitForTimeout(50)
+      assert.equal(held.length, count)
+    }
+    await parallelPage.getByRole('button', { name: '扫描 / 刷新全部', exact: true }).click()
+    await dispatched(2)
+    assert(held[1].time - held[0].time >= 150, 'starts should respect the 200 ms interval')
+    assert.equal(await parallelPage.locator('.querying').count(), 2, 'slow requests must overlap')
+    await parallelPage.waitForTimeout(350)
+    assert.equal(held.length, 2, 'do not exceed two concurrent requests')
+    held[1].release(); await dispatched(3)
+    held[2].release(); await dispatched(4)
+    assert(held[3].time - held[2].time >= 150, 'interval also applies when capacity opens')
+    held[3].release(); held[0].price = 990; held[0].release()
+    await parallelPage.getByText('扫描完成：4 项成功，0 项失败。', { exact: true }).waitFor()
+    const parallelCache = await parallelPage.evaluate(key => JSON.parse(localStorage.getItem(key)), cacheKey)
+    assert.equal(Object.keys(parallelCache).length, 4)
+    assert.equal(parallelCache['2026-11-10:PVG:NRT'].price, 990, 'out-of-order response must belong to its own task')
+    const stableCache = JSON.stringify(parallelCache)
+    await parallelPage.getByRole('button', { name: '扫描 / 刷新全部', exact: true }).click()
+    await dispatched(6)
+    await parallelPage.getByRole('button', { name: '停止', exact: true }).click()
+    await parallelPage.getByText('已停止，已完成的结果已保存，可继续未完成项。', { exact: true }).waitFor()
+    held[4].price = 1; held[4].release(); held[5].release()
+    await parallelPage.waitForTimeout(500)
+    assert.equal(held.length, 6, 'stop must cancel queued dispatches')
+    assert.equal(await parallelPage.evaluate(key => localStorage.getItem(key), cacheKey), stableCache, 'aborted responses must not overwrite cache')
+    await parallelPage.getByRole('button', { name: '扫描 / 刷新全部', exact: true }).click()
+    await dispatched(8)
+    held[6].release()
+    await parallelPage.locator('.summary-line strong').filter({ hasText: '1 / 4' }).waitFor()
+    await parallelPage.getByRole('button', { name: '停止', exact: true }).click()
+    await parallelPage.getByText('已停止，已完成的结果已保存，可继续未完成项。', { exact: true }).waitFor()
+    held[7].release()
+    await parallelPage.getByRole('button', { name: /继续未完成 \/ 重试失败（3）/ }).click()
+    await dispatched(10)
+    held[8].release(); held[9].release()
+    await dispatched(11)
+    held[10].release()
+    await parallelPage.getByText('扫描完成：4 项成功，0 项失败。', { exact: true }).waitFor()
+    assert.equal(held.length, 11, 'resume must skip the completed task')
+    await parallelPage.screenshot({path:'/tmp/flight-feasibility/flights-v2.png', fullPage:true, style:'canvas { visibility: hidden !important; }'})
+    assert.deepEqual(errors, [])
+    console.log('PASS: spaced overlapping starts, concurrency cap, out-of-order cache, abort with queued tasks, resume only unfinished, retry, filtering and sorting.')
+    await parallelContext.close()
   }
 } finally { await browser.close() }

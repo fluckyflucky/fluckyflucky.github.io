@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { makeTasks, searchFlight, taskKey, type FlightResult } from '../tools/flights'
+import { makeTasks, searchFlight, taskKey, type FlightTask, type FlightResult } from '../tools/flights'
 
 const SETTINGS = 'aoinatsu:flights:settings:v1'
 const CACHE = 'aoinatsu:flights:cache:v1'
@@ -13,10 +13,11 @@ function futureDate(offset: number) {
 }
 const saved = readStore(SETTINGS)
 const form = reactive({ from: '上海', to: '东京, 大阪', start: futureDate(14), end: futureDate(16),
-  minDelay: 3, maxDelay: 6, autoRefresh: true, ...saved })
+  minDelay: 3, maxDelay: 6, concurrency: 6, autoRefresh: true, ...saved })
 const cache = ref<Record<string, FlightResult>>(readStore(CACHE) ?? {})
 const running = ref(false), completed = ref(0), message = ref(''), storageMessage = ref('')
-const currentKey = ref(''), currentLabel = ref('')
+const active = ref<Set<string>>(new Set()), queued = ref(0)
+const onlyPrices = ref(false), sortBy = ref('price')
 const errors = ref<Record<string, string>>({})
 const refreshed = ref<Set<string>>(new Set())
 let controller: AbortController | null = null
@@ -26,7 +27,10 @@ const plan = computed(() => {
   catch (error) { return { tasks: [], error: (error as Error).message } }
 })
 const rows = computed(() => plan.value.tasks.map(task => ({ task, key: taskKey(task), result: cache.value[taskKey(task)] }))
-  .sort((a, b) => (a.result?.price ?? Infinity) - (b.result?.price ?? Infinity) || a.task.date.localeCompare(b.task.date)))
+  .sort((a, b) => (a.result?.price ?? Infinity) - (b.result?.price ?? Infinity) || a.key.localeCompare(b.key)))
+const visibleRows = computed(() => rows.value.filter(row => !onlyPrices.value || row.result?.price != null)
+  .sort((a, b) => sortBy.value === 'date' ? a.key.localeCompare(b.key) : 0))
+const unfinished = computed(() => plan.value.tasks.filter(task => !refreshed.value.has(taskKey(task))))
 const cheapest = computed(() => rows.value.find(row => row.result?.price != null))
 const progress = computed(() => plan.value.tasks.length ? completed.value / plan.value.tasks.length * 100 : 0)
 function store(key: string, value: unknown) {
@@ -45,44 +49,63 @@ function wait(ms: number, signal: AbortSignal) {
     if (signal.aborted) cancel()
   })
 }
-async function scan() {
+async function scan(resume = false) {
   if (running.value) return
   if (plan.value.error) { message.value = plan.value.error; return }
-  const min = Number(form.minDelay), max = Number(form.maxDelay)
+  const min = Number(form.minDelay), max = Number(form.maxDelay), limit = Number(form.concurrency)
   if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < min) {
     message.value = '请求间隔需为非负秒数，最长间隔不能小于最短间隔。'; return
   }
-  const tasks = [...plan.value.tasks]
+  if (!Number.isInteger(limit) || limit < 1 || limit > 12) {
+    message.value = '同时查询数需为 1 到 12 的整数。'; return
+  }
+  const tasks = [...(resume ? unfinished.value : plan.value.tasks)]
+  if (!tasks.length) return
   store(SETTINGS, form)
-  running.value = true; completed.value = 0; errors.value = {}; refreshed.value = new Set(); message.value = ''
+  if (!resume) { completed.value = 0; errors.value = {}; refreshed.value = new Set() }
+  else {
+    for (const task of tasks) delete errors.value[taskKey(task)]
+    completed.value = refreshed.value.size + Object.keys(errors.value).length
+  }
+  running.value = true; queued.value = tasks.length; message.value = ''
   controller = new AbortController()
   const signal = controller.signal
+  const pending = new Set<Promise<void>>()
+  async function query(task: FlightTask) {
+    const key = taskKey(task)
+    active.value.add(key)
+    try {
+      const result = await searchFlight(task, signal)
+      if (signal.aborted) return
+      cache.value[key] = result
+      refreshed.value.add(key)
+      store(CACHE, cache.value)
+    } catch (error) {
+      if (signal.aborted) return
+      errors.value[key] = error instanceof Error ? error.message : '查询失败，请稍后重试。'
+    } finally {
+      active.value.delete(key)
+      completed.value = refreshed.value.size + Object.keys(errors.value).length
+    }
+  }
   try {
     for (const [index, task] of tasks.entries()) {
+      // Space request starts; a slow response does not delay the next start.
+      if (index > 0) await wait((min + Math.random() * (max - min)) * 1000, signal)
+      while (pending.size >= limit && !signal.aborted) await Promise.race(pending)
       if (signal.aborted) break
-      const key = taskKey(task)
-      currentKey.value = key; currentLabel.value = `${task.date} · ${task.from} → ${task.to}`
-      try {
-        cache.value[key] = await searchFlight(task, signal)
-        refreshed.value.add(key)
-        store(CACHE, cache.value)
-      } catch (error) {
-        if (signal.aborted) break
-        errors.value[key] = error instanceof Error ? error.message : '查询失败，请稍后重试。'
-      }
-      completed.value++
-      currentKey.value = ''
-      if (index < tasks.length - 1) {
-        currentLabel.value = '等待下一项…'
-        await wait((min + Math.random() * (max - min)) * 1000, signal)
-      }
+      queued.value--
+      const request = query(task)
+      pending.add(request)
+      void request.then(() => pending.delete(request))
     }
-    message.value = signal.aborted ? '已停止，已完成的结果已保存。'
-      : `扫描完成：${completed.value - Object.keys(errors.value).length} 项成功，${Object.keys(errors.value).length} 项失败。`
   } catch {
-    message.value = '已停止，已完成的结果已保存。'
+    // Stopping also cancels the interval timer and all outstanding fetches.
   } finally {
-    running.value = false; currentKey.value = ''; currentLabel.value = ''; controller = null
+    await Promise.allSettled(pending)
+    message.value = signal.aborted ? '已停止，已完成的结果已保存，可继续未完成项。'
+      : `扫描完成：${refreshed.value.size} 项成功，${Object.keys(errors.value).length} 项失败。`
+    running.value = false; queued.value = 0; active.value.clear(); controller = null
   }
 }
 function stop() { controller?.abort(new Error('已停止')) }
@@ -101,22 +124,25 @@ onBeforeUnmount(stop)
       <h1>低价机票扫描</h1>
       <p>选几个城市和一段日期，慢慢找一张便宜的机票。</p>
     </div>
-    <form class="scan-form" @submit.prevent="scan">
+    <form class="scan-form" @submit.prevent="scan()">
       <fieldset :disabled="running">
         <div class="form-grid">
           <label>出发城市 / 机场<input v-model="form.from" placeholder="上海, 北京 或 PVG, PEK" required /></label>
           <label>目的城市 / 机场<input v-model="form.to" placeholder="东京, 大阪 或 TYO, KIX" required /></label>
           <label>开始日期<input v-model="form.start" type="date" required /></label>
           <label>结束日期<input v-model="form.end" type="date" :min="form.start" required /></label>
-          <label>最短请求间隔（秒）<input v-model.number="form.minDelay" type="number" min="0" step="1" required /></label>
-          <label>最长请求间隔（秒）<input v-model.number="form.maxDelay" type="number" :min="form.minDelay" step="1" required /></label>
+          <label>最短请求间隔（秒）<input v-model.number="form.minDelay" type="number" min="0" step="0.1" required /></label>
+          <label>最长请求间隔（秒）<input v-model.number="form.maxDelay" type="number" :min="form.minDelay" step="0.1" required /></label>
+          <label>最多同时查询<input v-model.number="form.concurrency" type="number" min="1" max="12" step="1" required /></label>
         </div>
-        <p class="form-hint">多个城市用逗号或空格分隔。支持常见中文城市名，也可直接填三字码；TYO 包含东京各机场。</p>
+        <p class="form-hint">多个城市用逗号或空格分隔。支持常见中文城市名，也可直接填三字码；TYO 包含东京各机场。按间隔发起下一项，无需等待上一项返回。</p>
         <label class="check-label"><input v-model="form.autoRefresh" type="checkbox" /> 重新打开时自动刷新上次的查询</label>
       </fieldset>
       <div class="actions">
         <button type="submit" class="primary" :disabled="running || !!plan.error">{{ running ? '正在扫描…' : '扫描 / 刷新全部' }}</button>
         <button v-if="running" type="button" class="secondary" @click="stop">停止</button>
+        <button v-if="!running && message && unfinished.length && !plan.error" type="button" class="secondary" @click="scan(true)">继续未完成 / 重试失败（{{ unfinished.length }}）</button>
+        <button type="button" class="secondary" :disabled="running" @click="[form.from, form.to] = [form.to, form.from]">交换出发 / 目的地</button>
         <span>{{ plan.tasks.length }} 个日期与城市组合 · 单程 · 1 成人 · 经济舱 · CNY</span>
       </div>
       <p v-if="plan.error" class="error" role="alert">{{ plan.error }}</p>
@@ -124,7 +150,7 @@ onBeforeUnmount(stop)
     </form>
 
     <section class="scan-summary" aria-live="polite">
-      <div class="summary-line"><span>{{ running ? currentLabel : (message || '先显示本地缓存，扫描后逐项更新。') }}</span><strong>{{ completed }} / {{ plan.tasks.length }}</strong></div>
+      <div class="summary-line"><span>{{ running ? `查询中 ${active.size} 项 · 待发 ${queued} 项 · 成功 ${refreshed.size} · 失败 ${Object.keys(errors).length}` : (message || '先显示本地缓存，扫描后逐项更新。') }}</span><strong>{{ completed }} / {{ plan.tasks.length }}</strong></div>
       <progress :value="completed" :max="plan.tasks.length || 1" :aria-label="`扫描进度 ${Math.round(progress)}%`" />
       <div v-if="cheapest" class="best-price">
         <div><span>当前列表最低价{{ running ? ' · 扫描中' : '' }}</span><strong>¥{{ cheapest.result!.price!.toLocaleString('zh-CN') }}</strong></div>
@@ -132,9 +158,14 @@ onBeforeUnmount(stop)
       </div>
     </section>
 
-    <div class="results-header"><h2>价格列表</h2><span>按价格从低到高 · 每项只保存最新结果</span></div>
-    <div v-if="rows.length" class="result-list">
-      <article v-for="row in rows" :key="row.key" class="result-row" :class="{ querying: currentKey === row.key }">
+    <div class="results-header"><h2>价格列表 <small>{{ visibleRows.length }} / {{ rows.length }}</small></h2>
+      <div class="result-controls">
+        <label class="check-label"><input v-model="onlyPrices" type="checkbox" /> 只看有报价</label>
+        <label>排序 <select v-model="sortBy" aria-label="排序"><option value="price">价格从低到高</option><option value="date">日期 / 航线</option></select></label>
+      </div>
+    </div>
+    <div v-if="visibleRows.length" class="result-list">
+      <article v-for="row in visibleRows" :key="row.key" class="result-row" :class="{ querying: active.has(row.key) }">
         <div class="route-detail"><strong>{{ row.task.from }} <span>→</span> {{ row.task.to }}</strong><span>{{ row.task.date }}</span>
           <small v-if="row.result?.flights">{{ row.result.airline }} · {{ row.result.flights }}</small>
           <small v-if="row.result?.departure">{{ formatTime(row.result.departure) }} → {{ formatTime(row.result.arrival) }}</small>
@@ -142,13 +173,14 @@ onBeforeUnmount(stop)
         </div>
         <div class="price-detail">
           <strong>{{ row.result ? (row.result.price === null ? '无报价' : `¥${row.result.price.toLocaleString('zh-CN')}`) : '—' }}</strong>
-          <span>{{ currentKey === row.key ? '查询中…' : errors[row.key] ? '刷新失败' : refreshed.has(row.key) ? '本轮已更新' : row.result ? '本地缓存' : '待查询' }}</span>
+          <span>{{ active.has(row.key) ? '查询中…' : errors[row.key] ? '刷新失败' : refreshed.has(row.key) ? '本轮已更新' : row.result ? '本地缓存' : '待查询' }}</span>
           <small v-if="row.result">{{ new Date(row.result.fetchedAt).toLocaleString('zh-CN') }}</small>
           <a :href="searchLink(row)" target="_blank" rel="noopener noreferrer">去查票 ↗</a>
         </div>
       </article>
     </div>
-    <p class="footer-note">价格来自 ITA Matrix，购买时以航司或售票平台为准。随机间隔逐项查询；保持页面打开即可继续。</p>
+    <p v-if="!visibleRows.length && rows.length" class="form-hint">当前还没有可显示的报价，可取消筛选查看全部查询项。</p>
+    <p class="footer-note">价格来自 ITA Matrix，购买时以航司或售票平台为准。随机间隔发起查询；保持页面打开即可继续。</p>
   </div>
 </template>
 
@@ -163,7 +195,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 label { display: block; font-size: 13px; color: #d6d3d1; }
 input:not([type=checkbox]) { display: block; width: 100%; min-width: 0; box-sizing: border-box; margin-top: 7px; padding: 11px 12px; border: 1px solid #57534e; border-radius: 9px; background: #0c0a09; color: #e7e5e4; color-scheme: dark; font-size: 14px; }
-input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 3px; }
+input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 3px; }
 .form-hint { margin: 13px 0; }
 .check-label { display: flex; align-items: center; gap: 9px; }
 .check-label input { accent-color: #0284c7; width: 16px; height: 16px; }
@@ -187,6 +219,8 @@ progress::-webkit-progress-value { background: #38bdf8; }
 .best-price strong { display: block; font-size: 32px; color: #7dd3fc; font-weight: 700; }
 .best-price p { font-size: 12px; line-height: 1.9; color: #d6d3d1; }
 .results-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.result-controls { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+select { background: #0c0a09; color: #d6d3d1; border: 1px solid #57534e; border-radius: 6px; padding: 6px; font-size: 12px; }
 h2 { font-size: 17px; font-weight: 600; }
 .results-header span { font-size: 11px; color: #a8a29e; }
 .result-list { display: grid; gap: 9px; }
