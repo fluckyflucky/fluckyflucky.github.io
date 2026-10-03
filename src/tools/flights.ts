@@ -18,6 +18,11 @@ const cities: Record<string, string> = {
   札幌: 'SPK', 冲绳: 'OKA', 首尔: 'SEL', 新加坡: 'SIN', 曼谷: 'BKK',
 }
 
+export function cityName(code: string): string {
+  const airports: Record<string, string> = { PVG: '上海浦东', NRT: '东京成田', HND: '东京羽田', KIX: '大阪关西', PEK: '北京首都', PKX: '北京大兴' }
+  return airports[code] ?? Object.entries(cities).find(([, value]) => value === code)?.[0] ?? code
+}
+
 export function parseCities(value: string): string[] {
   const tokens = value.trim().split(/[\s,，、;；]+/).filter(Boolean)
   const codes = tokens.map(token => cities[token] ?? token.toUpperCase())
