@@ -620,4 +620,15 @@ button:focus-visible {
 :global(.civ-game.expanded.research-open .civ-panel-content) {display:flex;overflow:hidden;}
 :global(.civ-game.expanded .research-view) {flex:1;}
 :global(.civ-game.expanded .tree-scroll) {flex:1;min-height:0;height:auto;max-height:none;}
+@media (max-height:500px) {
+  /* Keep the turn controls fixed, but let short screens reach the entire panel. */
+  :global(.civ-game.expanded.research-open .civ-panel-content) {overflow:auto;align-items:flex-start;}
+  :global(.civ-game.expanded .research-view) {flex:0 0 auto;width:100%;}
+  :global(.civ-game.expanded .tree-scroll) {flex:none;height:max(180px,calc(100dvh - 250px));min-height:180px;}
+  :global(.civ-game.expanded .research-list) {flex:none;max-height:max(180px,calc(100dvh - 250px));}
+  .research-summary > div {display:flex;align-items:center;gap:8px;}
+  .summary-name {flex-shrink:0;max-width:45%;}
+  .research-summary small {flex:1;min-width:0;}
+  .unlock-details ul {position:static;width:220px;max-width:100%;}
+}
 </style>

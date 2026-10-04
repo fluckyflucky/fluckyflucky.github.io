@@ -56,6 +56,30 @@ function builderFixture() {
   s.units=[];const t=s.tiles[at];Object.assign(t,{terrain:'grass',baseTerrain:'grass',feature:'',hills:false,resource:'',improvement:'',district:'',pillaged:false});
   const u=w.spawn(s,0,'builder',at);return {s,city,n,t,u,at};
 }
+test('cancelled wonders resume their actual site, locked cost and investment after reload',()=>{
+  const s=setup(),city=own(s),at=w.neighbors(s,city.tile)[0];s.nations[0].tech=['masonry'];
+  Object.assign(s.tiles[at],{terrain:'desert',baseTerrain:'desert',hills:false,feature:'',resource:'',district:'',territory:city.id,owner:0});
+  assert(w.enqueue(s,city,'pyramids',at));const job=city.queue.shift(),key=w.jobKey(job);
+  city.invested[key]=23;city.productionCosts[key]=250;
+  const before=structuredClone(s);assert.deepEqual(w.productionChoiceJob(s,city,'pyramids'),job);assert.deepEqual(s,before);
+  assert(saves.valid(s));const loaded=JSON.parse(JSON.stringify(s)),resumedCity=own(loaded),resumed=w.productionChoiceJob(loaded,resumedCity,'pyramids');
+  assert(w.enqueue(loaded,resumedCity,resumed.item,resumed.tile));assert.equal(w.jobCost(loaded,resumedCity,resumed),250);
+  assert.equal(resumedCity.invested[w.jobKey(resumed)],23);assert.deepEqual(resumedCity.queue,[job]);assert(saves.valid(loaded));
+  resumedCity.queue=[];delete resumedCity.productionCosts;assert.deepEqual(w.productionChoiceJob(loaded,resumedCity,'pyramids'),job,'legacy invested-only saves keep their site');
+});
+test('wonder resume never transfers investment from blocked sites; zero-progress plans and district placement survive',()=>{
+  const s=setup(),city=own(s),[a,b]=w.neighbors(s,city.tile);s.nations[0].tech=['masonry','writing'];
+  for(const at of [a,b]) Object.assign(s.tiles[at],{terrain:'desert',baseTerrain:'desert',hills:false,feature:'',resource:'',district:'',territory:city.id,owner:0});
+  assert(w.enqueue(s,city,'pyramids',a));city.queue=[];
+  assert.equal(w.productionChoiceJob(s,city,'pyramids').tile,a,'a cancelled plan without production still has a saved site');
+  const ka=`pyramids:${a}`,kb=`pyramids:${b}`;city.invested[ka]=23;city.invested[kb]=40;
+  assert.equal(w.productionChoiceJob(s,city,'pyramids').tile,b);
+  s.tiles[b].terrain='grass';assert.equal(w.productionChoiceJob(s,city,'pyramids').tile,a);
+  s.tiles[a].terrain='grass';const before=structuredClone(s);
+  assert.deepEqual(w.productionChoiceJob(s,city,'pyramids'),{item:'pyramids',tile:-1});assert.deepEqual(s,before);
+  assert(w.enqueue(s,city,'campus',a));city.queue=[];assert.deepEqual(w.productionChoiceJob(s,city,'campus'),{item:'campus',tile:a});
+  assert.equal(city.invested[ka],23);assert.equal(city.invested[kb],40);
+});
 test('existing GS resources use independent base yields, reveal gates and 2/3 strategic extraction',()=>{
   const {s,n,t}=builderFixture();
   for(const [id,food,production,science,gold,perTurn] of [

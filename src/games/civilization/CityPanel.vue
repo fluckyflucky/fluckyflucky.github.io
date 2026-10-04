@@ -8,6 +8,7 @@ import {
   tileYield,
   info,
   productionChoiceReason,
+  productionChoiceJob,
   enqueue,
   purchase,
   purchasePrice,
@@ -52,6 +53,7 @@ const output = computed(() => yields(props.state, props.city)),
   done = computed(() => props.city.buildings.map(info)),
   worked = computed(() => workedTiles(props.state, props.city));
 const reasons = computed(() => Object.fromEntries(items.map(d=>[d.id,productionChoiceReason(props.state,props.city,d.id)])));
+const jobs = computed(() => Object.fromEntries(items.map(d=>[d.id,productionChoiceJob(props.state,props.city,d.id)])));
 const choices = computed(() =>
   items
     .filter(
@@ -67,8 +69,8 @@ function build(id: string) {
   if (reasons.value[id]) return;
   const d = info(id);
   if (d.faithBuy) return;
-  const placed=props.city.districtPlacements?.[id];
-  if(placed!==undefined) {
+  const placed=jobs.value[id].tile;
+  if(placed>=0) {
     emit('status',enqueue(props.state,props.city,id,placed)?`继续建造：${d.name}`:'当前不能恢复建设');
     return;
   }
@@ -91,11 +93,8 @@ function buy(id: string) {
       : "资源、金币或出生地块不足",
   );
 }
-function productionJob(id: string) {
-  return {item:id,tile:props.city.districtPlacements?.[id] ?? -1};
-}
 function productionPrice(id: string) {
-  const j=productionJob(id);
+  const j=jobs.value[id];
   return props.city.productionCosts?.[jobKey(j)] ?? cost(props.state,id,props.city);
 }
 function productionTurns(id: string, price: number, invested: number) {
@@ -302,9 +301,9 @@ watch(
             <small v-if="!d.faithBuy"
               >{{ productionPrice(d.id) }} 生产 ·
               {{
-                productionTurns(d.id,productionPrice(d.id),city.invested[jobKey(productionJob(d.id))]??0)
+                productionTurns(d.id,productionPrice(d.id),city.invested[jobKey(jobs[d.id])]??0)
               }}
-              <template v-if="city.invested[jobKey(productionJob(d.id))]"> · 已投入 {{ Math.floor(city.invested[jobKey(productionJob(d.id))]) }}</template></small
+              <template v-if="city.invested[jobKey(jobs[d.id])]"> · 已投入 {{ Math.floor(city.invested[jobKey(jobs[d.id])]) }}</template></small
             ><small v-else>仅信仰购买 · {{ purchasePrice(state, city, d.id) }}</small
             ><small v-if="d.resource"
               >需要 10
@@ -330,9 +329,11 @@ watch(
             >
               {{
                 ["district", "wonder"].includes(d.kind)
-                  ? city.districtPlacements?.[d.id]!==undefined ? '继续建设' : "选择地块"
+                  ? jobs[d.id].tile>=0 ? '继续建设' : "选择地块"
                   : "加入队列"
               }}</button
+            ><button v-if="d.kind === 'wonder' && jobs[d.id].tile >= 0"
+              :aria-label="`定位${d.name}建设地块`" @click="emit('focus',jobs[d.id].tile)">原地块</button
             ><button
               v-if="d.kind === 'building' || d.kind === 'unit'"
               :disabled="

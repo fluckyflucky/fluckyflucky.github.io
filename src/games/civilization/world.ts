@@ -923,6 +923,23 @@ export function productionChoiceReason(s: State, c: City, id: string) {
     return '本城没有符合条件的建设地块';
   return '';
 }
+export function productionChoiceJob(s: State, c: City, id: string): Job {
+  const placed = c.districtPlacements?.[id];
+  if (placed !== undefined) return {item: id, tile: placed};
+  if (info(id).kind === 'wonder') {
+    const queued = c.queue.find(job => job.item === id);
+    if (queued) return queued;
+    // Older saves can contain investments on multiple sites. Resume the most
+    // advanced legal site without combining or moving any of those investments.
+    const sites = [...new Set([...Object.keys(c.invested), ...Object.keys(c.productionCosts ?? {})])]
+      .filter(key => key.startsWith(`${id}:`))
+      .map(key => ({item: id, tile: Number(key.slice(id.length + 1))}))
+      .filter(job => !placementReason(s, c, id, job.tile))
+      .sort((a, b) => (c.invested[jobKey(b)] ?? 0) - (c.invested[jobKey(a)] ?? 0) || a.tile - b.tile);
+    if (sites.length) return sites[0];
+  }
+  return {item: id, tile: -1};
+}
 export const jobKey = (j: Job) => `${j.repair ? 'repair:' : ''}${j.item}:${j.tile}`;
 export const jobName = (j: Job) => `${j.repair ? '修复' : ''}${info(j.item).name}`;
 export const districtTile = (s: State, c: City, id: string) => s.tiles.findIndex(t=>t.territory===c.id && t.district===id);

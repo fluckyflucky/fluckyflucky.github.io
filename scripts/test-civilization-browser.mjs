@@ -255,6 +255,55 @@ try {
     console.log(`✓ ${width}px: founding, full trees, government/policies, turn, autosave/reload, victory progress and non-destructive v2 migration`);
     await context.close();
   }
+  for(const [width,height] of [[667,375],[844,390]]) {
+    const context=await browser.newContext({viewport:{width,height},hasTouch:true}),page=await context.newPage(),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));await page.goto(url);
+    await page.getByRole('button',{name:'建立新世界'}).click();await page.getByRole('button',{name:'建立城市',exact:true}).click();
+    await page.getByRole('button',{name:'展开游戏',exact:true}).click();
+    const hit=locator=>locator.evaluate(e=>{
+      const b=e.getBoundingClientRect();return b.y>=0&&b.bottom<=innerHeight&&e.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2));
+    });
+    for(const tab of ['科技','市政']) {
+      await page.getByRole('button',{name:tab,exact:true}).click();
+      assert((await page.locator('.tree-scroll').boundingBox()).height>=180,'landscape tree must not collapse');
+      const node=page.locator('.research-node').first();await node.scrollIntoViewIfNeeded();assert(await hit(node),'landscape nodes are reachable above the turn bar');await node.tap();
+      const next=page.getByRole('button',{name:'下一回合',exact:true});assert(await hit(next),'scrolling the panel must leave the turn action visible');
+      await page.locator('.unlock-details summary').click();const link=page.locator('.unlock-details a').first();await link.scrollIntoViewIfNeeded();assert(await hit(link),'landscape encyclopedia links remain reachable');await page.locator('.unlock-details summary').click();
+      await page.getByRole('button',{name:'列表视图',exact:true}).click();assert((await page.locator('.research-list').boundingBox()).height>=180);
+      const last=page.locator('.research-list button').last();await last.scrollIntoViewIfNeeded();assert(await hit(last),'the entire landscape list can scroll');await last.tap();assert.match(await page.locator('.research-summary').innerText(),/未来/);
+      if(process.env.CIV_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`research-landscape-list-${tab}-${width}.png`)});
+      await page.getByRole('button',{name:'连线视图',exact:true}).click();await page.getByRole('button',{name:'当前研究',exact:true}).click();
+      await node.scrollIntoViewIfNeeded();assert(await hit(node));
+      if(process.env.CIV_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`research-landscape-${tab}-${width}.png`)});
+    }
+    await page.setViewportSize({width:375,height:667});await page.getByRole('button',{name:'当前研究',exact:true}).click();
+    assert((await page.locator('.tree-scroll').boundingBox()).height>=220,'rotation restores the normal portrait layout');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
+    console.log(`✓ ${width}×${height}: landscape tech/civic trees, full lists, encyclopedia, fixed turn controls and portrait rotation`);await context.close();
+  }
+  for(const width of [375,1440]) {
+    const fixture=rules.create({seed:42,size:'compact',speed:'normal'});rules.found(fixture,fixture.units.find(u=>u.owner===0&&u.type==='settler'));
+    const city=fixture.cities.find(c=>c.owner===0),at=rules.neighbors(fixture,city.tile)[0];fixture.nations[0].tech.push('masonry');
+    Object.assign(fixture.tiles[at],{terrain:'desert',baseTerrain:'desert',hills:false,feature:'',resource:'',district:'',territory:city.id,owner:0});
+    assert(rules.enqueue(fixture,city,'pyramids',at));const job=city.queue.shift(),key=rules.jobKey(job);city.invested[key]=23;
+    const lockedCost=city.productionCosts[key],turns=Math.ceil((lockedCost-23)/rules.productionRate(fixture,city,'pyramids'));assert(saveRules.valid(fixture));
+    const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===375});
+    await context.addInitScript(state=>{if(!localStorage.getItem('aoinatsu:civilization:v3'))localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(state));},fixture);
+    const page=await context.newPage();await page.goto(url);await page.getByRole('button',{name:'城市',exact:true}).click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
+    const card=page.locator('.build-catalog article').filter({has:page.getByText('金字塔',{exact:true})});
+    assert.match(await card.innerText(),new RegExp(`${lockedCost} 生产.*${turns} 回合.*已投入 23`));
+    await card.getByRole('button',{name:'定位金字塔建设地块',exact:true}).click();
+    assert.equal(await page.locator(`[data-tile="${at}"] .selection-ring`).count(),1);
+    await page.getByRole('button',{name:'城市',exact:true}).click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
+    await card.getByRole('button',{name:'继续建设',exact:true}).click();await page.waitForTimeout(350);
+    let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3'))),loadedCity=saved.cities.find(c=>c.owner===0);
+    assert.deepEqual(loadedCity.queue,[job]);assert.equal(loadedCity.invested[key],23);assert.equal(loadedCity.productionCosts[key],lockedCost);assert(saveRules.valid(saved));
+    await page.reload();await page.getByRole('button',{name:'城市',exact:true}).click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
+    await page.getByRole('button',{name:'移出队列金字塔',exact:true}).click();assert.match(await card.innerText(),/已投入 23/);await card.getByRole('button',{name:'继续建设',exact:true}).click();await page.waitForTimeout(350);
+    saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));loadedCity=saved.cities.find(c=>c.owner===0);assert.deepEqual(loadedCity.queue,[job]);assert.equal(loadedCity.invested[key],23);
+    if(process.env.CIV_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.CIV_SCREENSHOT_DIR,`wonder-resume-${width}.png`),fullPage:true});
+    console.log(`✓ ${width}px: cancelled wonder investment, remaining turns, original site, actual resume and reload`);await context.close();
+  }
   for(const width of [375,1440]) for(const aiCount of [1,5]) {
     const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===375}),page=await context.newPage();
     await page.goto(url);
