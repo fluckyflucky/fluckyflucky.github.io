@@ -286,7 +286,7 @@ export function create(options: Partial<Options> = {}): State {
     if (owner) {
       n.color = colors[owner];
       n.aiStrategy = (['expansion','science','culture','military'] as const)[Math.floor(random(s) * 4)];
-    }
+    } else n.research = '';
     n.tourismAgainst = Array(majors).fill(0);
     return n;
   });
@@ -1115,10 +1115,19 @@ export function advance(s: State, o: number, civic: boolean, amount: number) {
   const n = s.nations[o],
     key = civic ? "culture" : "research",
     done = civic ? n.civic : n.tech,
-    list = civic ? civics : techs;
+    list = civic ? civics : techs,
+    yieldKey = civic ? 'culture' : 'science';
+  n.researchOverflow ??= {science:0,culture:0};
+  amount += n.researchOverflow[yieldKey];
+  n.researchOverflow[yieldKey] = 0;
   for (let limit = 0; limit < list.length; limit++) {
-    if (!researchAvailable(n, n[key], civic))
-      n[key] = o ? aiResearch(s, o, civic) : list.find((d) => researchAvailable(n, d.id, civic))?.id ?? "";
+    if (!researchAvailable(n, n[key], civic)) {
+      n[key] = o ? aiResearch(s, o, civic) : '';
+      if (!n[key]) {
+        if (list.some(d => researchAvailable(n,d.id,civic))) n.researchOverflow[yieldKey] = amount;
+        return;
+      }
+    }
     const d = list.find((d) => d.id === n[key]);
     if (!d) return;
     n.researchProgress[d.id] = (n.researchProgress[d.id] ?? 0) + amount;
@@ -1133,12 +1142,16 @@ export function advance(s: State, o: number, civic: boolean, amount: number) {
       n.policies=n.policies.map(id=>id && policyAvailable(n,id)?id:null);
       n.envoys += civicEnvoyRewards[d.sourceId ?? ''] ?? 0;
       n.policyFree = true;
-      if (d.id === "laws" && !n.policies.some(Boolean))
+      if (o && d.id === "laws" && !n.policies.some(Boolean))
         n.policies = ["discipline", "planning"];
     }
     if (o === 0)
       event(s, `${civic ? "市政" : "科技"}完成：${d.name}`, "research");
-    n[key] = o ? aiResearch(s, o, civic) : list.find((d) => researchAvailable(n, d.id, civic))?.id ?? "";
+    n[key] = o ? aiResearch(s, o, civic) : '';
+    if (!o) {
+      if (list.some(d => researchAvailable(n,d.id,civic))) n.researchOverflow[yieldKey] = amount;
+      return;
+    }
   }
 }
 export function configureGovernment(
@@ -2081,9 +2094,13 @@ export function checkVictory(s: State) {
   }
 }
 export function pending(s: State) {
+  const n = s.nations[0], g = governments.find(g=>g.id===n.government)!, cities = ownCities(s);
   return {
-    cities: ownCities(s).filter((c) => !c.queue.length),
+    cities: cities.filter((c) => !c.queue.length),
     units: s.units.filter((u) => u.owner === 0 && u.moves > 0 && !u.fortified),
+    research: cities.length > 0 && !researchAvailable(n,n.research) && techs.some(r=>researchAvailable(n,r.id)),
+    civic: cities.length > 0 && !researchAvailable(n,n.culture,true) && civics.some(r=>researchAvailable(n,r.id,true)),
+    policies: g.slots.some((slot,i)=>!n.policies[i] && policies.some(p=>policyAvailable(n,p[0]) && !n.policies.includes(p[0]) && (slot==='wild' || p[3]===slot))),
   };
 }
 

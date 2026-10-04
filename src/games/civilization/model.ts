@@ -80,6 +80,7 @@ export interface Nation {
   research: string;
   culture: string;
   researchProgress: Record<string, number>;
+  researchOverflow?: { science: number; culture: number };
   boosts: string[];
   policies: (string | null)[];
   government: string;

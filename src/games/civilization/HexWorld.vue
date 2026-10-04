@@ -233,7 +233,7 @@ function keyboard(e: KeyboardEvent) {
     </div>
     <div v-if="lens" class="yield-legend">
       <span><CivIcon name="food" :size="16" />粮食</span><span><CivIcon name="production" :size="16" />生产力</span><span><CivIcon name="gold" :size="16" />金币</span>
-      <CivHelp label="地块产出说明" text="旧版的 2 / 0 / 0 表示粮食 2、生产力 0、金币 0，不是坐标。现在用图标配数字表示。地块被市民工作后才计入城市产出；建筑、政策等加成看城市面板。城市名后的数字是人口。" />
+      <CivHelp label="地块产出说明" text="图标旁的数字是粮食、生产力和金币。市民工作的地块才计入城市产出。城市名后的数字是人口。" />
     </div>
     <div
       ref="scroll"

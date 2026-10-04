@@ -66,7 +66,7 @@ function tree(kind: 'tech' | 'civic'): Research[] {
   return records.map(r=>({
     id:researchId(r.id), sourceId:r.id, source:r.source, name:r.name, cost:r.cost,
     requires:r.requires.map(researchId), boost:r.boost, era:r.era, column:column(r.id),
-    effect:r.unlocks.map(u=>u.name).join('、') || '查看百科中的规则效果',
+    effect:r.unlocks.map(u=>u.name).join('、'),
     unlocks:r.unlocks.map(u=>({id:u.id,name:u.name,source:u.source})),
   })).sort((a,b)=>a.column-b.column || a.era-b.era || a.id.localeCompare(b.id));
 }

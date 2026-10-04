@@ -124,11 +124,15 @@ const followerBelief=ref(''),founderBelief=ref('');
 const setupCivilization = computed(() => civilizations.find(c=>c.id===options.value.civilization));
 const expanded = ref(false);
 let previousOverflow = "";
-watch(expanded, (value) => {
+watch(expanded, async (value) => {
   if (value) {
     previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
   } else document.body.style.overflow = previousOverflow;
+  // Teleporting the workspace resets the map element's scroll position.
+  await nextTick();
+  focus.value = selection.value;
+  focusTick.value++;
 });
 const dialogs = computed(
     () => setup.value || turnConfirm.value || restoreConfirm.value,
@@ -173,6 +177,7 @@ const dialogs = computed(
   currentCivic = computed(() =>
     civics.find((t) => t.id === nation.value.culture),
   ),
+  hasTodo = computed(() => todo.value.cities.length || todo.value.units.length || todo.value.research || todo.value.civic || todo.value.policies),
   draftGov = computed(() =>
     governments.find((g) => g.id === governmentDraft.value)!,
   ),
@@ -345,12 +350,20 @@ function place(c: City, item: string) {
   focusTick.value++;
   tell(`${info(item).name}：选择高亮地块，数字表示邻接加成`);
 }
+function handleTodo() {
+  if (todo.value.cities.length) locate(todo.value.cities[0].tile);
+  else if (todo.value.research) tab.value='科技';
+  else if (todo.value.civic) tab.value='市政';
+  else if (todo.value.policies) tab.value='政体';
+  else if (todo.value.units.length) locateUnit(todo.value.units[0].id);
+}
+const panelPending = (label: string) => label === '科技' ? todo.value.research : label === '市政' ? todo.value.civic : label === '政体' ? todo.value.policies : false;
 async function endTurn(force = false) {
   if (turnBusy.value || !active(state.value)) return;
   if (
     !force &&
     warnUnfinished.value &&
-    (todo.value.cities.length || todo.value.units.length)
+    hasTodo.value
   ) {
     turnConfirm.value = true;
     return;
@@ -392,7 +405,7 @@ function startGame() {
     state.value.units.find((u) => u.owner === 0 && u.type === "settler")!.tile,
   );
   inspect.value = "单位";
-  notice.value = "先建立城市，再安排研究和生产。";
+  notice.value = '';
   persist();
 }
 function newSetup() {
@@ -593,7 +606,7 @@ const tabs = [
             :key="label"
             :class="{ selected: tab === label }"
             :aria-label="label === '城市' ? label : undefined"
-            :aria-description="label === '城市' && todo.cities.length ? `${todo.cities.length}座城市待安排生产` : undefined"
+            :aria-description="label === '城市' && todo.cities.length ? `${todo.cities.length}座城市待安排生产` : panelPending(label) ? '待选择' : undefined"
             :aria-pressed="tab === label"
             @click="tab = label"
           >
@@ -603,6 +616,7 @@ const tabs = [
               class="badge"
               >{{ todo.cities.length }}</span
             >
+            <span v-else-if="panelPending(label)" class="pending-dot" aria-hidden="true" />
           </button>
         </nav>
         <div v-if="state.winner" class="victory-banner">
@@ -633,7 +647,7 @@ const tabs = [
                 <CivIcon name="science" />
                 <div>
                   <small>科技</small
-                  ><strong>{{ currentTech?.name ?? "研究完成" }}</strong>
+                  ><strong>{{ currentTech?.name ?? (nation.tech.length < techs.length ? "选择科技" : "研究完成") }}</strong>
                 </div>
                 <span
                   >{{
@@ -645,7 +659,7 @@ const tabs = [
                 <CivIcon name="culture" />
                 <div>
                   <small>市政</small
-                  ><strong>{{ currentCivic?.name ?? "研究完成" }}</strong>
+                  ><strong>{{ currentCivic?.name ?? (todo.civic ? "选择市政" : "研究完成") }}</strong>
                 </div>
                 <span
                   >{{
@@ -675,6 +689,9 @@ const tabs = [
               <div>
                 <h3>待办</h3>
                 <div class="todo-list">
+                  <button v-if="todo.research" @click="tab = '科技'"><CivIcon name="science" :size="16" />选择科技</button>
+                  <button v-if="todo.civic" @click="tab = '市政'"><CivIcon name="culture" :size="16" />选择市政</button>
+                  <button v-if="todo.policies" @click="tab = '政体'"><CivIcon name="scroll" :size="16" />选择政策</button>
                   <button
                     v-if="todo.cities.length"
                     @click="locate(todo.cities[0].tile)"
@@ -691,7 +708,7 @@ const tabs = [
                       todo.units.length
                     }}
                     单位可行动</button
-                  ><span v-if="!todo.cities.length && !todo.units.length"
+                  ><span v-if="!hasTodo"
                     >已准备进入下一回合</span
                   >
                 </div>
@@ -847,7 +864,7 @@ const tabs = [
             @choose="
               (id) => {
                 if (chooseResearch(state, id, tab === '市政')) {
-                  tell('研究方向已切换，原进度保留');
+                  notice = '';
                 }
               }
             "
@@ -855,7 +872,6 @@ const tabs = [
           <template v-else-if="tab === '城市'"
             ><div class="page-heading">
               <div>
-                <p class="kicker">EMPIRE</p>
                 <h2>城市总览</h2>
               </div>
               <span
@@ -954,7 +970,6 @@ const tabs = [
           <template v-else-if="tab === '政体'"
             ><div class="page-heading">
               <div>
-                <p class="kicker">GOVERNMENT</p>
                 <h2>政体与政策</h2>
               </div>
             </div>
@@ -980,7 +995,7 @@ const tabs = [
               </div>
             </div>
             <div class="policy-actions">
-              <button class="primary" @click="applyPolicies" :disabled="!active(state)">应用</button>
+              <button class="primary" @click="applyPolicies" :disabled="!active(state) || !nation.civic.includes(draftGov.unlock) || (!nation.policyFree && nation.gold < 40)">应用</button>
               <span>{{ nation.policyFree ? '免费' : '40 金币' }}</span>
             </div>
             <details class="government-reference">
@@ -1011,7 +1026,6 @@ const tabs = [
           <template v-else-if="tab === '外交'"
             ><div class="page-heading">
               <div>
-                <p class="kicker">DIPLOMACY</p>
                 <h2>文明与城邦</h2>
               </div>
               <span>使者 {{ nation.envoys }} · 影响力 {{ (nation.influence ?? 0).toFixed(0) }} / {{ Math.ceil(influenceRate(nation).threshold * (state.options.speed==='normal'?1:2/3)) }}</span>
@@ -1144,7 +1158,6 @@ const tabs = [
           <template v-else-if="tab === '信仰'"
             ><div class="page-heading">
               <div>
-                <p class="kicker">FAITH & GREAT PEOPLE</p>
                 <h2>信仰与伟人</h2>
               </div>
               <span
@@ -1272,7 +1285,6 @@ const tabs = [
           <template v-else-if="tab === '进度'"
             ><div class="page-heading">
               <div>
-                <p class="kicker">VICTORY</p>
                 <h2>胜利进度</h2>
               </div>
               <span>第 {{ turnLimit(state) }} 回合结算分数胜利</span>
@@ -1344,7 +1356,6 @@ const tabs = [
           <template v-else-if="tab === '存档'"
             ><div class="page-heading">
               <div>
-                <p class="kicker">LOCAL SAVE</p>
                 <h2>存档与设置</h2>
               </div>
               <span>{{ savedMessage }}</span>
@@ -1380,7 +1391,6 @@ const tabs = [
               </article>
               <article>
                 <div class="card-title"><CivIcon name="globe" :size="24" /><h3>新游戏</h3><CivHelp label="新游戏设置" text="选择文明、地图、难度、速度和随机种子。建立新世界会替换自动存档，开始前会要求确认。" /></div>
-                <p>重新开始前，记得备份当前进度。</p>
                 <button class="primary" @click="newSetup">新游戏</button>
               </article>
             </div>
@@ -1388,7 +1398,7 @@ const tabs = [
               ><input
                 v-model="warnUnfinished"
                 type="checkbox"
-              />结束回合前提醒未行动单位与空闲城市</label
+              />结束回合前提醒待办事项</label
             >
             <p class="hint">
               本局：{{
@@ -1409,10 +1419,8 @@ const tabs = [
           <template v-else
             ><div class="page-heading">
               <div>
-                <p class="kicker">FIELD GUIDE</p>
                 <h2>怎么玩</h2>
               </div>
-              <span>无需账户 · 无联网对局</span>
             </div>
             <div class="guide-grid">
               <article>
@@ -1463,12 +1471,12 @@ const tabs = [
                 </p>
               </article>
               <article>
-                <h3>06 · 存档与边界</h3>
+                <h3>06 · 存档</h3>
                 <p>
                   进度保存在浏览器中，可在「存档」导出备份、保存快照或导入旧存档。
                 </p>
                 <p>
-                  本版按文明 6《风云变幻》对齐。科技与市政数据已补齐，部分玩法仍未实现，尚未通过90%对齐验收。
+                  规则参考《风云变幻》。总督、世界议会等系统未实现；具体差异见各面板的问号说明。
                 </p>
               </article>
             </div></template
@@ -1505,7 +1513,6 @@ const tabs = [
             ><div class="setup-heading">
               <CivIcon name="compass" :size="44" />
               <div>
-                <p class="kicker">A NEW WORLD</p>
                 <h2 id="setup-title">新游戏</h2>
               </div>
               <button
@@ -1526,7 +1533,7 @@ const tabs = [
                 <option v-for="count in 5" :key="count" :value="count">{{ count }} 个对手</option>
               </select></label>
               <label>城邦数量<select v-model.number="options.cityStateCount" aria-label="城邦数量">
-                <option v-for="count in [2,3,4,5,6]" :key="count" :value="count">{{ count }} 座{{ count===2?' · 政治哲学鼓舞不可达':'' }}</option>
+                <option v-for="count in [2,3,4,5,6]" :key="count" :value="count">{{ count }} 座</option>
               </select></label>
               <label
                 >地图规模<select v-model="options.size">
@@ -1553,13 +1560,13 @@ const tabs = [
                 >随机种子<input
                   v-model="seedInput"
                   maxlength="80"
-                  placeholder="留空随机；相同设置和种子复现开局"
+                  placeholder="留空随机"
               /></label>
             </div>
             <div class="setup-civilization-info">
               <CivIcon :name="setupCivilization?.id==='china'?'wonder':setupCivilization?.id==='rome'?'shield':setupCivilization?.id==='egypt'?'water':'compass'" :size="24" />
               <span>{{ setupCivilization ? setupCivilization.ability : '从华夏、罗马、埃及中随机选择' }}</span>
-              <CivHelp label="开局设置说明" :text="(setupCivilization?.description ?? '随机文明在建立新世界时决定，固定设置和种子可以复现。') + '\n当前仅有三种文明；多个AI允许重复，以不同名称、颜色区分。4–5个AI时地图自动扩大。人数只能在新游戏中调整，旧存档不重排玩家。'" />
+              <CivHelp label="开局设置说明" :text="(setupCivilization?.description ?? '建立新世界时随机选择文明。') + '\n相同设置和种子可复现开局。文明可重复，4–5个AI时地图扩大。政治哲学的鼓舞需要遇见3个城邦。'" />
             </div>
             <p v-if="initial.error && !started" class="warning">
               {{ initial.error }}
@@ -1581,6 +1588,9 @@ const tabs = [
             <p v-if="todo.units.length">
               还有 {{ todo.units.length }} 个单位可以行动。
             </p>
+            <p v-if="todo.research">请选择科技。</p>
+            <p v-if="todo.civic">请选择市政。</p>
+            <p v-if="todo.policies">有空闲政策槽。</p>
             <label class="setting-row"
               ><input v-model="warnUnfinished" type="checkbox" />继续提醒</label
             >
@@ -1588,8 +1598,7 @@ const tabs = [
               <button
                 @click="
                   turnConfirm = false;
-                  if (todo.cities.length) locate(todo.cities[0].tile);
-                  else if (todo.units.length) locateUnit(todo.units[0].id);
+                  handleTodo();
                 "
               >
                 去处理</button

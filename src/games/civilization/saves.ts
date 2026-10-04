@@ -253,6 +253,7 @@ export function valid(value: unknown): value is State {
           text(n.culture) &&
           (!n.culture || civicIds.has(n.culture)) &&
           record(n.researchProgress) &&
+          (n.researchOverflow === undefined || record(n.researchOverflow) && finite(n.researchOverflow.science) && finite(n.researchOverflow.culture)) &&
           Object.entries(n.researchProgress).every(
             ([k, v]) => researchIds.has(k) && finite(v),
           ) &&

@@ -6,6 +6,8 @@ import { join } from 'node:path';
 import { moduleUrl } from './civilization-test-module.mjs';
 const rules=await import(moduleUrl('src/games/civilization/world.ts'));
 const saveRules=await import(moduleUrl('src/games/civilization/saves.ts'));
+const catalog=await import(moduleUrl('src/games/civilization/catalog.ts'));
+const treeLayout=await import(moduleUrl('src/games/civilization/research-layout.ts'));
 const url=process.env.CIV_TEST_URL ?? 'http://127.0.0.1:4181/#/games/civilization';
 const executablePath=existsSync(chromium.executablePath()) ? chromium.executablePath() : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const browser=await chromium.launch({headless:true,executablePath});
@@ -15,8 +17,23 @@ try {
     page.on('pageerror',e=>errors.push(e.message));
     await page.goto(url);
     await page.getByRole('button',{name:'建立新世界'}).click();
+    await page.getByRole('button',{name:'政体',exact:true}).click();
+    assert(await page.getByRole('button',{name:'应用',exact:true}).isDisabled(),'policy application is unavailable before Code of Laws');
+    await page.getByRole('button',{name:'地图',exact:true}).click();
     await page.getByRole('button',{name:'建立城市',exact:true}).click();
     assert.equal(await page.locator('.production-queue li').count(),0,'new human city must not silently queue a monument');
+    const selectedOnMap=()=>page.locator('.selection-ring').evaluate(e=>{
+      const tile=e.getBoundingClientRect(),map=e.closest('.world-scroll').getBoundingClientRect();
+      return tile.x>=map.x && tile.right<=map.right && tile.y>=map.y && tile.bottom<=map.bottom;
+    });
+    await page.getByRole('button',{name:'展开游戏',exact:true}).click();
+    await page.waitForFunction(()=>{
+      const e=document.querySelector('.selection-ring'),tile=e.getBoundingClientRect(),map=e.closest('.world-scroll').getBoundingClientRect();
+      return tile.x>=map.x && tile.right<=map.right && tile.y>=map.y && tile.bottom<=map.bottom;
+    });
+    assert(await selectedOnMap(),'expanded opening must show the capital, not an empty corner of fog');
+    await page.getByRole('button',{name:'收起游戏',exact:true}).click();
+    assert(await selectedOnMap(),'collapsing the game must retain a visible selection');
     const warriorCard=page.locator('.build-catalog article').filter({has:page.locator('.build-heading strong').getByText('勇士',{exact:true})});
     await warriorCard.getByRole('button',{name:'加入队列',exact:true}).click();
     assert.equal(await page.locator('.production-queue li').count(),1);
@@ -29,7 +46,10 @@ try {
     await page.locator('.research-node').first().waitFor();
     assert.equal(await page.locator('.research-node').count(),77);
     assert.equal(await page.locator('.era-column').count(),9,'each era gets one truthful heading');
-    assert(await page.locator('.research-summary button').filter({hasText:'研究中'}).isDisabled());
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).nations[0].research),'');
+    assert(await page.getByRole('button',{name:'开始研究',exact:true}).isEnabled());
+    assert.equal(await page.locator('.connections path.connection').count(),treeLayout.researchLayout(catalog.techs).connections.length);
+    assert.equal(await page.locator('.research-node').evaluateAll(nodes=>nodes.some(n=>n.scrollHeight>n.clientHeight)),false,'compact cards must not clip their own content');
     await page.getByLabel('搜索科技').fill('高级人工智能');
     const futureNode=page.locator('[data-research="advancedai"]');
     await futureNode.waitFor();
@@ -43,11 +63,14 @@ try {
     });
     await page.getByRole('button',{name:'当前研究',exact:true}).click();
     await page.getByLabel('搜索科技').fill('采矿业');
+    assert(await page.locator('.connection.focused').count()>0);
+    assert.equal(await page.locator('.connection.focused').evaluateAll(edges=>edges.every(e=>e.dataset.from==='mining'||e.dataset.to==='mining')),true,'only inspected links are emphasized');
     await page.getByRole('button',{name:'开始研究',exact:true}).click();
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).nations[0].research==='mining');
     await page.getByLabel('搜索科技').fill('制陶术');
     await page.getByRole('button',{name:'开始研究',exact:true}).click();
     await page.waitForFunction(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).nations[0].research==='pottery');
+    assert(await page.locator('.research-summary button').filter({hasText:'研究中'}).isDisabled());
     await page.getByRole('button',{name:'当前研究',exact:true}).click();
     await page.getByLabel('跳转研究时代').selectOption('8');
     assert.match(await page.locator('.research-summary').innerText(),/海洋家园|高级|控制论|智能材料|预报/);
@@ -254,6 +277,45 @@ try {
     assert.deepEqual(errors,[],`runtime errors at ${width}px`);
     console.log(`✓ ${width}px: founding, full trees, government/policies, turn, autosave/reload, victory progress and non-destructive v2 migration`);
     await context.close();
+  }
+  for(const width of [375,1440]) {
+    const context=await browser.newContext({viewport:{width,height:800},hasTouch:width===375}),page=await context.newPage(),errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    const s=rules.create({seed:42,size:'compact',speed:'quick',difficulty:'relaxed'});
+    rules.found(s,s.units.find(u=>u.owner===0&&u.type==='settler'));
+    const city=s.cities.find(c=>c.owner===0),n=s.nations[0];rules.enqueue(s,city,'warrior');
+    for(const unit of s.units.filter(u=>u.owner===0))unit.moves=0;
+    await context.addInitScript(s=>localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s)),s);
+    await page.goto(url);await page.getByRole('button',{name:'下一回合',exact:true}).click();
+    assert.match(await page.getByRole('dialog').innerText(),/请选择科技/);
+    await page.getByRole('button',{name:'去处理',exact:true}).click();await page.getByLabel('搜索科技').fill('制陶术');
+    await page.getByRole('button',{name:'开始研究',exact:true}).click();
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).nations[0].research==='pottery');
+    await page.getByRole('button',{name:'地图',exact:true}).click();assert.equal(await page.locator('.todo-list').getByRole('button',{name:'选择科技',exact:true}).count(),0);
+    await page.getByRole('button',{name:'下一回合',exact:true}).click();
+    await page.waitForFunction(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).turn===2);
+    // Separate completion fixture; init scripts only seed fresh isolated contexts.
+    await context.close();
+    rules.chooseResearch(s,'pottery');n.researchProgress.pottery=rules.researchCost(s,n,catalog.techs.find(r=>r.id==='pottery'))-1;
+    n.researchProgress.laws=rules.researchCost(s,n,catalog.civics.find(r=>r.id==='laws'))-.1;
+    const finished=await browser.newContext({viewport:{width,height:800},hasTouch:width===375}),game=await finished.newPage();
+    game.on('pageerror',e=>errors.push(e.message));await finished.addInitScript(s=>localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s)),s);
+    await game.goto(url);await game.getByRole('button',{name:'下一回合',exact:true}).click();
+    await game.waitForFunction(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).turn===2);
+    const saved=await game.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
+    assert(saveRules.valid(saved));assert.equal(saved.nations[0].research,'');assert.equal(saved.nations[0].culture,'');assert.deepEqual(saved.nations[0].policies,[null,null]);assert(saved.nations[0].researchOverflow.science>0);
+    for(const label of ['选择科技','选择市政','选择政策'])await game.locator('.todo-list').getByRole('button',{name:label,exact:true}).waitFor();
+    await game.locator('.todo-list').getByRole('button',{name:'选择政策',exact:true}).click();
+    await game.getByLabel('军事政策槽 1').selectOption('discipline');await game.getByLabel('经济政策槽 2').selectOption('planning');await game.getByRole('button',{name:'应用',exact:true}).click();
+    await game.waitForFunction(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).nations[0].policies[0]==='discipline');
+    await game.getByRole('button',{name:'科技',exact:true}).click();await game.getByLabel('搜索科技').fill('采矿业');await game.getByRole('button',{name:'开始研究',exact:true}).click();
+    await game.getByRole('button',{name:'市政',exact:true}).click();await game.getByLabel('搜索市政').fill('技艺');await game.getByRole('button',{name:'开始研究',exact:true}).click();
+    await game.waitForFunction(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')).nations[0].culture==='craft');
+    const after=await game.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
+    assert.equal(after.nations[0].researchOverflow.science,saved.nations[0].researchOverflow.science);assert.equal(after.nations[0].researchOverflow.culture,saved.nations[0].researchOverflow.culture);assert(saveRules.valid(after));
+    await finished.close();const reload=await browser.newContext({viewport:{width,height:800}});await reload.addInitScript(s=>localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s)),after);
+    const again=await reload.newPage();await again.goto(url);await again.getByRole('button',{name:'科技',exact:true}).click();assert.match(await again.locator('.research-summary').innerText(),/采矿业/);
+    assert.deepEqual(errors,[]);await reload.close();console.log(`✓ ${width}px: opening research prompt, manual policies/civic choice, completion pause and saved overflow`);
   }
   for(const [width,height] of [[667,375],[844,390]]) {
     const context=await browser.newContext({viewport:{width,height},hasTouch:true}),page=await context.newPage(),errors=[];

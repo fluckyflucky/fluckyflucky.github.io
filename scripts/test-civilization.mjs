@@ -64,6 +64,7 @@ test("new maps have three major starts and two real city states", () => {
 test("research switching retains separate progress; no currency transfer", () => {
   const s = setup(),
     n = s.nations[0];
+  assert(w.chooseResearch(s, 'pottery'));
   w.advance(s, 0, false, 4);
   const invested = n.researchProgress.pottery;
   assert(w.chooseResearch(s, "mining"));
@@ -83,8 +84,14 @@ test("boosts are idempotent, civilization-specific, with overflow research", () 
   assert.equal(w.researchCost(s,n,d),17);
   w.boost(s,0,'pottery');
   assert(!n.boosts.includes('pottery'), 'pottery has no eureka');
+  assert(w.chooseResearch(s, 'pottery'));
   w.advance(s, 0, false, 100);
   assert(n.tech.includes("pottery"));
+  assert(!n.tech.includes('mining'), 'human completion must not choose the next technology');
+  assert.equal(n.research, '');
+  assert(n.researchOverflow.science > 0);
+  assert(w.chooseResearch(s, 'mining'));
+  w.advance(s, 0, false, 0);
   assert(n.tech.includes("mining"));
   assert(Object.values(n.researchProgress).some(v=>v>0));
 });

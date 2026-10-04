@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { techs, civics, eras, type Research } from "./catalog";
 import { researchPrerequisites } from './research';
+import { researchGeometry, researchLayout } from './research-layout';
 import { active, researchAvailable, researchCost, totals, speedMultiplier } from "./world";
 import type { State } from "./model";
 import CivIcon from "./CivIcon.vue";
@@ -16,28 +17,19 @@ const rows = computed(() => (props.civic ? civics : techs)),
   n = computed(() => props.state.nations[0]),
   done = computed(() => (props.civic ? n.value.civic : n.value.tech)),
   current = computed(() => (props.civic ? n.value.culture : n.value.research));
-const positions = computed(() => {
-  const counts: Record<number, number> = {},
-    map: Record<string, { x: number; y: number }> = {};
-  for (const r of rows.value) {
-    const row = counts[r.column] ?? 0;
-    counts[r.column] = row + 1;
-    map[r.id] = { x: 12 + r.column * 216, y: 36 + row * 112 };
-  }
-  return map;
-});
-const width = computed(
-    () => Math.max(...rows.value.map((r) => r.column)) * 216 + 216,
-  ),
-  height = computed(
-    () => Math.max(...Object.values(positions.value).map((p) => p.y)) + 112,
-  );
+const layout = computed(() => researchLayout(rows.value));
+const positions = computed(() => layout.value.positions),
+  width = computed(() => layout.value.width), height = computed(() => layout.value.height);
+const firstChoice = computed(() => rows.value.find(r => researchAvailable(n.value, r.id, props.civic)));
 const selected = computed(() =>
-    rows.value.find((r) => r.id === (inspected.value || current.value)),
+    rows.value.find((r) => r.id === (inspected.value || current.value)) ?? firstChoice.value,
   ),
   yieldRate = computed(
     () => totals(props.state)[props.civic ? "culture" : "science"],
   );
+const linked = (from: string, to: string) => from === selected.value?.id || to === selected.value?.id;
+const connections = computed(() => [...layout.value.connections].sort((a, b) => Number(linked(a.from,a.to)) - Number(linked(b.from,b.to))));
+const related = computed(() => new Set(connections.value.filter(e => linked(e.from,e.to)).flatMap(e => [e.from,e.to])));
 const matching = (t: Research) =>
   !search.value.trim() ||
   [t.name, t.effect, t.boost].some((s) => s.includes(search.value.trim()));
@@ -48,8 +40,9 @@ const eraGroups = computed(() => eras.map((name, era) => {
 }));
 const prerequisites = (t: Research) => researchPrerequisites(t).map(id=>rows.value.find(r=>r.id===id)!.name).join('、');
 const turns = (t: Research) => yieldRate.value > 0
-  ? `${Math.max(1, Math.ceil((researchCost(props.state,n.value,t)-(n.value.researchProgress[t.id]??0))/yieldRate.value))} 回合`
+  ? `${Math.max(1, Math.ceil((researchCost(props.state,n.value,t)-(n.value.researchProgress[t.id]??0)-overflow.value)/yieldRate.value))} 回合`
   : '无产出';
+const overflow = computed(() => n.value.researchOverflow?.[props.civic ? 'culture' : 'science'] ?? 0);
 const progress = (t: Research) =>
   Math.min(
     100,
@@ -62,7 +55,7 @@ function inspect(t: Research) {
 }
 async function revealNode(id: string) {
   await nextTick();
-  const at=positions.value[id];
+  const at=positions.value[id || firstChoice.value?.id || ''];
   if(at && treeScroll.value) treeScroll.value.scrollTo({left:Math.max(0,at.x-12),top:Math.max(0,at.y-36)});
 }
 function jumpToEra(era: number) {
@@ -95,8 +88,8 @@ watch(
   <section class="research-view">
     <div class="section-head">
       <div>
-        <div class="research-title"><h2>{{ civic ? "市政树" : "科技树" }}</h2><CivHelp label="研究规则" :text="`切换项目保留已投入进度。尤里卡 / 鼓舞减少 ${n.civ === 'china' ? 50 : 40}% 需求；部分提升条件尚未实现。百科解锁不等于本城可建。未来时代原版使用随机前置，本版暂用固定后期路线。`" /></div>
-        <p>每回合 +{{ yieldRate.toFixed(1) }} {{ civic ? '文化' : '科技' }}</p>
+        <div class="research-title"><h2>{{ civic ? "市政树" : "科技树" }}</h2><CivHelp label="研究规则" :text="`选择节点后开始研究。切换保留进度，完成后重新选择；溢出点数留给下一项。尤里卡 / 鼓舞减少 ${n.civ === 'china' ? 50 : 40}% 需求，部分条件尚未实现。未来时代使用固定前置。百科中的部分解锁尚不可建造。`" /></div>
+        <p>每回合 +{{ yieldRate.toFixed(1) }} {{ civic ? '文化' : '科技' }}<span v-if="overflow"> · 待分配 {{ overflow.toFixed(1) }}</span></p>
       </div>
       <label class="search"
         ><CivIcon name="compass" :size="16" /><input
@@ -174,7 +167,7 @@ watch(
           :key="group.era"
           class="era-column"
           :data-era="group.era"
-          :style="{ left: 12 + group.first * 216 + 'px', width: (group.last-group.first+1)*216 + 'px', height: height + 'px' }"
+          :style="{ left: researchGeometry.left + group.first * researchGeometry.column + 'px', width: (group.last-group.first+1)*researchGeometry.column + 'px', height: height + 'px' }"
         >
           <span>{{ group.name }}</span>
         </div>
@@ -184,15 +177,12 @@ watch(
           :height="height"
           aria-hidden="true"
         >
-          <template v-for="t in rows" :key="t.id">
-            <path
-              v-for="pre in researchPrerequisites(t)"
-              :key="pre"
-              :d="`M${positions[pre].x + 196} ${positions[pre].y + 48} C${positions[pre].x + 206} ${positions[pre].y + 48},${positions[t.id].x - 12} ${positions[t.id].y + 48},${positions[t.id].x} ${positions[t.id].y + 48}`"
-              fill="none"
-              :stroke="done.includes(pre) ? '#b9a86d' : '#4e6258'"
-              stroke-width="2"
-            />
+          <defs><marker :id="civic ? 'civic-arrow' : 'tech-arrow'" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L6 3 L0 6" fill="#d8c98f" /></marker></defs>
+          <template v-for="edge in connections" :key="`${edge.from}:${edge.to}`">
+            <path :d="edge.path" class="connection-halo" :class="{ focused: linked(edge.from,edge.to) }" />
+            <path :d="edge.path" class="connection" :data-from="edge.from" :data-to="edge.to"
+              :class="{ focused: linked(edge.from,edge.to), known: done.includes(edge.from) }"
+              :marker-end="linked(edge.from,edge.to) ? `url(#${civic ? 'civic-arrow' : 'tech-arrow'})` : undefined" />
           </template>
         </svg>
         <button
@@ -209,6 +199,7 @@ watch(
             unlocked: researchAvailable(n, t.id, civic),
             dim: !matching(t),
             inspected: selected?.id === t.id,
+            related: related.has(t.id),
           }"
           :style="{
             left: positions[t.id].x + 'px',
@@ -251,7 +242,7 @@ watch(
         <strong
           >{{ t.name }}<span>{{ eras[t.era] }}</span></strong
         >
-        <p>{{ t.effect }}</p>
+        <p v-if="t.effect">{{ t.effect }}</p>
         <small>{{
           done.includes(t.id)
             ? "已完成"
@@ -287,19 +278,13 @@ watch(
 }
 .section-head > div {display:flex;align-items:center;gap:12px;}
 .research-title {display:flex;align-items:center;gap:6px;}
-.kicker {
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: #c4b77e;
-  margin: 0 0 5px;
-}
 .section-head h2 {
   font-size: 20px;
   margin: 0;
   color: #efe1b2;
   font-family: serif;
 }
-.section-head p:not(.kicker) {
+.section-head p {
   margin: 0;
   font-size: 12px;
   color: #bbc6b6;
@@ -449,16 +434,23 @@ watch(
   left: 0;
   pointer-events: none;
 }
+.connection, .connection-halo {fill:none;stroke-linejoin:round;stroke-linecap:round;}
+.connection {stroke:#839c8a;stroke-width:1.5;opacity:.3;}
+.connection.known {stroke:#b9a86d;}
+.connection.focused {stroke:#d8c98f;stroke-width:2;opacity:1;}
+.connection-halo {stroke:#1c302d;stroke-width:6;opacity:.3;}
+.connection-halo.focused {opacity:1;}
+.research-node.related {border-color:#9a9568;}
 .research-node {
   display: block;
   position: absolute;
-  width: 196px;
-  height: 100px;
+  width: 184px;
+  height: 92px;
   border: 1px solid #576b5d;
   background: #263c33;
   border-radius: 8px;
   color: #cfdbc0;
-  padding: 8px;
+  padding: 6px 8px;
   text-align: left;
   cursor: pointer;
   transition:
@@ -474,10 +466,12 @@ watch(
   flex: 1;
   min-width: 0;
   font-size: 14px;
+  line-height:1.4;
 }
 .research-node p {
   font-size: 11px;
-  margin: 4px 0;
+  margin: 3px 0;
+  line-height:1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -485,7 +479,7 @@ watch(
 .research-node small {
   display: block;
   font-size: 10px;
-  line-height: 1.6;
+  line-height: 1.35;
   color: #b0c0aa;
   overflow:hidden;
   text-overflow:ellipsis;

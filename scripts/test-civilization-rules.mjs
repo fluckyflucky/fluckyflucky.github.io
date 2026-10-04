@@ -7,6 +7,7 @@ const cs=await import(moduleUrl('src/games/civilization/city-states.ts'));
 const faith=await import(moduleUrl('src/games/civilization/religion.ts'));
 const gp=await import(moduleUrl('src/games/civilization/great-people.ts'));
 const research=await import(moduleUrl('src/games/civilization/research.ts'));
+const treeLayout=await import(moduleUrl('src/games/civilization/research-layout.ts'));
 let passed=0;
 function test(name,fn){fn();passed++;console.log('✓ '+name);}
 function setup(options={}) {
@@ -15,6 +16,65 @@ function setup(options={}) {
   return s;
 }
 const own=s=>s.cities.find(c=>c.owner===0);
+test('tree layout retains every dependency, separates cards and routes all links outside card interiors',()=>{
+  for(const rows of [c.techs,c.civics]) {
+    const layout=treeLayout.researchLayout(rows), g=treeLayout.researchGeometry;
+    assert.deepEqual(layout,treeLayout.researchLayout(rows));
+    assert.equal(layout.connections.length,rows.reduce((sum,r)=>sum+research.researchPrerequisites(r).length,0));
+    const original={},counts={};for(const r of rows){original[r.id]={x:r.column,y:counts[r.column]??0};counts[r.column]=(counts[r.column]??0)+1;}
+    const crossings=positions=>layout.connections.reduce((sum,a,i)=>sum+layout.connections.slice(i+1).filter(b=>
+      positions[a.from].x===positions[b.from].x && positions[a.to].x===positions[b.to].x &&
+      (positions[a.from].y-positions[b.from].y)*(positions[a.to].y-positions[b.to].y)<0).length,0);
+    assert(crossings(layout.positions)<crossings(original),'neighbour ordering must reduce branch-order inversions');
+    for(const r of rows) {
+      const p=layout.positions[r.id];assert(p.x+g.width<=layout.width);assert(p.y+g.height<=layout.height);
+      for(const other of rows.filter(o=>o.id!==r.id)) {
+        const q=layout.positions[other.id];assert(p.x+g.width<=q.x || q.x+g.width<=p.x || p.y+g.height<=q.y || q.y+g.height<=p.y);
+      }
+    }
+    for(const edge of layout.connections) {
+      assert(research.researchPrerequisites(rows.find(r=>r.id===edge.to)).includes(edge.from));
+      for(let i=1;i<edge.points.length;i++) {
+        const a=edge.points[i-1],b=edge.points[i];assert(a.x===b.x || a.y===b.y);
+        for(const r of rows) {
+          const p=layout.positions[r.id];
+          const crosses=a.x===b.x ? a.x>p.x && a.x<p.x+g.width && Math.max(a.y,b.y)>p.y && Math.min(a.y,b.y)<p.y+g.height
+            : a.y>p.y && a.y<p.y+g.height && Math.max(a.x,b.x)>p.x && Math.min(a.x,b.x)<p.x+g.width;
+          assert(!crosses,`${edge.from} → ${edge.to} crosses ${r.id}`);
+        }
+      }
+    }
+  }
+});
+test('opening uses settler/warrior, automatic Code of Laws, and human choice of research and production after founding',()=>{
+  for(const civilization of ['china','rome','egypt']) {
+    const s=w.create({seed:42,civilization}),n=s.nations[0];
+    assert.deepEqual(s.units.filter(u=>u.owner===0).map(u=>u.type).sort(),['settler','warrior']);
+    assert.equal(n.research,'');assert.equal(n.culture,'laws');assert.deepEqual(n.policies,[null,null]);
+    assert.equal(w.pending(s).research,false);assert.equal(w.pending(s).policies,false);
+    assert.deepEqual(new Set(c.techs.filter(r=>w.researchAvailable(n,r.id)).map(r=>r.id)),new Set(['animals','astrology','pottery','mining','sailing']));
+    assert(w.found(s,s.units.find(u=>u.owner===0&&u.type==='settler')));
+    assert(w.pending(s).research);assert(!w.pending(s).civic);assert(w.pending(s).cities.length===1);
+    assert(w.chooseResearch(s,'mining'));assert(!w.pending(s).research);assert(saves.valid(s));
+  }
+});
+test('human research stops at completion and preserves overflow, forced skipped income and independent progress across saves',()=>{
+  const s=setup(),n=s.nations[0];assert(w.chooseResearch(s,'pottery'));const price=w.researchCost(s,n,c.techs.find(r=>r.id==='pottery'));
+  w.advance(s,0,false,price+7);assert.deepEqual(n.tech,['pottery']);assert.equal(n.research,'');assert.equal(n.researchOverflow.science,7);
+  assert(w.pending(s).research);w.advance(s,0,false,3);assert.equal(n.researchOverflow.science,10);
+  const loaded=saves.migrate(JSON.parse(JSON.stringify(s)));assert(loaded);const next=loaded.nations[0];assert(w.chooseResearch(loaded,'mining'));
+  assert.equal(next.researchOverflow.science,10);w.advance(loaded,0,false,1);assert.equal(next.researchProgress.mining,11);assert.equal(next.researchOverflow.science,0);
+  assert.equal(next.researchProgress.pottery,price);assert(w.chooseResearch(loaded,'animals'));w.advance(loaded,0,false,2);assert.equal(next.researchProgress.mining,11);assert.equal(next.researchProgress.animals,2);
+  assert(saves.valid(loaded));const legacy=structuredClone(loaded);delete legacy.nations[0].researchOverflow;const old=saves.migrate(legacy);assert(old);assert.equal(old.nations[0].research,next.research);
+  for(const value of [{science:-1,culture:0},{science:NaN,culture:0},{science:0},{science:'1',culture:0}]) {const broken=structuredClone(s);broken.nations[0].researchOverflow=value;assert(!saves.valid(broken));}
+});
+test('Code of Laws opens policy choices and next civic without auto-equipping human cards; AI remains autonomous',()=>{
+  const s=setup(),n=s.nations[0];w.advance(s,0,true,w.researchCost(s,n,c.civics.find(r=>r.id==='laws'))+4);
+  assert.deepEqual(n.civic,['laws']);assert.equal(n.culture,'');assert.equal(n.researchOverflow.culture,4);assert.deepEqual(n.policies,[null,null]);
+  assert(w.pending(s).civic);assert(w.pending(s).policies);assert(w.configureGovernment(s,'chief',['discipline','planning']));assert(!w.pending(s).policies);
+  assert(w.chooseResearch(s,'craft',true));assert(!w.pending(s).civic);w.advance(s,0,true,1);assert.equal(n.researchProgress.craft,5);
+  const ai=s.nations[1];w.advance(s,1,true,100);assert(ai.civic.includes('laws'));assert(ai.culture);assert(w.researchAvailable(ai,ai.culture,true));assert(saves.valid(s));
+});
 test('research columns keep eras disjoint and every effective prerequisite to the left',()=>{
   for(const tree of [c.techs,c.civics]) {
     for(const entry of tree) for(const pre of research.researchPrerequisites(entry)) {
