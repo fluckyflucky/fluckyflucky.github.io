@@ -15,6 +15,7 @@ import {
   type Research,
 } from "./catalog";
 import { distance, neighbors, random } from "./hex";
+import { researchPrerequisites } from './research';
 import { satisfiedBoosts } from './boosts';
 import { majorIds, civilizedIds, barbarianOwner, aiStrategy } from './participants';
 import { cityStateRoster, cityStateYields, envoyBonus, suzerain, hasSuzerainBonus, influenceRate, civicEnvoyRewards, activeBuilding } from './city-states';
@@ -497,7 +498,7 @@ export function found(s: State, u: Unit) {
     hp: 200,
     walls: 0,
     buildings: n.civ === "rome" && n.kind === "major" ? ["monument"] : [],
-    queue: [{ item: "monument", tile: -1 }],
+    queue: u.owner === 0 ? [] : [{ item: "monument", tile: -1 }],
     invested: {},
     productionCosts: {},
     districtPlacements: {},
@@ -914,6 +915,14 @@ export function enqueue(s: State, c: City, id: string, tile = -1) {
   c.queue.push(job);
   return true;
 }
+export function productionChoiceReason(s: State, c: City, id: string) {
+  const reason=buildReason(s,c,id);
+  if(reason) return reason;
+  const d=info(id);
+  if(['district','wonder'].includes(d.kind) && !s.tiles.some((_,at)=>!placementReason(s,c,id,at)))
+    return '本城没有符合条件的建设地块';
+  return '';
+}
 export const jobKey = (j: Job) => `${j.repair ? 'repair:' : ''}${j.item}:${j.tile}`;
 export const jobName = (j: Job) => `${j.repair ? '修复' : ''}${info(j.item).name}`;
 export const districtTile = (s: State, c: City, id: string) => s.tiles.findIndex(t=>t.territory===c.id && t.district===id);
@@ -1039,14 +1048,22 @@ export function purchasePrice(s: State, c: City, id: string) {
 export function purchase(s: State, c: City, id: string) {
   const d = info(id),
     n = s.nations[c.owner];
-  if (buildReason(s, c, id) || !["unit", "building"].includes(d.kind))
-    return false;
+  if (purchaseReason(s,c,id)) return false;
   const money = d.faithBuy ? "faith" : "gold",
     price = purchasePrice(s,c,id);
-  if (n[money] < price) return false;
   if (!complete(s, c, { item: id, tile: -1 })) return false;
   n[money] -= price;
   return true;
+}
+export function purchaseReason(s: State, c: City, id: string) {
+  const reason=buildReason(s,c,id);
+  if(reason) return reason;
+  const d=info(id);
+  if(!['unit','building'].includes(d.kind)) return '此项目不能购买';
+  const money=d.faithBuy?'faith':'gold';
+  if(s.nations[c.owner][money]<purchasePrice(s,c,id)) return `${d.faithBuy?'信仰':'金币'}不足`;
+  if(d.kind==='unit' && spawnTile(s,c,d)===undefined) return '没有空闲的单位出生地块';
+  return '';
 }
 export function buyTile(s: State, c: City, i: number) {
   const t = s.tiles[i],
@@ -1069,7 +1086,7 @@ export function buyTile(s: State, c: City, i: number) {
 export function researchAvailable(n: Nation, id: string, civic = false) {
   const d = (civic ? civics : techs).find((t) => t.id === id),
     done = civic ? n.civic : n.tech;
-  return !!d && !done.includes(id) && d.requires.every((r) => done.includes(r));
+  return !!d && !done.includes(id) && researchPrerequisites(d).every((r) => done.includes(r));
 }
 export function chooseResearch(s: State, id: string, civic = false, o = 0) {
   const n = s.nations[o];
@@ -2240,7 +2257,8 @@ function aiResearch(s: State, owner: number, civic: boolean) {
   function visit(id: string) {
     if (done.includes(id) || pathToGoal.has(id)) return;
     pathToGoal.add(id);
-    list.find(r => r.id === id)?.requires.forEach(visit);
+    const entry = list.find(r => r.id === id);
+    if (entry) researchPrerequisites(entry).forEach(visit);
   }
   const goal = goals.find(id => !done.includes(id));
   if (goal) visit(goal);

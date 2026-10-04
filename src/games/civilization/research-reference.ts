@@ -1568,7 +1568,7 @@ export const researchReference = [
       "tech_scientific_theory"
     ],
     "boost": "建造1个工业时代或以后的奇观。",
-    "era": 4,
+    "era": 5,
     "unlocks": [
       {
         "id": "building_hangar",
@@ -2140,7 +2140,7 @@ export const researchReference = [
       "tech_rocketry"
     ],
     "boost": "建造2个广播中心。",
-    "era": 5,
+    "era": 7,
     "unlocks": [
       {
         "id": "unit_mechanized_infantry",
@@ -3186,7 +3186,7 @@ export const researchReference = [
       "civic_guilds"
     ],
     "boost": "获得1位大艺术家。",
-    "era": 2,
+    "era": 3,
     "unlocks": [
       {
         "id": "policy_invention",
@@ -3231,7 +3231,7 @@ export const researchReference = [
       "civic_medieval_faires"
     ],
     "boost": "建造2艘轻快帆船。",
-    "era": 2,
+    "era": 3,
     "unlocks": [
       {
         "id": "government_merchant_republic",

@@ -27,6 +27,7 @@ import {
   attack,
   enqueue,
   nextTurn,
+  chooseResearch,
   pending,
   era,
   jobCost,
@@ -536,8 +537,8 @@ const tabs = [
 
 <template>
   <Teleport to="body" :disabled="!expanded">
-    <section class="civ-game" :class="{ expanded }" :aria-busy="turnBusy">
-      <div :inert="dialogs || turnBusy">
+    <section class="civ-game" :class="{ expanded, 'research-open': tab === '科技' || tab === '市政' }" :aria-busy="turnBusy">
+      <div class="civ-workspace" :inert="dialogs || turnBusy">
         <header class="civ-header">
           <div class="brand-mark"><CivIcon name="compass" :size="38" /></div>
           <div class="civ-brand">
@@ -591,6 +592,8 @@ const tabs = [
             v-for="[label, icon] in tabs"
             :key="label"
             :class="{ selected: tab === label }"
+            :aria-label="label === '城市' ? label : undefined"
+            :aria-description="label === '城市' && todo.cities.length ? `${todo.cities.length}座城市待安排生产` : undefined"
             :aria-pressed="tab === label"
             @click="tab = label"
           >
@@ -843,8 +846,7 @@ const tabs = [
             :civic="tab === '市政'"
             @choose="
               (id) => {
-                if (active(state)) {
-                  nation[tab === '市政' ? 'culture' : 'research'] = id;
+                if (chooseResearch(state, id, tab === '市政')) {
                   tell('研究方向已切换，原进度保留');
                 }
               }

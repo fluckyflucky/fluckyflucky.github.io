@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { moduleUrl } from './civilization-test-module.mjs';
 const w=await import(moduleUrl('src/games/civilization/world.ts')),
   c=await import(moduleUrl('src/games/civilization/catalog.ts')),
@@ -10,6 +11,9 @@ const w=await import(moduleUrl('src/games/civilization/world.ts')),
 let passed=0;
 function test(name, fn){fn();passed++;console.log('✓ '+name);}
 function setup(){const s=w.create({seed:42,size:'compact',speed:'normal',difficulty:'relaxed',cityStateCount:2});assert(w.found(s,s.units.find(u=>u.owner===0&&u.type==='settler')));return s;}
+test('reference scraper reads era itself, not an era mentioned by prerequisites or boosts',()=>{
+  execFileSync(process.execPath,['scripts/civilopedia-research.mjs','--test-era']);
+});
 test('77 technologies and 61 civics match source costs, prerequisites, eras and boosts',()=>{
   assert.equal(c.techs.length,77);assert.equal(c.civics.length,61);
   for(const ref of r.researchReference){
@@ -24,6 +28,11 @@ test('independent golden fixtures: education, astrology and archery',()=>{
   assert.equal(c.techs.find(t=>t.id==='astrology').boost,'发现1个自然奇观。');
   assert.equal(c.techs.find(t=>t.id==='archery').boost,'用投石兵击杀1个单位。');
   assert.equal(c.techs.find(t=>t.id==='wheel').sourceId,'tech_the_wheel');
+  assert.equal(c.techs.find(t=>t.id==='satellites').era,7,'Civilopedia places Satellites in Information Era, not Modern');
+  assert.equal(c.techs.find(t=>t.id==='flight').era,5);
+  assert.equal(c.civics.find(t=>t.id==='humanism').era,3);assert.equal(c.civics.find(t=>t.id==='exploration').era,3);
+  assert.deepEqual(Array.from({length:9},(_,era)=>c.techs.filter(r=>r.era===era).length),[11,8,8,9,8,8,8,9,8]);
+  assert.deepEqual(Array.from({length:9},(_,era)=>c.civics.filter(r=>r.era===era).length),[7,7,7,6,7,9,5,7,6]);
 });
 test('every constructible item unlock is present in the canonical trees',()=>{
   const all=new Set([...c.techs,...c.civics].map(r=>r.id));

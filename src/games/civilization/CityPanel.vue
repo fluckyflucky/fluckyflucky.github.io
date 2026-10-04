@@ -7,10 +7,11 @@ import {
   workedTiles,
   tileYield,
   info,
-  buildReason,
+  productionChoiceReason,
   enqueue,
   purchase,
   purchasePrice,
+  purchaseReason,
   jobKey,
   cost,
   jobCost,
@@ -50,6 +51,7 @@ const output = computed(() => yields(props.state, props.city)),
   current = computed(() => props.city.queue[0]),
   done = computed(() => props.city.buildings.map(info)),
   worked = computed(() => workedTiles(props.state, props.city));
+const reasons = computed(() => Object.fromEntries(items.map(d=>[d.id,productionChoiceReason(props.state,props.city,d.id)])));
 const choices = computed(() =>
   items
     .filter(
@@ -58,11 +60,11 @@ const choices = computed(() =>
         (!props.city.buildings.includes(d.id) || d.kind === "unit" || d.repeat),
     )
     .filter(
-      (d) => showLocked.value || !buildReason(props.state, props.city, d.id),
+      (d) => showLocked.value || !reasons.value[d.id],
     ),
 );
 function build(id: string) {
-  if (buildReason(props.state, props.city, id)) return;
+  if (reasons.value[id]) return;
   const d = info(id);
   if (d.faithBuy) return;
   const placed=props.city.districtPlacements?.[id];
@@ -80,12 +82,25 @@ function build(id: string) {
     );
 }
 function buy(id: string) {
+  const reason=purchaseReason(props.state,props.city,id);
+  if(reason) {emit('status',reason);return;}
   emit(
     "status",
     purchase(props.state, props.city, id)
       ? `${info(id).name}已购买`
       : "资源、金币或出生地块不足",
   );
+}
+function productionJob(id: string) {
+  return {item:id,tile:props.city.districtPlacements?.[id] ?? -1};
+}
+function productionPrice(id: string) {
+  const j=productionJob(id);
+  return props.city.productionCosts?.[jobKey(j)] ?? cost(props.state,id,props.city);
+}
+function productionTurns(id: string, price: number, invested: number) {
+  const rate=productionRate(props.state,props.city,id);
+  return rate>0 ? `${Math.max(1,Math.ceil(Math.max(0,price-invested)/rate))} 回合` : '无产出';
 }
 function rename() {
   const text = name.value.trim();
@@ -218,16 +233,9 @@ watch(
               >{{ Math.floor(city.invested[jobKey(job)] ?? 0) }} /
               {{ jobCost(state, city, job) }} ·
               {{
-                Math.max(
-                  1,
-                  Math.ceil(
-                    (jobCost(state, city, job) -
-                      (city.invested[jobKey(job)] ?? 0)) /
-                      productionRate(state, city, job.item),
-                  ),
-                )
+                productionTurns(job.item,jobCost(state,city,job),city.invested[jobKey(job)]??0)
               }}
-              回合</small
+              </small
             >
             <div class="meter">
               <i
@@ -284,20 +292,19 @@ watch(
         <article
           v-for="d in choices"
           :key="d.id"
-          :class="{ unavailable: !!buildReason(state, city, d.id) }"
+          :class="{ unavailable: !!reasons[d.id] }"
         >
           <div class="build-heading">
             <CivIcon :name="d.icon" :size="22" /><strong>{{ d.name }}</strong
-            ><small>{{ categoryNames[d.kind] }}</small>
+            ><CivHelp :label="`${d.name}效果`" :text="d.description" />
           </div>
-          <p>{{ d.description }}</p>
           <div class="build-price">
             <small v-if="!d.faithBuy"
-              >{{ cost(state, d.id, city) }} 生产 ·
+              >{{ productionPrice(d.id) }} 生产 ·
               {{
-                Math.ceil(cost(state, d.id, city) / productionRate(state, city, d.id))
+                productionTurns(d.id,productionPrice(d.id),city.invested[jobKey(productionJob(d.id))]??0)
               }}
-              回合</small
+              <template v-if="city.invested[jobKey(productionJob(d.id))]"> · 已投入 {{ Math.floor(city.invested[jobKey(productionJob(d.id))]) }}</template></small
             ><small v-else>仅信仰购买 · {{ purchasePrice(state, city, d.id) }}</small
             ><small v-if="d.resource"
               >需要 10
@@ -312,8 +319,8 @@ watch(
               }}</small
             >
           </div>
-          <p v-if="buildReason(state, city, d.id)" class="lock-reason">
-            {{ buildReason(state, city, d.id) }}
+          <p v-if="reasons[d.id]" class="lock-reason">
+            {{ reasons[d.id] }}
           </p>
           <div v-else class="build-buttons">
             <button
@@ -329,16 +336,16 @@ watch(
             ><button
               v-if="d.kind === 'building' || d.kind === 'unit'"
               :disabled="
-                !active(state) ||
-                state.nations[city.owner][d.faithBuy ? 'faith' : 'gold'] <
-                  purchasePrice(state, city, d.id)
+                !!purchaseReason(state,city,d.id)
               "
+              :title="purchaseReason(state,city,d.id) || '立即购买，不使用生产力'"
               @click="buy(d.id)"
             >
               {{ d.faithBuy ? "信仰" : "金币" }}
               {{ purchasePrice(state, city, d.id) }}
             </button>
           </div>
+          <small v-if="!reasons[d.id] && purchaseReason(state,city,d.id)==='没有空闲的单位出生地块'" class="warning">没有空闲的单位出生地块</small>
         </article>
         <p v-if="!choices.length" class="empty">这类项目暂无可建内容。</p>
       </div>

@@ -6,6 +6,7 @@ const saves=await import(moduleUrl('src/games/civilization/saves.ts'));
 const cs=await import(moduleUrl('src/games/civilization/city-states.ts'));
 const faith=await import(moduleUrl('src/games/civilization/religion.ts'));
 const gp=await import(moduleUrl('src/games/civilization/great-people.ts'));
+const research=await import(moduleUrl('src/games/civilization/research.ts'));
 let passed=0;
 function test(name,fn){fn();passed++;console.log('✓ '+name);}
 function setup(options={}) {
@@ -14,6 +15,42 @@ function setup(options={}) {
   return s;
 }
 const own=s=>s.cities.find(c=>c.owner===0);
+test('research columns keep eras disjoint and every effective prerequisite to the left',()=>{
+  for(const tree of [c.techs,c.civics]) {
+    for(const entry of tree) for(const pre of research.researchPrerequisites(entry)) {
+      const predecessor=tree.find(r=>r.id===pre);assert(predecessor,pre);
+      assert(predecessor.column<entry.column,entry.id);assert(predecessor.era<=entry.era,entry.id);
+    }
+    for(let era=1;era<9;era++) assert(Math.max(...tree.filter(r=>r.era<era).map(r=>r.column))<Math.min(...tree.filter(r=>r.era===era).map(r=>r.column)));
+  }
+});
+test('future-era entries cannot be researched from a new game; legacy progress survives rejected selection',()=>{
+  const s=setup(),n=s.nations[0];
+  for(const civic of [false,true]) for(const entry of (civic?c.civics:c.techs).filter(r=>r.era===8)) {
+    n.researchProgress[entry.id]=12;const before=structuredClone(s);
+    assert(!w.researchAvailable(n,entry.id,civic));assert(!w.chooseResearch(s,entry.id,civic));assert.deepEqual(s,before);
+    n[civic?'civic':'tech']=research.researchPrerequisites(entry);
+    assert(w.researchAvailable(n,entry.id,civic));assert(w.chooseResearch(s,entry.id,civic));
+    n[civic?'civic':'tech']=[];
+  }
+  n.research='advancedai';w.advance(s,0,false,3);assert.notEqual(n.research,'advancedai');assert.equal(n.researchProgress.advancedai,12);
+});
+test('founding a human city leaves production to the player, including Rome; AI still arranges production',()=>{
+  for(const civilization of ['china','rome']) {
+    const s=setup({civilization}),city=own(s);assert.equal(city.queue.length,0);assert(w.pending(s).cities.includes(city));
+    if(civilization==='rome') assert(city.buildings.includes('monument'));
+    const ai=s.cities.find(c=>c.owner===1);ai.queue=[];w.computerTurn(s,1);assert(ai.queue.length);assert(saves.valid(s));
+  }
+});
+test('production choices reject impossible placements, and purchases reject blocked spawns without spending',()=>{
+  const s=setup(),city=own(s),n=s.nations[0];n.tech=['writing','astrology'];
+  for(const t of s.tiles.filter(t=>t.territory===city.id && t.city<0)) {t.terrain='mountain';t.hills=false;t.feature='';}
+  assert.equal(w.buildReason(s,city,'campus'),'');assert.match(w.productionChoiceReason(s,city,'campus'),/没有.*地块/);
+  assert.equal(w.productionChoiceReason(s,city,'warrior'),'');n.gold=1000;
+  if(!s.units.some(u=>u.tile===city.tile)) w.spawn(s,0,'warrior',city.tile);
+  assert.match(w.purchaseReason(s,city,'warrior'),/出生地块/);const before=structuredClone(s);assert(!w.purchase(s,city,'warrior'));assert.deepEqual(s,before);
+  s.units=s.units.filter(u=>u.tile!==city.tile);assert.equal(w.purchaseReason(s,city,'warrior'),'');assert(w.purchase(s,city,'warrior'));assert.equal(n.gold,1000-w.purchasePrice(s,city,'warrior'));
+});
 function builderFixture() {
   const s=setup(),city=own(s),n=s.nations[0],at=w.neighbors(s,city.tile)[0];
   s.units=[];const t=s.tiles[at];Object.assign(t,{terrain:'grass',baseTerrain:'grass',feature:'',hills:false,resource:'',improvement:'',district:'',pillaged:false});
@@ -80,6 +117,7 @@ test('builder repairs and removes only owned improvements, for no charges; distr
 });
 test('wooded-hill chopping uses the shared action gate and preserves underlying terrain/resources',()=>{
   const {s,n,t,u,city}=builderFixture();n.tech=['mining'];t.terrain='hill';t.hills=true;t.baseTerrain='tundra';t.feature='forest';t.resource='gems';
+  assert(w.enqueue(s,city,'monument'));
   const charges=u.charges;assert.equal(w.chopReason(s,u),'');assert(w.chop(s,u));assert.equal(t.feature,'');assert.equal(t.baseTerrain,'tundra');assert.equal(t.hills,true);assert.equal(t.resource,'gems');assert.equal(u.charges,charges-1);assert.equal(city.invested['monument:-1'],25);
 });
 test('district repair is a priced production job, preserves investment/locked price on cancel/reload, and does not rebuild the district',()=>{

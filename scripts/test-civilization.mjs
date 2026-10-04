@@ -273,9 +273,15 @@ test("all victory routes are reachable and terminal actions stop", () => {
 test("seeded 100-turn simulations keep saves valid and opponents expand", () => {
   for (const seed of [7, 21, 42]) {
     const s = setup({ seed });
+    const seenCityIds = new Set(s.cities.map(c=>c.id));
+    const foundedByOpponent = new Set();
     s.continued = true;
     for (let turn = 0; turn < 100; turn++) {
       w.nextTurn(s);
+      for(const city of s.cities) {
+        if(!seenCityIds.has(city.id) && city.owner===1) foundedByOpponent.add(city.id);
+        seenCityIds.add(city.id);
+      }
       if (!saves.valid(s)) {
         console.error("invalid turn", s.turn, JSON.stringify(s));
         assert.fail("invalid simulated save");
@@ -284,7 +290,9 @@ test("seeded 100-turn simulations keep saves valid and opponents expand", () => 
     // Standard source costs replace the old compressed tree. At this yield rate,
     // 100 quick turns finish five technologies; expansion must still be real.
     assert(s.nations[1].tech.length >= 5);
-    assert(s.cities.filter((c) => c.owner === 1).length >= 2);
+    // Conquest can remove an AI capital during the run. Count actual new cities,
+    // rather than making the expansion assertion depend on who won a later war.
+    assert(foundedByOpponent.size >= 1);
   }
 });
 test("defeating a garrison does not bypass city defenses", () => {

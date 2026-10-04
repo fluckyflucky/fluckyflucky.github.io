@@ -4,6 +4,20 @@ import assert from 'node:assert/strict';
 const base = 'https://www.civilopedia.net/zh-CN/gathering-storm/';
 const eraNames = ['远古时代','古典时期','中世纪','文艺复兴时期','工业时代','现代','原子能时代','信息时代','未来时代'];
 const strip = s => s.replace(/<[^>]*>/g, ' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#x27;|&#39;/g,"'").replace(/\s+/g, ' ').trim();
+function researchEra(requirements) {
+  const eraText=strip(requirements).split(/所需的科技|所需的市政|研究费用|文化值消耗/)[0].trim();
+  return eraNames.indexOf(eraText);
+}
+if(process.argv.includes('--test-era')) {
+  for(const [text,expected] of [
+    ['信息时代 所需的科技 现代航空 火箭研究 研究费用 基准花费：1850',7],
+    ['文艺复兴时期 所需的市政 中世纪集市 公会 文化值消耗 基准花费：600',3],
+    ['现代 所需的科技 工业化 科学理论 研究费用 基准花费：1250 提升条件 建造1个工业时代或以后的奇观。',5],
+    ['未来时代 研究费用 基准花费：2200 提升条件 通过间谍提升。',8],
+  ]) assert.equal(researchEra(`<div>${text}</div>`),expected);
+  assert.equal(researchEra('未知时代 研究费用 基准花费：100'),-1);
+  process.exit(0);
+}
 async function page(url) {
   for (let attempt=0; attempt<3; attempt++) {
     try {
@@ -53,7 +67,9 @@ for (const [kind, category, first, prefix, expected] of [
       const afterBoost = requirements.slice(requirements.indexOf('提升条件'));
       const boost = requirements.includes('提升条件') ? strip(afterBoost).replace(/^提升条件\s*/, '') : '';
       assert(boost.length < 250 && !boost.includes('历史背景'), `Unexpected boost article content: ${url}`);
-      const era = eraNames.findIndex(name=>strip(requirements).includes(name));
+      // Match only the first requirement (era). Prerequisite names such as
+      // “现代航空” / “中世纪集市” and boosts must not overwrite the article's era.
+      const era = researchEra(requirements);
       assert(era>=0, `Missing era: ${url}`);
       const unlocks = links(section(html,'解锁')).filter(l=>l.name).map(l=>({id:l.url.split('/').filter(Boolean).at(-1),name:l.name,source:new URL(l.url,base).href}));
       records[index] = {id:entry.url.split('/').filter(Boolean).at(-1),kind,name:entry.name,cost:Number(cost[1]),requires:[...new Set(prereqs)],boost,era,unlocks,source:url};
