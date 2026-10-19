@@ -19,11 +19,11 @@ export const civicEnvoySource=(id:string)=>`https://www.civilopedia.net/en-US/ga
 export const cityStateTypes = { science:'科技', culture:'文化', trade:'商业', industrial:'工业', military:'军事', religious:'宗教' };
 export const cityStateRoster: {name:string;type:CityState['type'];bonus:string}[] = [
   {name:'日内瓦',type:'science',bonus:'和平时期，所有城市科技 +15%'},
-  {name:'库马西',type:'culture',bonus:'通往城邦的贸易：起点每个专业区域 +2 文化、+1 金币'},
+  {name:'库马西',type:'culture',bonus:'通往城邦的贸易路线，起点城市每个专业区域提供2文化和1金币。'},
   {name:'布鲁塞尔',type:'industrial',bonus:'建造奇观的生产力 +15%'},
   {name:'桑给巴尔',type:'trade',bonus:'肉桂和丁香各提供6宜居度，分配给最多6座城市'},
   {name:'喀布尔',type:'military',bonus:'主动攻击时获得双倍经验'},
-  {name:'埃里温',type:'religious',bonus:'使徒自由选择晋升（使徒晋升尚未实现）'},
+  {name:'埃里温',type:'religious',bonus:'使徒自由选择晋升的宗主奖励尚未实现。'},
 ];
 const war = (s:State,a:number,b:number) => a!==b && s.relations.some(r=>r.a===Math.min(a,b) && r.b===Math.max(a,b) && r.status==='war');
 export function suzerain(s:State,cs:CityState): number | null {
@@ -74,7 +74,7 @@ export function cityStateYields(s:State,c:City) {
   return y;
 }
 export function cityStateHelp(type:CityState['type']) {
-  const tiers=buildings[type].map(group=>group.filter(id=>itemMap[id]).map(id=>itemMap[id].name).join(' / ') || '对应三级建筑');
-  const factor=type==='trade'?2:1, unit=cityStateTypes[type];
-  return `1使者：首都和${tiers[0]} +${factor}；3使者：${tiers[1]}、领事馆 +${2*factor}；6使者：${tiers[2]}、外交办 +${3*factor}。各档累加。` + (type==='military'?'仅训练单位时增加生产。':type==='industrial'?'仅建造建筑、区域、奇观时增加生产。':`增加${unit}产出。`);
+  const tiers=buildings[type].map(group=>group.filter(id=>itemMap[id]).map(id=>itemMap[id].name).join('或') || '对应三级建筑');
+  const factor=type==='trade'?2:1, unit=type==='trade'?'金币':type==='religious'?'信仰':type==='military'||type==='industrial'?'生产力':cityStateTypes[type];
+  return `派出1名使者，首都和${tiers[0]}的${unit} +${factor}。派出3名使者，${tiers[1]}与领事馆的${unit} +${2*factor}。派出6名使者，${tiers[2]}与外交办的${unit} +${3*factor}。各档收益累加。` + (type==='military'?'仅训练单位时增加生产。':type==='industrial'?'仅建造建筑、区域和奇观时增加生产。':'');
 }

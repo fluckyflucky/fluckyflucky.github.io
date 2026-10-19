@@ -606,6 +606,6 @@ export function restoreManual(): State | null {
 export function manualSummary() {
   const s = restoreManual();
   return s
-    ? `${s.nations[0].name} · 回合 ${s.turn} · ${s.cities.filter((c) => c.owner === 0).length} 城市`
+    ? `${s.nations[0].name}，第 ${s.turn} 回合，${s.cities.filter((c) => c.owner === 0).length} 座城市`
     : "暂无手动存档";
 }

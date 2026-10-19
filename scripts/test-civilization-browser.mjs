@@ -20,8 +20,21 @@ try {
     await page.getByRole('button',{name:'政体',exact:true}).click();
     assert(await page.getByRole('button',{name:'应用',exact:true}).isDisabled(),'policy application is unavailable before Code of Laws');
     await page.getByRole('button',{name:'地图',exact:true}).click();
+    assert.doesNotMatch(await page.locator('.unit-panel').innerText(),/新城与其他城市|点选单位移动/,'routine actions must not carry an always-visible instruction paragraph');
+    await page.getByRole('button',{name:'建城规则',exact:true}).click();
+    assert.match(await page.getByRole('tooltip').innerText(),/无主土地.*至少相隔四格/);
+    assert.doesNotMatch(await page.getByRole('tooltip').textContent(),/\n/,'short help should flow naturally, without forced line breaks');
+    await page.keyboard.press('Escape');
     await page.getByRole('button',{name:'建立城市',exact:true}).click();
+    await page.locator('.inspector-tabs').getByRole('button',{name:'市民',exact:true}).click();
+    assert.doesNotMatch(await page.locator('.city-panel').innerText(),/每位市民自动工作|住房接近上限/,'worker and growth rules belong in optional help, not duplicate instruction blocks');
+    await page.getByRole('button',{name:'市民工作规则',exact:true}).click();
+    assert.match(await page.getByRole('tooltip').innerText(),/每位市民.*焦点/);
+    await page.keyboard.press('Escape');
+    await page.locator('.inspector-tabs').getByRole('button',{name:'生产',exact:true}).click();
     assert.equal(await page.locator('.production-queue li').count(),0,'new human city must not silently queue a monument');
+    assert.doesNotMatch(await page.locator('.civ-game').innerText(),/\s[·•]\s/,'visible information must not be glued together with decorative dots');
+    assert.equal(await page.locator('.build-price .meta-line').first().evaluate(e=>getComputedStyle(e).display),'flex','production price and duration stay separate');
     const selectedOnMap=()=>page.locator('.selection-ring').evaluate(e=>{
       const tile=e.getBoundingClientRect(),map=e.closest('.world-scroll').getBoundingClientRect();
       return tile.x>=map.x && tile.right<=map.right && tile.y>=map.y && tile.bottom<=map.bottom;
@@ -353,7 +366,8 @@ try {
     await context.addInitScript(state=>{if(!localStorage.getItem('aoinatsu:civilization:v3'))localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(state));},fixture);
     const page=await context.newPage();await page.goto(url);await page.getByRole('button',{name:'城市',exact:true}).click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
     const card=page.locator('.build-catalog article').filter({has:page.getByText('金字塔',{exact:true})});
-    assert.match(await card.innerText(),new RegExp(`${lockedCost} 生产.*${turns} 回合.*已投入 23`));
+    assert.match(await card.innerText(),new RegExp(`${lockedCost} 生产.*${turns} 回合.*已投入 23`,'s'));
+    assert.equal(await card.locator('.build-price .meta-line > span').count(),3,'cost, turns and saved investment remain separate visible fields');
     await card.getByRole('button',{name:'定位金字塔建设地块',exact:true}).click();
     assert.equal(await page.locator(`[data-tile="${at}"] .selection-ring`).count(),1);
     await page.getByRole('button',{name:'城市',exact:true}).click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
@@ -404,7 +418,7 @@ try {
       await page.addInitScript(s=>localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s)),religious);
       await page.reload();
       const missionary=page.locator('.build-catalog article').filter({hasText:'传教士'});await missionary.waitFor();
-      assert.match(await missionary.locator('.build-price').innerText(),/仅信仰购买.*150/);
+      assert.match(await missionary.locator('.build-price').innerText(),/只能用 150 信仰购买/);
       assert(!await missionary.getByRole('button',{name:'加入队列',exact:true}).count());
       await missionary.getByRole('button',{name:'信仰 150',exact:true}).tap();await page.waitForTimeout(500);
       const bought=await page.evaluate(()=>JSON.parse(localStorage.getItem('aoinatsu:civilization:v3')));
@@ -426,7 +440,7 @@ try {
     await context.addInitScript(s=>{if(!localStorage.getItem('aoinatsu:civilization:v3'))localStorage.setItem('aoinatsu:civilization:v3',JSON.stringify(s));},fixture);
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(url);
     await page.getByRole('button',{name:'信仰',exact:true}).click();
-    await page.getByRole('button',{name:'工匠之神 · 25',exact:true}).click();
+    await page.getByRole('button',{name:'工匠之神 25 信仰',exact:true}).click();
     await page.getByRole('button',{name:'招募大预言家',exact:true}).click();
     await page.getByLabel('信徒信条',{exact:true}).selectOption('choral');
     await page.getByLabel('创始人信条',{exact:true}).selectOption('tithe');
@@ -498,8 +512,8 @@ try {
     const cityTab=page.locator('.civ-nav').getByRole('button',{name:/^城市\s*\d*$/});
     await page.goto(url);await cityTab.click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
     await page.locator('.city-panel').waitFor();assert.match(await page.locator('.growth').innerText(),/3 \/ 24/);
-    assert.match(await page.locator('.city-summary').innerText(),/2 \/ 1/);assert.match(await page.locator('.city-defense-status').innerText(),/补给畅通/);
-    const help=page.getByRole('button',{name:'城市增长规则',exact:true});await help.click();assert.match(await page.getByRole('tooltip').innerText(),/住房.*超出5.*停长/s);await page.keyboard.press('Escape');
+    assert.match(await page.locator('.city-summary').innerText(),/2 \/ 1/);assert.match(await page.locator('.city-defense-status').innerText(),/每回合恢复 10 生命/);
+    const help=page.getByRole('button',{name:'城市增长规则',exact:true});await help.click();assert.match(await page.getByRole('tooltip').innerText(),/住房.*超出住房5.*停止增长/s);await page.keyboard.press('Escape');
     await page.getByRole('button',{name:'围城与城墙维修',exact:true}).click();assert.match(await page.getByRole('tooltip').innerText(),/城墙不自动回血.*3回合/s);await page.keyboard.press('Escape');
     await page.getByLabel('生产分类').selectOption('project');
     const repair=page.locator('.build-catalog article').filter({hasText:'修复外部防御'});assert.match(await repair.innerText(),/30 生产/);
@@ -529,7 +543,7 @@ try {
     await page.goto(url);const cityTab=page.locator('.civ-nav').getByRole('button',{name:/^城市\s*\d*$/});
     await cityTab.click();await page.getByRole('button',{name:'管理',exact:true}).first().click();
     await page.locator('.inspector-tabs').getByRole('button',{name:'建筑',exact:true}).click();
-    const repair=page.getByRole('button',{name:/^修复学院 · \d+生产$/});assert(await repair.isEnabled());await repair.click();await page.waitForTimeout(350);
+    const repair=page.getByRole('button',{name:/^修复学院 \d+ 生产$/});assert(await repair.isEnabled());await repair.click();await page.waitForTimeout(350);
     await page.getByRole('button',{name:'区域维修',exact:true}).click();assert.match(await page.getByRole('tooltip').innerText(),/建造者.*25%.*单独受损/s);await page.keyboard.press('Escape');
     await page.locator('.inspector-tabs').getByRole('button',{name:'生产',exact:true}).click();assert.match(await page.locator('.production-queue').innerText(),/修复学院/);assert.doesNotMatch(await page.locator('.production-queue').innerText(),/已建成/);
     await page.reload();await cityTab.click();await page.getByRole('button',{name:'管理',exact:true}).first().click();assert.match(await page.locator('.production-queue').innerText(),/修复学院/);

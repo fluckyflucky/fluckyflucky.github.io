@@ -89,9 +89,9 @@ function fortify() {
     <div class="inspector-title">
       <div class="unit-emblem"><CivIcon :name="d.icon" :size="32" /></div>
       <div>
-        <small
-          >等级 {{ unit.level }} ·
-          {{ d.domain === "sea" ? "海上单位" : "陆地单位" }}</small
+        <small class="meta-line"
+          ><span>等级 {{ unit.level }}</span>
+          <span>{{ d.domain === "sea" ? "海上单位" : "陆地单位" }}</span></small
         >
         <h2>{{ scientistById(unit.person)?.name ?? d.name }}</h2>
       </div>
@@ -102,17 +102,17 @@ function fortify() {
       >
     </div>
     <div class="unit-rest-status">
-      <small>{{ unit.acted ? '本回合已行动，不能休整回血' : `休整回血 +${healingRate(state,unit)} / 回合` }}<template v-if="canFortify(unit)"> · 驻防 +{{ 3*(unit.fortificationTurns??(unit.fortified?2:0)) }}</template></small>
+      <small class="meta-line"><span>{{ unit.acted ? '本回合已行动，不能休整回血' : `休整回血 +${healingRate(state,unit)} / 回合` }}</span><span v-if="canFortify(unit)">驻防 +{{ 3*(unit.fortificationTurns??(unit.fortified?2:0)) }}</span></small>
       <CivHelp label="驻守与休整" text="驻守保留当前剩余移动力，唤醒不会补回已消耗的移动力。整回合未行动才回血；可驻防单位静止一回合防御+3，两回合+6，移动或攻击后清除。城市和区域内回复20，己方或宗主城邦领土15，无主地10，其他领土5；海军及登船单位通常只能在友方领土回复。" />
     </div>
     <div class="unit-health">
       <div class="meter"><i :style="{ width: unit.hp + '%' }" /></div>
-      <small
-        >生命 {{ Math.round(unit.hp) }} / 100
+      <small class="meta-line"
+        ><span>生命 {{ Math.round(unit.hp) }} / 100</span>
         <span v-if="d.strength"
-          >· 战斗力 {{ Math.round(strength(state, unit, 1)) }}</span
+          >战斗力 {{ Math.round(strength(state, unit, 1)) }}</span
         ><span v-else-if="['builder', 'missionary'].includes(unit.type)"
-          >· 使用次数 {{ unit.charges }}</span
+          >使用次数 {{ unit.charges }}</span
         ></small
       >
     </div>
@@ -147,19 +147,16 @@ function fortify() {
       </button>
     </div>
     <template v-if="unit.type === 'settler'"
-      ><button
-        class="primary wide"
+      ><div class="button-row"><button
+        class="primary"
         :disabled="!canFound(state, unit)"
         @click="action(() => found(state, unit), '城市已建立')"
       >
         <CivIcon name="city" />建立城市
-      </button>
-      <p class="hint">
-        新城与其他城市至少相隔四格。临河提供住房，山脉有利于学院和圣地。
-      </p></template
+      </button><CivHelp label="建城规则" text="需要剩余移动力和无主土地，不能在水面或山脉上建城。新城与其他城市至少相隔四格。临河提供住房，山脉有利于学院和圣地。" /></div></template
     >
     <template v-if="unit.type === 'builder'"
-      ><div class="inspector-title"><h3>改良地块 · 剩余 {{ unit.charges }} 次</h3><CivHelp label="建造者操作" text="建造和砍伐消耗1次，维修和拆除改良不消耗次数。资源地块只能建对应改良；矿山通常需先清除树林，资源矿可保留树林。区域维修在城市·建筑中安排。" /></div>
+      ><div class="inspector-title"><h3>改良地块</h3><small>剩余 {{ unit.charges }} 次</small><CivHelp label="建造者操作" text="建造和砍伐消耗1次，维修和拆除改良不消耗次数。资源地块只能建对应改良。建矿山通常需先清除树林，资源矿可保留树林。区域维修在城市面板的建筑页中安排。" /></div>
       <div class="improvements">
         <button
           v-for="(d, id) in improvements"
@@ -208,11 +205,11 @@ function fortify() {
         >
           <strong
             >{{ c.name }}<span>{{ state.nations[c.owner].name }}</span></strong
-          ><small
-            >金币 +{{ tradeYield(state, source, c).gold.toFixed(1) }} · 粮食 +{{
+          ><small class="meta-line"
+            ><span>金币 +{{ tradeYield(state, source, c).gold.toFixed(1) }}</span><span>粮食 +{{
               tradeYield(state, source, c).food
-            }}
-            · 生产 +{{ tradeYield(state, source, c).production }}</small
+            }}</span>
+            <span>生产 +{{ tradeYield(state, source, c).production }}</span></small
           >
         </button>
         <p v-if="!targets.length" class="hint">
@@ -239,8 +236,8 @@ function fortify() {
       </p></template
     >
     <template v-if="unit.type==='prophet'">
-      <p class="hint">在己方圣地创立宗教。信仰面板可选择信条。</p>
-      <button :disabled="!n.pantheon || !religionCity(state,unit.owner) || !active(state)" @click="action(()=>foundReligion(state,unit.owner),'宗教已创立')">创立宗教 · 自动选择未占用信条</button>
+      <p class="hint">在己方圣地创立宗教。此处自动选择可用信条，手动选择请到信仰面板。</p>
+      <button :disabled="!n.pantheon || !religionCity(state,unit.owner) || !active(state)" @click="action(()=>foundReligion(state,unit.owner),'宗教已创立')">创立宗教</button>
     </template>
     <template v-if="unit.type==='scientist'">
       <div class="inspector-title"><h3>大科学家</h3><CivHelp label="科学家能力" :text="scientistById(unit.person)?.description??''" /></div>
@@ -254,7 +251,7 @@ function fortify() {
             unit.xp < 3 * (unit.level + 1) || !unit.moves || !active(state)
           "
           @click="
-            action(() => promote(state, unit), '晋升：战斗力 +4，恢复 50 生命')
+            action(() => promote(state, unit), '单位已晋升，战斗力 +4，恢复 50 生命')
           "
         >
           晋升 {{ unit.xp }} / {{ 3 * (unit.level + 1) }} 经验</button
@@ -268,8 +265,7 @@ function fortify() {
           "
           @click="action(() => upgrade(state, unit), '单位已升级')"
         >
-          升级 {{ info(upgradeTo(state, unit)).name }} ·
-          {{ upgradePrice }} 金</button
+          <span>升级为{{ info(upgradeTo(state, unit)).name }}</span><small>{{ upgradePrice }} 金</small></button
         ><button
           :disabled="
             tile.pillaged ||
@@ -286,18 +282,16 @@ function fortify() {
           掠夺
         </button>
       </div>
-      <p class="hint">
-        驻守提供防御加成；本回合未行动的单位可恢复生命。进攻后不能再次行动。
-      </p></template
+      </template
     >
     <div v-if="mode === 'attack'" class="combat-preview">
       <h3>战斗预览</h3>
       <template v-if="preview"
-        ><strong
+        ><strong class="meta-line"
           >{{
             preview.enemy ? info(preview.enemy.type).name : preview.city?.name
           }}
-          · {{ state.nations[preview.owner].name }}</strong
+          <span>{{ state.nations[preview.owner].name }}</span></strong
         >
         <div class="combat-numbers">
           <div>
@@ -319,7 +313,7 @@ function fortify() {
         </button></template
       >
       <p v-else class="hint">
-        点击红色目标查看预计伤害，确认后攻击。必须先在外交面板宣战。
+        选择红色目标，攻击其他文明前需宣战。
       </p>
     </div>
   </section>

@@ -88,8 +88,8 @@ watch(
   <section class="research-view">
     <div class="section-head">
       <div>
-        <div class="research-title"><h2>{{ civic ? "市政树" : "科技树" }}</h2><CivHelp label="研究规则" :text="`选择节点后开始研究。切换保留进度，完成后重新选择；溢出点数留给下一项。尤里卡 / 鼓舞减少 ${n.civ === 'china' ? 50 : 40}% 需求，部分条件尚未实现。未来时代使用固定前置。百科中的部分解锁尚不可建造。`" /></div>
-        <p>每回合 +{{ yieldRate.toFixed(1) }} {{ civic ? '文化' : '科技' }}<span v-if="overflow"> · 待分配 {{ overflow.toFixed(1) }}</span></p>
+        <div class="research-title"><h2>{{ civic ? "市政树" : "科技树" }}</h2><CivHelp label="研究规则" :text="`选择节点后开始研究。切换保留进度，完成后重新选择；溢出点数留给下一项。尤里卡或鼓舞减少 ${n.civ === 'china' ? 50 : 40}% 需求，部分条件尚未实现。未来时代使用固定前置。百科中的部分解锁尚不可建造。`" /></div>
+        <p class="meta-line"><span>每回合 +{{ yieldRate.toFixed(1) }} {{ civic ? '文化' : '科技' }}</span><span v-if="overflow">待分配 {{ overflow.toFixed(1) }}</span></p>
       </div>
       <label class="search"
         ><CivIcon name="compass" :size="16" /><input
@@ -106,21 +106,19 @@ watch(
           >{{ selected.name }}
           <span v-if="done.includes(selected.id)">已完成</span></strong
         >
-        <CivHelp label="研究效果与提升" :text="`${selected.effect}\n${selected.boost || '无提升条件'}${n.boosts.includes(selected.id) ? '（已触发）' : ''}`" /></div>
-        <small
-          >{{
+        <CivHelp label="研究效果与提升" :text="`${selected.effect ? '解锁' + selected.effect + '。' : ''}${selected.boost || '没有提升条件。'}${n.boosts.includes(selected.id) ? '已触发提升。' : ''}`" /></div>
+        <small class="meta-line"
+          ><span>{{
             researchPrerequisites(selected).length
-              ? "前置：" +
+              ? "需要先完成 " +
                 prerequisites(selected)
               : "无需前置"
-          }}
-          ·
-          {{
+          }}</span><span>{{
             Math.ceil(
               selected.cost * speedMultiplier(state),
             )
           }}
-          基础{{ civic ? "文化" : "科技" }}</small
+          基础{{ civic ? "文化" : "科技" }}</span></small
         >
       </div>
       <a v-if="selected?.source" :href="selected.source" target="_blank" rel="noopener noreferrer">百科原条目</a>
@@ -192,7 +190,7 @@ watch(
           :data-era="t.era"
           :data-research="t.id"
           :aria-pressed="selected?.id === t.id"
-          :aria-label="`${t.name} · ${done.includes(t.id) ? '已完成' : current === t.id ? '研究中' : researchAvailable(n,t.id,civic) ? '可研究' : '未解锁'}`"
+          :aria-label="`${t.name}，${done.includes(t.id) ? '已完成' : current === t.id ? '研究中' : researchAvailable(n,t.id,civic) ? '可研究' : '未解锁'}`"
           :class="{
             known: done.includes(t.id),
             studying: current === t.id,
@@ -218,12 +216,11 @@ watch(
           <div class="node-progress">
             <i :style="{ width: progress(t) + '%' }" />
           </div>
-          <small
-            >{{ Math.floor(n.researchProgress[t.id] ?? 0) }} /
-            {{ researchCost(state, n, t) }}
+          <small class="meta-line"
+            ><span>{{ Math.floor(n.researchProgress[t.id] ?? 0) }} /
+            {{ researchCost(state, n, t) }}</span>
             <span v-if="current === t.id"
-              >·
-              {{ turns(t) }}</span
+              >{{ turns(t) }}</span
             ></small
           ><small :class="{ boosted: n.boosts.includes(t.id) }"
             >{{ n.boosts.includes(t.id) ? "✓ 已触发" : "○" }}
@@ -335,6 +332,10 @@ watch(
   font-size: 16px;
 }
 .research-summary small {display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.research-summary small.meta-line {display:flex;flex-wrap:nowrap;}
+.research-summary small.meta-line > span:first-child {overflow:hidden;text-overflow:ellipsis;}
+.research-summary small.meta-line > span:last-child {flex-shrink:0;}
+.research-node small.meta-line {display:flex;gap:8px;}
 .research-summary small {
   color: #b7c5ac;
   font-size: 11px;

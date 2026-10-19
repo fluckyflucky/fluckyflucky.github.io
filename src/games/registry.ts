@@ -80,13 +80,13 @@ export const games: GameDefinition[] = [
   },
   {
     id: 'civilization',
-    title: '文明 · 六角世界',
+    title: '文明 六角世界',
     description: '建城、研究、扩张。从开拓者到火星。',
     category: '回合策略',
     coverText: '文明',
     coverImage: civilizationCover,
     accent: '#9bba8a',
-    controls: '点击操作 · 拖动地图',
+    controls: '点击操作，拖动地图',
     load: () => import('./civilization/CivilizationGame.vue'),
   },
   {

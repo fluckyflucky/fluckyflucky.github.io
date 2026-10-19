@@ -71,7 +71,7 @@ function build(id: string) {
   if (d.faithBuy) return;
   const placed=jobs.value[id].tile;
   if(placed>=0) {
-    emit('status',enqueue(props.state,props.city,id,placed)?`继续建造：${d.name}`:'当前不能恢复建设');
+    emit('status',enqueue(props.state,props.city,id,placed)?`已继续建造${d.name}`:'当前不能恢复建设');
     return;
   }
   if (["district", "wonder"].includes(d.kind)) emit("place", id);
@@ -79,7 +79,7 @@ function build(id: string) {
     emit(
       "status",
       enqueue(props.state, props.city, id)
-        ? `已加入队列：${d.name}`
+        ? `${d.name}已加入队列`
         : "生产队列已满",
     );
 }
@@ -152,17 +152,17 @@ watch(
       <div>
         <strong :class="{ warning: output.happy < -1 }"
           >{{ output.amenities }} / {{ output.requiredAmenities }}</strong
-        ><span>宜居度 · {{ output.happiness }}</span>
+        ><span class="meta-line"><span>宜居度</span><span>{{ output.happiness }}</span></span>
       </div>
       <div>
         <strong>{{ Math.round(city.hp) }}</strong
-        ><span>生命 / 200<template v-if="city.buildings.includes('walls')"> · 墙 {{ Math.round(city.walls) }}</template></span>
+        ><span class="meta-line"><span>生命 / 200</span><span v-if="city.buildings.includes('walls')">城墙 {{ Math.round(city.walls) }}</span></span>
       </div>
     </div>
     <div class="growth">
       <div>
         <span>人口增长</span>
-        <CivHelp label="城市增长规则" :text="`每人口消耗2粮食。住房至少多2时正常增长，多1时减半，不足时仅25%，超出5时停长；半点住房向下取整。宜居度需求每2人口1点（向上取整），本城${output.happiness}。奢侈品按城市缺口自动分配，每种最多4城，同种重复不叠加。`" />
+        <CivHelp label="城市增长规则" :text="`每人口消耗2粮食。住房比人口至少多2时正常增长，多1时减半。住房不足时增长速度降至25%，人口超出住房5时停止增长。计算时住房向下取整。每2人口需要1点宜居度，不满2人口也按1点计算，本城${output.happiness}。奢侈品优先分给缺宜居度的城市，每种最多供4城，重复资源不叠加。`" />
         <span>{{ Math.floor(city.food) }} / {{ growthCost(state,city) }}</span>
       </div>
       <div class="meter">
@@ -174,19 +174,19 @@ watch(
       </div>
       <small v-if="output.growing > 0"
         >预计
-        {{ Math.max(1,Math.ceil((growthCost(state,city) - city.food) / output.growing)) }} 回合 ·
+        {{ Math.max(1,Math.ceil((growthCost(state,city) - city.food) / output.growing)) }} 回合，
         每回合 +{{ output.growing.toFixed(1) }} 储粮</small
       ><small v-else class="warning">{{
         output.food < city.pop * 2
-          ? "粮食短缺：调整市民焦点或建农场"
+          ? "粮食短缺，调整市民焦点或建农场"
           : city.pop >= Math.floor(output.housing)+5 ? "住房不足，人口停止增长"
           : output.happy <= -6 ? "城市动荡，人口停止增长"
           : "粮食收支平衡，暂不增长"
       }}</small>
     </div>
     <div v-if="city.hp<200 || city.buildings.includes('walls')" class="city-defense-status">
-      <small>{{ underSiege(state,city) ? '被围城：停止回血' : '补给畅通：生命 +10 / 回合' }}</small>
-      <CivHelp label="围城与城墙维修" text="周围所有可通行地块都被敌方军队占据或控制才算围城；山脉不提供补给，沿海城市还需封锁水路。城墙不自动回血，连续3回合未遭攻击后，在生产·项目中修复外部防御。河流边的控制阻隔尚未实现。" />
+      <small>{{ underSiege(state,city) ? '城市被围，无法回血' : '城市每回合恢复 10 生命' }}</small>
+      <CivHelp label="围城与城墙维修" text="周围所有可通行地块都被敌方军队占据或控制才算围城；山脉不提供补给，沿海城市还需封锁水路。城墙不自动回血，连续3回合未遭攻击后，在生产面板的项目分类中修复外部防御。河流边的控制阻隔尚未实现。" />
     </div>
     <div class="city-yields">
       <span
@@ -228,12 +228,11 @@ watch(
           <div class="queue-number">{{ index + 1 }}</div>
           <div class="queue-description">
             <strong>{{ jobName(job) }}</strong
-            ><small
-              >{{ Math.floor(city.invested[jobKey(job)] ?? 0) }} /
-              {{ jobCost(state, city, job) }} ·
-              {{
+            ><small class="meta-line"
+              ><span>{{ Math.floor(city.invested[jobKey(job)] ?? 0) }} /
+              {{ jobCost(state, city, job) }}</span><span>{{
                 productionTurns(job.item,jobCost(state,city,job),city.invested[jobKey(job)]??0)
-              }}
+              }}</span>
               </small
             >
             <div class="meter">
@@ -298,13 +297,12 @@ watch(
             ><CivHelp :label="`${d.name}效果`" :text="d.description" />
           </div>
           <div class="build-price">
-            <small v-if="!d.faithBuy"
-              >{{ productionPrice(d.id) }} 生产 ·
-              {{
+            <small v-if="!d.faithBuy" class="meta-line"
+              ><span>{{ productionPrice(d.id) }} 生产</span><span>{{
                 productionTurns(d.id,productionPrice(d.id),city.invested[jobKey(jobs[d.id])]??0)
-              }}
-              <template v-if="city.invested[jobKey(jobs[d.id])]"> · 已投入 {{ Math.floor(city.invested[jobKey(jobs[d.id])]) }}</template></small
-            ><small v-else>仅信仰购买 · {{ purchasePrice(state, city, d.id) }}</small
+              }}</span>
+              <span v-if="city.invested[jobKey(jobs[d.id])]">已投入 {{ Math.floor(city.invested[jobKey(jobs[d.id])]) }}</span></small
+            ><small v-else>只能用 {{ purchasePrice(state, city, d.id) }} 信仰购买</small
             ><small v-if="d.resource"
               >需要 10
               {{
@@ -352,17 +350,14 @@ watch(
       </div>
     </template>
     <template v-else-if="view === '市民'"
-      ><label class="focus-label"
+      ><div class="button-row"><label class="focus-label"
         >市民焦点<select v-model="city.focus" :disabled="!active(state)">
           <option value="balanced">均衡发展</option>
           <option value="food">优先粮食</option>
           <option value="production">优先生产</option>
           <option value="gold">优先金币</option>
         </select></label
-      >
-      <p class="hint">
-        城市中心不消耗市民；每位市民自动工作一块本城领土。同一地块不会被两城重复使用。
-      </p>
+      ><CivHelp label="市民工作规则" text="每位市民自动工作一块本城地块，焦点决定优先选择哪种产出。城市中心不占用市民，同一地块不会被两城重复使用。" /></div>
       <div class="worked-tiles">
         <button v-for="i in worked" :key="i" @click="emit('focus', i)">
           <span>{{ state.tiles[i].q }}, {{ state.tiles[i].r }}</span
@@ -377,10 +372,7 @@ watch(
           >
         </button>
       </div>
-      <p class="hint">
-        粮食消耗 {{ city.pop * 2 }} /
-        回合。住房接近上限会减慢增长，宜居度不足会降低产出。
-      </p></template
+      </template
     >
     <template v-else
       ><h3>建成的区域与建筑</h3>
@@ -392,12 +384,12 @@ watch(
             <p>{{ d.description }}</p>
             <template v-if="d.kind==='district' && state.tiles[districtTile(state,city,d.id)]?.pillaged">
               <small class="warning">已被劫掠</small>
-              <button :disabled="city.queue.length>=5 || !!districtRepairReason(state,city,d.id)" @click="emit('status',enqueueDistrictRepair(state,city,d.id)?`已加入队列：修复${d.name}`:'当前不能维修')">修复{{ d.name }} · {{ districtRepairCost(state,city,d.id) }}生产</button>
+              <button :disabled="city.queue.length>=5 || !!districtRepairReason(state,city,d.id)" @click="emit('status',enqueueDistrictRepair(state,city,d.id)?`${d.name}维修已加入队列`:'当前不能维修')"><span>修复{{ d.name }}</span><small>{{ districtRepairCost(state,city,d.id) }} 生产</small></button>
             </template>
           </div>
         </article>
       </div>
-      <CivHelp v-if="done.some(d=>d.kind==='district')" label="区域维修" text="受损区域在这里安排生产维修，不能由建造者直接修复。移出队列保留维修投入；敌军占据区域时暂停。本版按当前区域造价的25%锁定维修价，尚未区分区域内各栋建筑的单独受损。" />
+      <CivHelp v-if="done.some(d=>d.kind==='district')" label="区域维修" text="在这里安排受损区域的维修，建造者不能修复区域。移出队列保留投入，敌军占据区域时暂停维修。费用按加入队列时区域造价的25%计算。尚未区分区域内各栋建筑的单独受损。" />
       <p v-if="!done.length" class="empty">还没有建筑。</p>
       <p class="hint">
         专业区域容量：{{
@@ -407,7 +399,7 @@ watch(
               !["spaceport", "neighborhood"].includes(id),
           ).length
         }}
-        / {{ 1 + Math.floor((city.pop - 1) / 3) }}。社区与航天中心不占容量。
+        / {{ 1 + Math.floor((city.pop - 1) / 3) }}
       </p>
       <p v-if="city.walls > 0" class="hint">
         城墙 {{ Math.round(city.walls) }} / 100，城市可进行两格远程攻击。

@@ -348,7 +348,7 @@ function place(c: City, item: string) {
   mode.value = "inspect";
   focus.value = c.tile;
   focusTick.value++;
-  tell(`${info(item).name}：选择高亮地块，数字表示邻接加成`);
+  tell(`为${info(item).name}选择高亮地块，数字表示邻接加成。`);
 }
 function handleTodo() {
   if (todo.value.cities.length) locate(todo.value.cities[0].tile);
@@ -493,7 +493,7 @@ const progress = computed(() => [
     icon: "rocket",
     value: Math.floor(nation.value.space.distance),
     max: 50,
-    description: nation.value.space.launched ? `系外行星远征 · 每回合 ${nation.value.space.speed} 光年` : "卫星 → 登月 → 火星 → 系外行星远征（50光年）",
+    description: nation.value.space.launched ? `系外行星远征每回合前进 ${nation.value.space.speed} 光年` : "发射卫星、完成登月和火星殖民后，发起系外行星远征，航行 50 光年。",
   },
   {
     name: "文化",
@@ -555,11 +555,11 @@ const tabs = [
         <header class="civ-header">
           <div class="brand-mark"><CivIcon name="compass" :size="38" /></div>
           <div class="civ-brand">
-            <h1>文明 · 六角世界</h1>
+            <h1>文明 六角世界</h1>
           </div>
           <div class="nation-banner">
             <span :style="{ color: nation.color }">{{ nation.name }}</span
-            ><small>{{ civ.leader }} · {{ eras[era(nation)] }}</small>
+            ><small class="meta-line"><span>{{ civ.leader }}</span><span>{{ eras[era(nation)] }}</span></small>
           </div>
           <div class="turn-counter">
             <strong>{{ state.turn }}<small>回合</small></strong
@@ -594,7 +594,7 @@ const tabs = [
             <CivIcon name="city" :size="22" /><span
               ><small>帝国</small
               ><strong
-                >{{ cities.length }} 城 ·
+                >{{ cities.length }} 城
                 {{ cities.reduce((v, c) => v + c.pop, 0) }} 人</strong
               ></span
             >
@@ -630,11 +630,11 @@ const tabs = [
                 state.winner.type === "defeat"
                   ? "文明覆灭"
                   : state.nations[state.winner.owner].name +
-                    " · " +
+                    "取得" +
                     victoryNames[state.winner.type]
               }}
             </h2>
-            <p>第 {{ state.turn }} 回合 · {{ score(state, 0) }} 分</p>
+            <p class="meta-line"><span>第 {{ state.turn }} 回合</span><span>{{ score(state, 0) }} 分</span></p>
           </div>
           <button v-if="!state.continued" @click="state.continued = true">
             继续游玩</button
@@ -671,7 +671,7 @@ const tabs = [
             </div>
             <div v-if="placement" class="placement-banner">
               <span
-                >放置 {{ info(placement.item).name }} · 地块显示邻接收益</span
+                >选择 {{ info(placement.item).name }} 的位置，地块上标有邻接收益。</span
               ><button @click="placement = null">取消</button>
             </div>
             <HexWorld
@@ -739,17 +739,16 @@ const tabs = [
               }}</strong
               ><span>{{ tile.q }}, {{ tile.r }}</span>
             </div>
-            <p v-if="tile.seen" class="tile-description">
-              {{ tile.river ? "淡水河流 · " : ""
-              }}{{
+            <p v-if="tile.seen" class="tile-description meta-line">
+              <span v-if="tile.river">淡水河流</span><span v-if="resourceVisible(nation, tile) && tile.resource">{{
                 resourceVisible(nation, tile)
                   ? (resources[tile.resource]?.name ?? "")
                   : ""
-              }}{{
+              }}</span><span>{{
                 tile.owner >= 0
-                  ? " · " + state.nations[tile.owner].name + "领土"
-                  : " · 未占领土地"
-              }}
+                  ? state.nations[tile.owner].name + "领土"
+                  : "未占领土地"
+              }}</span>
             </p>
             <div v-if="unit && city" class="inspector-tabs">
               <button
@@ -790,9 +789,9 @@ const tabs = [
               <template v-if="viewedUnit"
                 ><CivIcon :name="info(viewedUnit.type).icon" :size="40" />
                 <h2>{{ info(viewedUnit.type).name }}</h2>
-                <p>
-                  {{ state.nations[viewedUnit.owner].name }} · 生命
-                  {{ Math.round(viewedUnit.hp) }}
+                <p class="meta-line">
+                  <span>{{ state.nations[viewedUnit.owner].name }}</span><span>生命
+                  {{ Math.round(viewedUnit.hp) }}</span>
                 </p>
                 <button
                   v-if="viewedUnit.owner > 0 && state.nations[viewedUnit.owner].kind !== 'barbarian'"
@@ -803,20 +802,18 @@ const tabs = [
               ><template v-else-if="selectedCity && tile.seen"
                 ><CivIcon name="city" :size="40" />
                 <h2>{{ selectedCity.name }}</h2>
-                <p>
-                  {{ state.nations[selectedCity.owner].name }} · 人口
-                  {{ selectedCity.pop }}
+                <p class="meta-line">
+                  <span>{{ state.nations[selectedCity.owner].name }}</span><span>人口
+                  {{ selectedCity.pop }}</span>
                 </p>
-                <p>
-                  城市生命 {{ Math.round(selectedCity.hp) }} · 城墙
-                  {{ Math.round(selectedCity.walls) }}
+                <p class="meta-line">
+                  <span>城市生命 {{ Math.round(selectedCity.hp) }}</span><span>城墙
+                  {{ Math.round(selectedCity.walls) }}</span>
                 </p></template
               ><template v-else
                 ><CivIcon name="compass" :size="40" />
                 <h2>{{ tile.seen ? "选择单位或城市" : "世界仍在迷雾中" }}</h2>
-                <p>
-                  点选单位移动，点选城市安排生产。
-                </p></template
+                </template
               >
             </div>
             <button
@@ -875,7 +872,7 @@ const tabs = [
                 <h2>城市总览</h2>
               </div>
               <span
-                >{{ cities.length }} 座城市 ·
+                >{{ cities.length }} 座城市，共
                 {{ cities.reduce((v, c) => v + c.pop, 0) }} 人口</span
               >
             </div>
@@ -885,10 +882,9 @@ const tabs = [
                   <CivIcon name="city" :size="28" />
                   <div>
                     <h3>{{ c.name }}</h3>
-                    <p>
-                      {{ c.capital >= 0 ? "首都 · " : "" }}人口 {{ c.pop }} ·
-                      住房
-                      {{ yields(state, c).housing }}
+                    <p class="meta-line">
+                      <span v-if="c.capital >= 0">首都</span><span>人口 {{ c.pop }}</span>
+                      <span>住房 {{ yields(state, c).housing }}</span>
                     </p>
                   </div>
                   <button @click="locate(c.tile)">管理</button>
@@ -958,9 +954,9 @@ const tabs = [
                 <CivIcon :name="info(u.type).icon" />
                 <div>
                   <strong>{{ scientistById(u.person)?.name ?? info(u.type).name }}</strong
-                  ><small
-                    >生命 {{ Math.round(u.hp) }} ·
-                    {{ u.fortified ? "驻守中" : u.moves + " 移动力" }}</small
+                  ><small class="meta-line"
+                    ><span>生命 {{ Math.round(u.hp) }}</span>
+                    <span>{{ u.fortified ? "驻守中" : u.moves + " 移动力" }}</span></small
                   >
                 </div>
                 <span>#{{ u.id }}</span>
@@ -976,17 +972,17 @@ const tabs = [
             <div class="government-toolbar">
               <label for="government-choice">政体</label>
               <select id="government-choice" v-model="governmentDraft" @change="governmentChange">
-                <option v-for="g in governments" :key="g.id" :value="g.id" :disabled="!nation.civic.includes(g.unlock)">{{ g.name }}{{ nation.civic.includes(g.unlock) ? '' : '（未解锁）' }}</option>
+                <option v-for="g in governments" :key="g.id" :value="g.id" :disabled="!nation.civic.includes(g.unlock)">{{ g.name }}{{ nation.civic.includes(g.unlock) ? '' : ' 未解锁' }}</option>
               </select>
               <span>{{ draftGov.slots.length }} 槽</span>
-              <CivHelp label="政体效果" :text="draftGov.description + (draftGov.pending ? '\n暂未接入 ' + draftGov.pending : '')" />
+              <CivHelp label="政体效果" :text="draftGov.description + (draftGov.pending ? ' ' + draftGov.pending + '。' : '')" />
               <CivHelp label="政策规则" text="新市政完成后可免费换卡。卡片按类型入槽，通配槽不限类型；淘汰的卡会移除。" />
             </div>
             <div class="policy-slots">
               <div v-for="(slot,index) in draftGov.slots" :key="index" :class="slot">
                 <div class="policy-slot-title">
                   <label :for="`policy-slot-${index}`">{{ policyTypeNames[slot] }} {{ index + 1 }}</label>
-                  <CivHelp v-if="policyDraft[index]" :label="`政策效果 ${index+1}`" :text="policies.filter(p=>p[0]===policyDraft[index]).map(p=>`${p[1]}：${p[4]}`).join('')" />
+                  <CivHelp v-if="policyDraft[index]" :label="`政策效果 ${index+1}`" :text="policies.filter(p=>p[0]===policyDraft[index]).map(p=>p[4]).join('')" />
                 </div>
                 <select :id="`policy-slot-${index}`" v-model="policyDraft[index]" :aria-label="`${policyTypeNames[slot]}政策槽 ${index+1}`">
                   <option :value="null">空槽</option>
@@ -1015,9 +1011,9 @@ const tabs = [
                   g.name
                 }}</strong>
                 <p>{{ g.description }}</p>
-                <small
-                  >{{ g.slots.length }} 政策槽 ·
-                  {{ civics.find((c) => c.id === g.unlock)?.name }}</small
+                <small class="meta-line"
+                  ><span>{{ g.slots.length }} 政策槽</span>
+                  <span>{{ civics.find((c) => c.id === g.unlock)?.name }}解锁</span></small
                 >
               </button>
               </div>
@@ -1028,7 +1024,7 @@ const tabs = [
               <div>
                 <h2>文明与城邦</h2>
               </div>
-              <span>使者 {{ nation.envoys }} · 影响力 {{ (nation.influence ?? 0).toFixed(0) }} / {{ Math.ceil(influenceRate(nation).threshold * (state.options.speed==='normal'?1:2/3)) }}</span>
+              <div class="meta-line"><span>使者 {{ nation.envoys }}</span><span>影响力 {{ (nation.influence ?? 0).toFixed(0) }} / {{ Math.ceil(influenceRate(nation).threshold * (state.options.speed==='normal'?1:2/3)) }}</span></div>
             </div>
             <div class="diplomacy-grid">
               <article
@@ -1038,21 +1034,21 @@ const tabs = [
               >
                 <div class="card-title diplomatic-title"><CivIcon name="flag" :size="24" /><h3>{{ nation.met.includes(o + 1) ? n.name : "尚未遇见" }}</h3></div>
                 <template v-if="nation.met.includes(o + 1)"
-                  ><p>
-                    {{
+                  ><p class="meta-line">
+                    <span>{{
                       relation(state, 0, o + 1).status === "war"
                         ? "交战"
                         : relation(state, 0, o + 1).status === "friend"
                           ? "友好"
                           : "和平"
-                    }}
-                    · 好感 {{ relation(state, 0, o + 1).opinion }}
+                    }}</span>
+                    <span>好感 {{ relation(state, 0, o + 1).opinion }}</span>
                   </p>
-                  <p>
-                    {{ ownCities(state, o + 1).length }} 座城市 ·
-                    {{ eras[era(n)] }} · {{ n.tech.length }} 科技
+                  <p class="meta-line">
+                    <span>{{ ownCities(state, o + 1).length }} 座城市</span>
+                    <span>{{ eras[era(n)] }}</span><span>{{ n.tech.length }} 科技</span>
                   </p>
-                  <p>AI 偏好 · {{ aiStrategyNames[aiStrategy(n,o+1)] }}</p>
+                  <p>偏好{{ aiStrategyNames[aiStrategy(n,o+1)] }}</p>
                   <div class="diplomatic-actions">
                     <button
                       :disabled="
@@ -1063,7 +1059,7 @@ const tabs = [
                       "
                       @click="diplomat(o + 1, 'delegate')"
                     >
-                      代表团 · 25 金</button
+                      <span>派代表团</span><small>25 金</small></button
                     ><button
                       :disabled="
                         relation(state, 0, o + 1).status !== 'peace' ||
@@ -1106,13 +1102,12 @@ const tabs = [
                       : "未知城邦"
                   }}
                 </h3>
-                <CivHelp v-if="nation.met.includes(cs.owner)" :label="`城邦使者收益 ${cs.owner}`" :text="cityStateHelp(cs.type) + '\n宗主：至少3使者且独占最多。' + (cityStateRoster.find(row=>row.name===state.nations[cs.owner].name)?.bonus ?? '')" />
+                <CivHelp v-if="nation.met.includes(cs.owner)" :label="`城邦使者收益 ${cs.owner}`" :text="cityStateHelp(cs.type) + '派出至少3名使者且数量超过其他文明，才能成为宗主。' + (cityStateRoster.find(row=>row.name===state.nations[cs.owner].name)?.bonus ?? '')" />
                 </div>
                 <template v-if="nation.met.includes(cs.owner)">
-                <p>
-                  {{ cityStateTypes[cs.type] }}城邦 · 使者
-                  {{ cs.envoys[0] }}
-                  · 宗主 {{ suzerain(state,cs)===null ? '无' : state.nations[suzerain(state,cs)!].name }}
+                <p class="meta-line">
+                  <span>{{ cityStateTypes[cs.type] }}城邦</span><span>使者 {{ cs.envoys[0] }}</span>
+                  <span>宗主 {{ suzerain(state,cs)===null ? '无' : state.nations[suzerain(state,cs)!].name }}</span>
                 </p>
                 <button
                   :disabled="
@@ -1135,10 +1130,10 @@ const tabs = [
                 </template>
               </article>
             </div>
-            <h3>
-              贸易路线 ·
-              {{ state.routes.filter((r) => r.owner === 0).length }} /
-              {{ tradeCapacity(state) }}
+            <h3 class="meta-line">
+              <span>贸易路线</span>
+              <small>{{ state.routes.filter((r) => r.owner === 0).length }} /
+              {{ tradeCapacity(state) }}</small>
             </h3>
             <div class="route-list">
               <article
@@ -1160,11 +1155,11 @@ const tabs = [
               <div>
                 <h2>信仰与伟人</h2>
               </div>
-              <span
-                >{{ Math.floor(nation.faith) }} 信仰 · +{{
+              <span class="meta-line"
+                ><span>{{ Math.floor(nation.faith) }} 信仰</span><span>+{{
                   output.faith.toFixed(1)
                 }}
-                / 回合</span
+                / 回合</span></span
               >
             </div>
             <div class="faith-layout">
@@ -1172,7 +1167,7 @@ const tabs = [
                 <div class="card-title">
                   <CivIcon name="faith" :size="24" />
                   <h3>{{ nation.religion || "尚未创立宗教" }}</h3>
-                  <CivHelp label="本版宗教规则" text="先招募大预言家，再在圣地创教；须有万神殿，不额外消耗信仰。信条全局独占。预言家费用暂按古典基础计算，压力与信徒换算仍简化；完整伟人池、信条扩展和神学战待补。" />
+                  <CivHelp label="宗教规则" text="先建立万神殿，再招募大预言家，在圣地创立宗教，不额外消耗信仰。每条信条只能由一个宗教选择。预言家费用按古典时代的基础值计算，宗教压力与信徒数量的换算仍有简化。完整伟人池、信条扩展和神学战尚未实现。" />
                 </div>
                 <template v-if="!nation.religion">
                 <div class="meter">
@@ -1183,7 +1178,7 @@ const tabs = [
                     }"
                   />
                 </div>
-                <p>{{ Math.floor(nation.great.prophet) }} / {{ prophetCost(state) }} 预言家点 · 宗教 {{ majorNations.filter(n=>n.religion || n.prophetRecruited).length }} / {{ religionLimit(state) }}</p>
+                <p class="meta-line"><span>{{ Math.floor(nation.great.prophet) }} / {{ prophetCost(state) }} 预言家点</span><span>宗教 {{ majorNations.filter(n=>n.religion || n.prophetRecruited).length }} / {{ religionLimit(state) }}</span></p>
                 <button v-if="!nation.prophetRecruited && !nation.religion"
                   :disabled="nation.great.prophet < prophetCost(state) || majorNations.filter(n=>n.religion || n.prophetRecruited).length>=religionLimit(state) || !cities.some(c=>c.buildings.includes('holy')) || !active(state)"
                   @click="tell(recruitProphet(state)?'大预言家已招募':'需要预言家点、圣地和空闲地块')">招募大预言家</button>
@@ -1230,7 +1225,7 @@ const tabs = [
                     :disabled="nation.faith < 25 || state.nations.some(n=>n.pantheon===p.id) || !active(state)"
                     @click="pantheon(state, p.id)"
                   >
-                    {{ p.name }} · 25</button><CivHelp :label="`${p.name}效果`" :text="p.description" />
+                    <span>{{ p.name }}</span><small>25 信仰</small></button><CivHelp :label="`${p.name}效果`" :text="p.description" />
                   </div>
                 </div>
               </article>
@@ -1239,19 +1234,19 @@ const tabs = [
                   <CivIcon name="science" :size="28" />
                   <div>
                     <h3>{{ currentScientist(state)?.name ?? '科学家名单已招募完' }}</h3>
-                    <p v-if="currentScientist(state)">{{ eras[currentScientist(state)!.era] }} · {{ Math.floor(nation.great.science) }} / {{ scientistCost(state) }} 点</p>
+                    <p v-if="currentScientist(state)" class="meta-line"><span>{{ eras[currentScientist(state)!.era] }}</span><span>{{ Math.floor(nation.great.science) }} / {{ scientistCost(state) }} 点</span></p>
                     <CivHelp v-if="currentScientist(state)" label="科学家能力" :text="currentScientist(state)!.description" />
-                    <CivHelp label="科学家招募规则" :text="`所有文明争抢同一名单，招募后需移动单位使用能力。当前每回合 +${(cities.reduce((v,c)=>v+scientistPoints(state,c),0)+(hasPolicy(nation,'inspiration')?2*(nation.government==='republic'?1.15:1):0)).toFixed(1)} 点。现有 9 位早中期科学家；费用按时代基础值计算，世界时代溢价、跳过和赞助待补。`" />
+                    <CivHelp label="科学家招募规则" :text="`所有文明共用一份名单，招募后将科学家移动到指定地块使用能力。当前每回合获得 ${(cities.reduce((v,c)=>v+scientistPoints(state,c),0)+(hasPolicy(nation,'inspiration')?2*(nation.government==='republic'?1.15:1):0)).toFixed(1)} 点。现有 9 位早中期科学家，费用按时代基础值计算。世界时代溢价、跳过和赞助尚未实现。`" />
                   </div>
-                  <button :disabled="!currentScientist(state) || nation.great.science<scientistCost(state) || !cities.length || !active(state)" @click="tell(recruitScientist(state)?'科学家已就绪，前往地图使用能力':'暂时无法招募：点数不足或出生地被占')">招募科学家</button>
+                  <button :disabled="!currentScientist(state) || nation.great.science<scientistCost(state) || !cities.length || !active(state)" @click="tell(recruitScientist(state)?'科学家已招募，前往地图使用能力':'点数不足或出生地被占，无法招募')">招募科学家</button>
                 </article>
                 <article class="great-card">
                   <CivIcon name="culture" :size="28" />
                   <div>
                     <h3>大艺术家</h3>
-                    <p>
-                      {{ Math.floor(nation.great.culture) }} / 80 点 ·
-                      获得 80 旅游与 60 文化
+                    <p class="meta-line">
+                      <span>{{ Math.floor(nation.great.culture) }} / 80 点</span>
+                      <span>获得 80 旅游与 60 文化</span>
                     </p>
                   </div>
                   <button
@@ -1400,20 +1395,19 @@ const tabs = [
                 type="checkbox"
               />结束回合前提醒待办事项</label
             >
-            <p class="hint">
-              本局：{{
+            <p class="hint meta-line">
+              <span>{{
                 state.options.size === "standard" ? "标准" : "紧凑"
-              }}地图 ·
-              {{ state.options.map === "pangaea" ? "盘古大陆" : "大陆" }} ·
-              {{
+              }}地图</span>
+              <span>{{ state.options.map === "pangaea" ? "盘古大陆" : "大陆" }}</span>
+              <span>{{
                 state.options.difficulty === "hard"
                   ? "挑战"
                   : state.options.difficulty === "relaxed"
                     ? "轻松"
                     : "标准"
-              }}难度 ·
-              {{ state.options.speed === "quick" ? "快速" : "普通" }}速度 · 种子
-              {{ state.options.seed }}
+              }}难度</span>
+              <span>{{ state.options.speed === "quick" ? "快速" : "普通" }}速度</span><span>种子 {{ state.options.seed }}</span>
             </p></template
           >
           <template v-else
@@ -1424,7 +1418,7 @@ const tabs = [
             </div>
             <div class="guide-grid">
               <article>
-                <h3>01 · 建城与探索</h3>
+                <h3>建城与探索</h3>
                 <p>
                   选中开拓者，点「建立城市」。选中其他单位，先点「移动」，再点蓝色地块。地图支持拖动与缩放；小地图显示已探索区域。
                 </p>
@@ -1433,17 +1427,16 @@ const tabs = [
                 </p>
               </article>
               <article>
-                <h3>02 · 城市与土地</h3>
+                <h3>城市与土地</h3>
                 <p>
-                  城市生产单位、建筑、区域和奇观。最多五项排队，可调整顺序；移出队列不清除投入。人口
-                  1 / 4 / 7 对应 1 / 2 / 3 个专业区域。
+                  城市可训练单位，建造建筑、区域和奇观。最多五项排队，可调整顺序，移出队列不清除投入。人口1时可建1个专业区域，此后每增加3人口，多1个区域名额。
                 </p>
                 <p>
                   市民自动工作本城地块。建农场增粮、矿山增产；临河增加住房，奢侈资源与娱乐建筑提供宜居度。
                 </p>
               </article>
               <article>
-                <h3>03 · 两棵研究树</h3>
+                <h3>科技与市政</h3>
                 <p>
                   科技消耗科学，市政消耗文化。选择节点，再点「开始研究」。切换不会把旧项目进度挪到新项目。
                 </p>
@@ -1452,7 +1445,7 @@ const tabs = [
                 </p>
               </article>
               <article>
-                <h3>04 · 战争与和平</h3>
+                <h3>战争与和平</h3>
                 <p>
                   遇见文明后可派代表团、宣布友谊或宣战。攻击模式会显示目标，点选后有伤害预览，再确认攻击。
                 </p>
@@ -1461,7 +1454,7 @@ const tabs = [
                 </p>
               </article>
               <article>
-                <h3>05 · 贸易与信仰</h3>
+                <h3>贸易与信仰</h3>
                 <p>
                   商人在城市中心选目标，建立 24
                   回合路线并铺路。国内贸易提供粮食和生产，国际贸易提供金币。商业中心和港口增加容量。
@@ -1471,7 +1464,7 @@ const tabs = [
                 </p>
               </article>
               <article>
-                <h3>06 · 存档</h3>
+                <h3>存档</h3>
                 <p>
                   进度保存在浏览器中，可在「存档」导出备份、保存快照或导入旧存档。
                 </p>
@@ -1527,7 +1520,7 @@ const tabs = [
             <div class="setup-fields">
               <label>你的文明<select v-model="options.civilization" aria-label="你的文明">
                 <option value="random">随机文明</option>
-                <option v-for="c in civilizations" :key="c.id" :value="c.id">{{ c.name }} · {{ c.leader }}</option>
+                <option v-for="c in civilizations" :key="c.id" :value="c.id">{{ c.name }} {{ c.leader }}</option>
               </select></label>
               <label>AI 数量<select v-model.number="options.aiCount" aria-label="AI 数量">
                 <option v-for="count in 5" :key="count" :value="count">{{ count }} 个对手</option>
@@ -1542,14 +1535,14 @@ const tabs = [
                 </select></label
               ><label
                 >地图类型<select v-model="options.map">
-                  <option value="continents">大陆 · 海湾与内海</option>
-                  <option value="pangaea">盘古大陆 · 陆地相连</option>
+                  <option value="continents">大陆</option>
+                  <option value="pangaea">盘古大陆</option>
                 </select></label
               ><label
                 >难度<select v-model="options.difficulty">
-                  <option value="relaxed">轻松 · 少量蛮族</option>
+                  <option value="relaxed">轻松</option>
                   <option value="standard">标准</option>
-                  <option value="hard">挑战 · 积极对手</option>
+                  <option value="hard">挑战</option>
                 </select></label
               ><label
                 >游戏速度<select v-model="options.speed">
@@ -1566,7 +1559,7 @@ const tabs = [
             <div class="setup-civilization-info">
               <CivIcon :name="setupCivilization?.id==='china'?'wonder':setupCivilization?.id==='rome'?'shield':setupCivilization?.id==='egypt'?'water':'compass'" :size="24" />
               <span>{{ setupCivilization ? setupCivilization.ability : '从华夏、罗马、埃及中随机选择' }}</span>
-              <CivHelp label="开局设置说明" :text="(setupCivilization?.description ?? '建立新世界时随机选择文明。') + '\n相同设置和种子可复现开局。文明可重复，4–5个AI时地图扩大。政治哲学的鼓舞需要遇见3个城邦。'" />
+              <CivHelp label="开局设置说明" :text="(setupCivilization?.description ?? '建立新世界时随机选择文明。') + '大陆地图有海湾与内海，盘古大陆的陆地相连。轻松难度的蛮族较少，挑战难度的对手更积极。相同设置和种子可复现开局。文明可重复，4到5个AI时地图扩大。政治哲学的鼓舞需要遇见3个城邦。'" />
             </div>
             <p v-if="initial.error && !started" class="warning">
               {{ initial.error }}

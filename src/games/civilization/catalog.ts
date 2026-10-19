@@ -94,7 +94,7 @@ const unit = (
   kind: "unit",
   icon: strength ? "sword" : "flag",
   description: strength
-    ? `战斗力 ${strength} · 移动力 ${moves}`
+    ? `战斗力 ${strength}，移动力 ${moves}`
     : `移动力 ${moves}`,
   ...extra,
 });
@@ -116,13 +116,13 @@ const building = (
 export const items: Item[] = [
   unit('slinger', '投石兵', 35, 5, 2, '', {range:1, rangedStrength:15, unitClass:'ranged', era:0, icon:'bow'}),
   unit("settler", "开拓者", 65, 0, 2, "", {
-    description: "建立城市；完成时消耗一人口",
+    description: "用于建立城市，训练完成时城市减少1人口。",
     icon: "flag",
   }),
   unit("scout", "侦察兵", 22, 10, 3, "", { icon: "compass" }),
   unit("warrior", "勇士", 30, 20, 2),
   unit("builder", "建造者", 30, 0, 2, "", {
-    description: "三次地块改良；政策可增加次数",
+    description: "可改良地块3次，政策可增加次数。",
     icon: "hammer",
   }),
   unit("trader", "商人", 35, 0, 3, "trade", {
@@ -155,7 +155,7 @@ export const items: Item[] = [
     faithCost: 150,
     needs: 'shrine',
     icon: "faith",
-    description: "祠堂解锁 · 基础 150 信仰 · 三次传播宗教",
+    description: "建造祠堂后可购买，基础价格 150 信仰，可传播宗教三次。",
   }),
   unit('prophet','大预言家',0,0,4,'',{greatPerson:true,icon:'faith',description:'用预言家点招募；在圣地创立宗教，不能生产或购买',source:'https://www.civilopedia.net/en-US/gathering-storm/concepts/faith_4/'}),
   unit('scientist','大科学家',0,0,4,'',{greatPerson:true,icon:'science',description:'用科学家点招募；移动到对应地块使用能力，不能生产或购买',source:'https://www.civilopedia.net/en-US/gathering-storm/units/unit_great_scientist/'}),
@@ -453,7 +453,7 @@ for (const item of items) {
   }
   if (item.kind === 'unit') {
     item.unitClass = item.id==='scout' ? 'recon' : ['catapult','artillery'].includes(item.id) ? 'siege' : item.range ? 'ranged' : item.domain==='sea' ? 'naval' : ['horse','tank'].includes(item.id) ? 'cavalry' : item.strength ? 'melee' : 'civilian';
-    if (item.strength) item.description = `近战防御 ${item.strength}${item.rangedStrength ? ` · 远程 ${item.rangedStrength}` : ''}${item.bombardStrength ? ` · 轰炸 ${item.bombardStrength}` : ''} · 移动力 ${item.moves}`;
+    if (item.strength) item.description = `近战防御 ${item.strength}${item.rangedStrength ? `，远程 ${item.rangedStrength}` : ''}${item.bombardStrength ? `，轰炸 ${item.bombardStrength}` : ''}，移动力 ${item.moves}`;
   }
   item.era = [...techs,...civics].find(r=>r.id===item.unlock)?.era ?? 0;
 }
@@ -483,7 +483,7 @@ export const civilizations = [
     leader: "秦始皇",
     color: "#e5c27b",
     ability: "朝代更替",
-    description: "尤里卡 / 鼓舞减少 50% 需求，建造者多一次使用次数。",
+    description: "尤里卡或鼓舞减少 50% 需求，建造者多一次使用次数。",
     cities: ["长安", "洛阳", "成都", "杭州", "南京", "苏州", "武汉"],
   },
   {

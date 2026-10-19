@@ -63,6 +63,15 @@
   flex-shrink: 0;
   font-size: 12px;
 }
+.civ-game .meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.civ-game .meta-line > span {
+  white-space: nowrap;
+}
 :where(.civ-game) button {
   font: inherit;
   min-height: 44px;
@@ -689,12 +698,13 @@
   font-weight: 500;
   color: #e6dba9;
 }
-.city-summary span {
+.city-summary > div > span {
   display: block;
   font-size: 9px;
   color: #b6c9a9;
   margin-top: 5px;
 }
+.city-summary .meta-line {justify-content:center;gap:0 4px;}
 .growth > div:first-child {
   display: flex;
   justify-content: space-between;

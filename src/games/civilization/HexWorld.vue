@@ -213,7 +213,7 @@ function keyboard(e: KeyboardEvent) {
 <template>
   <div class="world-map">
     <div class="cartography">
-      <span
+      <span v-if="mode === 'move' || mode === 'attack' || placement"
         ><CivIcon name="compass" :size="16" />{{
           mode === "move"
             ? "蓝色地块可移动"
@@ -221,7 +221,7 @@ function keyboard(e: KeyboardEvent) {
               ? "红色地块可攻击"
               : placement
                 ? "选择高亮地块建设"
-                : "拖动地图 · 点击地块查看"
+                : ""
         }}</span
       >
       <div>
@@ -599,7 +599,7 @@ function keyboard(e: KeyboardEvent) {
     <div class="map-bottom">
       <span>缩放 {{ Math.round(zoom * 100) }}%</span
       ><span
-        >{{ state.options.map === "continents" ? "大陆" : "盘古大陆" }} ·
+        >{{ state.options.map === "continents" ? "大陆" : "盘古大陆" }}
         {{ state.width }} × {{ state.height }}</span
       >
     </div>
@@ -661,6 +661,7 @@ function keyboard(e: KeyboardEvent) {
 .cartography > div {
   display: flex;
   gap: 4px;
+  margin-left: auto;
 }
 .cartography button {
   display: grid;
