@@ -11,3 +11,4 @@
 - [时间戳转换](./timestamp) — Unix 时间戳与日期互转
 - [下载速度计算](./download-calc) — 文件大小、速度、时间互算，支持 bit/Byte 单位
 - [低价机票扫描](./flights) — 多个候选城市 × 日期区间，逐项查价并保存本地最新结果
+- [JR 新干线与特急列车线路图](./jr-map) — 原图支持窗口滚动与缩放；[来源：makkiato / Gumroad](https://makkiato.gumroad.com/l/JRGroupMap)（2022 年 9 月版）
