@@ -54,7 +54,7 @@ const sideNavGroup = computed(() => {
     <header class="site-header sticky top-0 z-50">
       <div class="header-inner mx-auto px-4 flex items-center justify-between">
         <RouterLink to="/" aria-label="青い夏首页" class="brand-link flex items-center gap-2 hover:opacity-80 transition">
-          <img :src="'/logo.png'" alt="" class="w-7 h-7 rounded" />
+          <img :src="'/logo.svg'" alt="" class="w-7 h-7 rounded" />
           <span class="text-lg font-bold text-stone-100 tracking-wide">青い夏</span>
           <span class="brand-subtitle">AOI NATSU</span>
         </RouterLink>

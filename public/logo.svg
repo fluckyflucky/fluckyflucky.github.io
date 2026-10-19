@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" color="#92d6ce" role="img" aria-labelledby="logo-title">
+<title id="logo-title">青い夏</title>
+<defs>
+<mask id="logo-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+<rect width="64" height="64" fill="white"/>
+<path d="M26 20H64V30H23.5ZM21 40H41L37 64H15Z" fill="black"/>
+<path d="M55.60918,-10 61.96004,-10 13.46261,74 7.11176,74Z" fill="black"/>
+</mask>
+</defs>
+<path d="M20 8h28l8 8v28q0 12-12 12H20Q8 56 8 44V20Q8 8 20 8Z" fill="currentColor" mask="url(#logo-cutout)"/>
+</svg>
