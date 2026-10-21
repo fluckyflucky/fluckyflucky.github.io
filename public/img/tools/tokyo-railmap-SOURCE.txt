@@ -1,0 +1,17 @@
+Tokyo metropolitan railway map / 首都圏鉄道路線図
+
+Original source: Railmaps — https://railmaps.jp/tokyo
+Map data: https://railmaps.jp/api/maps/tokyo/data
+Collected: 2026-10-21
+
+The map's graphic design and content belong to their original author(s).
+These SVGs are locally generated static exports, not official downloads
+published by Railmaps. The source does not state a map update date.
+
+Export: original Canvas rendering logic drawn through an SVG backend,
+using M PLUS 2 and Roboto Condensed, with text converted to vector outlines.
+Decorative PNG images from the original map are embedded at their original
+resolution. Japanese and English versions share the original map layout.
+
+Railway services may change. Refer to the railway operators for current
+routes and stopping patterns.

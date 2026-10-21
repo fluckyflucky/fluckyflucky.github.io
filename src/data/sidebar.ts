@@ -21,6 +21,7 @@ const manualOverrides: Record<string, SidebarGroup> = {
       { text: '下载速度计算', link: '/tools/download-calc' },
       { text: '低价机票扫描', link: '/tools/flights' },
       { text: 'JR 铁路线路图', link: '/tools/jr-map' },
+      { text: '东京首都圈线路图', link: '/tools/tokyo-map' },
     ],
   },
 }
