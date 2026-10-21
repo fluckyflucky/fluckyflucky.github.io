@@ -87,7 +87,7 @@ function endDrag(event: PointerEvent) {
     <p class="text-sm text-stone-400 mb-5">首都圏 · 高清 SVG · 日文 / 英文</p>
 
     <div class="source-note">
-      <p><strong>原图来源 / REF：</strong><a href="https://railmaps.jp/tokyo" target="_blank" rel="noopener noreferrer">Railmaps · 鉄道路線図（首都圏）↗</a></p>
+      <p><strong>来源：</strong><a href="https://railmaps.jp/tokyo" target="_blank" rel="noopener noreferrer">Railmaps · 鉄道路線図（首都圏）↗</a></p>
       <p class="text-xs text-stone-400 mt-2">图形与内容归原作者所有。本站根据原站公开地图数据导出 SVG，采集日期为 2026 年 10 月 21 日，非原站发布的下载版本。</p>
       <p class="text-xs text-stone-400 mt-2">原站未标注地图更新日期；此处为静态快照，仅供参考。线路与停站信息以铁路公司最新公告为准。</p>
     </div>

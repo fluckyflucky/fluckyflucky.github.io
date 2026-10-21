@@ -62,7 +62,7 @@ function endDrag(event: PointerEvent) {
     <p class="text-sm text-stone-400 mb-5">2022 年 9 月版 · 高清原图</p>
 
     <div class="source-note">
-      <p><strong>原图来源 / REF：</strong><a :href="sourceUrl" target="_blank" rel="noopener noreferrer">makkiato · JR Group Map ↗</a></p>
+      <p><strong>来源：</strong><a :href="sourceUrl" target="_blank" rel="noopener noreferrer">makkiato · JR Group Map ↗</a></p>
       <p class="text-xs text-stone-400 mt-2">图中署名：R Zhao © 2022 · makkiato.net。非官方示意图，仅供参考；线路与停站信息以铁路公司最新公告为准。</p>
     </div>
 
