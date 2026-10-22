@@ -28,16 +28,16 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
         <p class="hero-subtitle">一直在追逐永无止境的夏。</p>
         <div class="hero-actions">
           <RouterLink to="/thoughts" class="primary-link">夏日记忆 <span aria-hidden="true">↗</span></RouterLink>
-          <RouterLink to="/images" class="secondary-link">图库 <span aria-hidden="true">→</span></RouterLink>
+          <RouterLink to="/images" class="secondary-link glass-surface">图库 <span aria-hidden="true">→</span></RouterLink>
         </div>
       </div>
       <RouterLink to="/images/2026-05-08-japan-1" class="hero-photo" aria-label="第一次日本行">
         <img src="/img/home/tokyo-train.webp" alt="东京街头，绿色电车经过商业楼前的高架轨道" width="1400" height="1051" fetchpriority="high" />
-        <span class="photo-location">
+        <span class="photo-location glass-surface">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>
           东京
         </span>
-        <span class="photo-caption">
+        <span class="photo-caption glass-surface">
           <span><span class="photo-kicker">2024.06</span><strong>第一次日本行</strong></span>
           <span class="photo-arrow" aria-hidden="true">↗</span>
         </span>
@@ -50,7 +50,7 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
         <span class="section-rule" aria-hidden="true" />
       </div>
       <div class="feature-grid">
-        <RouterLink v-for="feature in features" :key="feature.path" :to="feature.path" class="feature-card">
+        <RouterLink v-for="feature in features" :key="feature.path" :to="feature.path" class="feature-card glass-surface">
           <span class="feature-icon"><img :src="feature.icon" alt="" aria-hidden="true" width="24" height="24" /></span>
           <div class="feature-copy">
             <h3>{{ feature.title }}</h3>
@@ -79,7 +79,7 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
           <p v-if="!recommendations.length" class="empty-journal">暂无随笔</p>
         </div>
       </section>
-      <section class="about-card" aria-labelledby="about-title">
+      <section class="about-card glass-surface" aria-labelledby="about-title">
         <div class="about-heading">
           <h2 id="about-title">关于我</h2>
           <span class="about-mark" aria-hidden="true"><img src="/logo.svg" alt="" width="32" height="32" /></span>
@@ -101,15 +101,6 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
   position: relative;
   z-index: 10;
   color: #e9efef;
-}
-
-.home-page::before {
-  content: '';
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at 70% 12%, #79d5d10a, transparent 48%);
 }
 
 .home-hero {
@@ -140,8 +131,8 @@ h1 > span { color: #a1dcd8; }
 
 .primary-link { background: var(--home-accent); color: #153e3e; font-weight: 600; }
 .primary-link:hover { background: #d3f5ed; }
-.secondary-link { border-color: var(--home-border); color: #c1d1d2; }
-.secondary-link:hover { background: #79d5d10c; border-color: #91d8d55c; color: var(--home-accent); }
+.secondary-link { color: #dce8e8; }
+.secondary-link:hover { color: var(--home-accent); }
 
 .hero-photo {
   position: relative;
@@ -155,7 +146,6 @@ h1 > span { color: #a1dcd8; }
   box-shadow: 0 24px 64px #00000026;
 }
 
-.hero-photo::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, #071c271f 35%, #071c27e6); }
 .hero-photo > img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 60% center; transition: transform .5s; }
 .hero-photo:hover > img { transform: scale(1.035); }
 
@@ -167,19 +157,17 @@ h1 > span { color: #a1dcd8; }
   align-items: center;
   gap: 6px;
   padding: 7px 10px;
-  border: 1px solid #e9efef30;
-  border-radius: 6px;
-  background: #0c252bd9;
+  border-radius: 20px;
   color: #e9efef;
   font-size: 11px;
   letter-spacing: .04em;
 }
 
-.photo-caption { position: absolute; bottom: 26px; left: 26px; right: 26px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; color: #fff; }
+.photo-caption { position: absolute; bottom: 16px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 20px; border-radius: 12px; color: #fff; }
 .photo-kicker { display: block; margin-bottom: 9px; color: #d0e0df; font-size: 11px; letter-spacing: .12em; }
 .photo-caption strong { font-size: 22px; font-weight: 500; letter-spacing: .035em; }
-.photo-arrow { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border: 1px solid #e9efef50; border-radius: 50%; font-size: 21px; transition: background .2s, border-color .2s; }
-.hero-photo:hover .photo-arrow { background: #b9e8de20; border-color: var(--home-accent); }
+.photo-arrow { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border: 1px solid #e9efef50; border-radius: 50%; background: rgb(255 255 255 / .05); font-size: 21px; transition: background .2s, border-color .2s; }
+.hero-photo:hover .photo-arrow { background: rgb(255 255 255 / .1); border-color: var(--home-accent); }
 
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 22px; }
 .section-heading h2, .about-heading h2 { font-size: 20px; font-weight: 600; letter-spacing: .03em; }
@@ -195,16 +183,12 @@ h1 > span { color: #a1dcd8; }
   gap: 15px;
   min-height: 108px;
   padding: 22px;
-  border: 1px solid var(--home-border);
   border-radius: 12px;
-  background: linear-gradient(115deg, #17313596, #102326a6);
-  transition: background .2s, border-color .2s;
 }
 
-.feature-card:hover, .feature-card:focus-visible { background: #18363aca; border-color: #91d8d55c; }
 .feature-copy h3 { font-size: 17px; font-weight: 550; letter-spacing: .02em; }
 .feature-copy p { margin-top: 7px; color: var(--home-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.feature-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #a1dcd814; border-radius: 11px; background: #79d5d10b; }
+.feature-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgb(233 239 239 / .1); border-radius: 11px; background: rgb(255 255 255 / .025); }
 .feature-arrow { color: #8daeb0; font-size: 18px; transition: color .2s; }
 .feature-card:hover .feature-arrow { color: var(--home-accent); }
 
@@ -222,9 +206,9 @@ h1 > span { color: #a1dcd8; }
 .recent-copy time { flex-shrink: 0; color: var(--home-muted); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
 .recent-arrow { color: #95b5b7; }
 
-.about-card { display: flex; flex-direction: column; padding: 28px; border: 1px solid var(--home-border); border-radius: 14px; background: linear-gradient(140deg, #18383acc, #102426b3); }
+.about-card { display: flex; flex-direction: column; padding: 28px; border-radius: 14px; }
 .about-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
-.about-mark { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--home-border); border-radius: 12px; background: #b9e8de08; }
+.about-mark { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--home-border); border-radius: 12px; background: rgb(255 255 255 / .025); }
 .about-card > p { margin-top: 12px; color: var(--home-muted); font-size: 14px; line-height: 1.85; }
 .about-card > .about-intro { margin: 0; color: #dce8e8; font-size: 15px; }
 .about-card > .about-interests { margin-top: 4px; font-size: 12px; }
@@ -232,6 +216,33 @@ h1 > span { color: #a1dcd8; }
 .github-link:hover { color: var(--home-accent); }
 .github-link > span { margin-left: auto; }
 .empty-journal { padding: 24px 0; color: var(--home-muted); }
+
+/* Opaque fallback keeps text readable when backdrop filtering is unavailable. */
+.glass-surface {
+  background: rgb(17 25 29 / .94);
+  border: 1px solid rgb(231 244 246 / .16);
+  border-top-color: rgb(231 244 246 / .3);
+  border-left-color: rgb(231 244 246 / .22);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .06), inset 0 -1px 0 rgb(0 0 0 / .12), 0 8px 24px rgb(0 0 0 / .12);
+  transition: background-color .2s, border-color .2s, box-shadow .2s;
+}
+
+.feature-card:hover, .feature-card:focus-visible, .secondary-link:hover {
+  background-color: rgb(30 40 44 / .94);
+  border-color: rgb(231 244 246 / .38);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .12), inset 0 -1px 0 rgb(0 0 0 / .1), 0 10px 28px rgb(0 0 0 / .16);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass-surface {
+    background-color: rgb(17 25 29 / .28);
+    -webkit-backdrop-filter: blur(18px) saturate(1.25);
+    backdrop-filter: blur(18px) saturate(1.25);
+  }
+
+  .photo-caption, .photo-location { background-color: rgb(13 22 28 / .7); }
+  .feature-card:hover, .feature-card:focus-visible, .secondary-link:hover { background-color: rgb(38 48 52 / .4); }
+}
 
 @media (max-width: 1023px) {
   .home-hero { gap: 32px; }
@@ -252,7 +263,7 @@ h1 > span { color: #a1dcd8; }
   .hero-actions { margin-top: 26px; }
   .hero-photo { height: auto; aspect-ratio: 1.2; }
   .photo-location { top: 16px; left: 16px; }
-  .photo-caption { bottom: 22px; left: 22px; right: 22px; }
+  .photo-caption { bottom: 12px; left: 12px; right: 12px; padding: 14px 16px; }
   .photo-caption strong { font-size: 20px; }
   .section-heading { gap: 12px; }
   .section-heading h2, .about-heading h2 { font-size: 19px; }
@@ -270,7 +281,15 @@ h1 > span { color: #a1dcd8; }
 
 @media (max-width: 359px) {
   .hero-subtitle { font-size: 18px; }
+  .photo-caption { gap: 8px; padding: 12px; }
+  .photo-caption strong { font-size: 18px; }
+  .photo-arrow { width: 34px; height: 34px; }
   .feature-card { padding: 16px 12px; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-surface { background-color: rgb(17 25 29 / .96); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .feature-card:hover, .feature-card:focus-visible, .secondary-link:hover { background-color: rgb(30 40 44 / .96); }
 }
 
 @media (prefers-reduced-motion: reduce) {
