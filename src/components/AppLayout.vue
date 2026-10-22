@@ -56,7 +56,7 @@ const sideNavGroup = computed(() => {
         <RouterLink to="/" aria-label="青い夏首页" class="brand-link flex items-center gap-2 hover:opacity-80 transition">
           <img :src="'/logo.svg'" alt="" class="w-7 h-7 rounded" />
           <span class="text-lg font-bold text-stone-100 tracking-wide">青い夏</span>
-          <span class="brand-subtitle">AOI NATSU</span>
+          <span class="brand-subtitle">AOINATSU</span>
         </RouterLink>
 
         <nav aria-label="主导航" class="hidden md:flex items-center gap-1">

@@ -84,9 +84,9 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
           <h2 id="about-title">关于我</h2>
           <span class="about-mark" aria-hidden="true"><img src="/logo.svg" alt="" width="32" height="32" /></span>
         </div>
-        <p class="about-intro">同济大学计科大四在读</p>
-        <p class="about-interests">Agent / 前端 / 后端 / 移动开发</p>
-        <p>平时喜欢旅行、拍照。</p>
+        <p class="about-intro">同济大学计科大四在读。</p>
+        <p>主要做 Web 全栈开发，也写一些 Agent 和 Unity 小游戏。</p>
+        <p>喜欢旅行、摄影和绘画，也是ヨルシカ的歌迷。一到夏天就坐不住，总在计划下一趟旅行。</p>
         <a href="https://github.com/fluckyflucky" target="_blank" rel="noopener noreferrer" class="github-link"><svg aria-hidden="true" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.79-.26.79-.58v-2.23c-3.34.72-4.03-1.42-4.03-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.49 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23A11.5 11.5 0 0 1 12 5.81c1.02 0 2.05.14 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.83 1.1.83 2.22v3.3c0 .32.19.69.8.57A12 12 0 0 0 24 12C24 5.37 18.63 0 12 0Z" /></svg>GitHub <span aria-hidden="true">↗</span></a>
       </section>
     </div>
@@ -211,7 +211,6 @@ h1 > span { color: #a1dcd8; }
 .about-mark { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--home-border); border-radius: 12px; background: rgb(255 255 255 / .025); }
 .about-card > p { margin-top: 12px; color: var(--home-muted); font-size: 14px; line-height: 1.85; }
 .about-card > .about-intro { margin: 0; color: #dce8e8; font-size: 15px; }
-.about-card > .about-interests { margin-top: 4px; font-size: 12px; }
 .github-link { display: flex; gap: 10px; align-items: center; min-height: 44px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--home-border); font-size: 13px; color: #d0e0df; }
 .github-link:hover { color: var(--home-accent); }
 .github-link > span { margin-left: auto; }
