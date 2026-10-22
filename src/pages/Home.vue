@@ -295,7 +295,7 @@ h1 > span { color: #a1dcd8; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-page *, .home-page *::after { transition: none; }
+  .home-page *, .home-page *::after { transition: none !important; }
   .hero-photo:hover > img { transform: none; }
 }
 </style>
