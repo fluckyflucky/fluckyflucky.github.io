@@ -10,12 +10,12 @@ import gamesIcon from '../icons/home/games.svg'
 document.title = '青い夏'
 
 const features = [
-  { title: '笔记', description: '把学到的，慢慢记下来', path: '/notes', icon: notesIcon },
-  { title: '夏日记忆', description: '收藏日常里的细碎心事', path: '/thoughts', icon: thoughtsIcon },
-  { title: '图库', description: '用镜头留住沿途的风景', path: '/images', icon: imagesIcon },
-  { title: '工具箱', description: '给日常多一点便利', path: '/tools', icon: toolsIcon },
-  { title: '词典', description: '遇见一个新的日语词汇', path: '/jmdict', icon: dictionaryIcon },
-  { title: '小游戏', description: '在这里，轻松玩一会儿', path: '/games', icon: gamesIcon },
+  { title: '笔记', description: '学习记录与问题整理', path: '/notes', icon: notesIcon },
+  { title: '夏日记忆', description: '生活随笔', path: '/thoughts', icon: thoughtsIcon },
+  { title: '图库', description: '旅行照片', path: '/images', icon: imagesIcon },
+  { title: '工具箱', description: '格式转换、线路图等', path: '/tools', icon: toolsIcon },
+  { title: '词典', description: '日语词汇与例句', path: '/jmdict', icon: dictionaryIcon },
+  { title: '小游戏', description: '益智、休闲和桌游', path: '/games', icon: gamesIcon },
 ]
 const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
 </script>
@@ -24,10 +24,8 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
   <div class="home-page">
     <section class="home-hero" aria-labelledby="home-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="summer-dot" aria-hidden="true" /> explorer · recorder · creator</p>
         <h1 id="home-title">青い<span>夏</span></h1>
         <p class="hero-subtitle">一直在追逐永无止境的夏。</p>
-        <p class="hero-note">关于技术、生活，和路上的风景。</p>
         <div class="hero-actions">
           <RouterLink to="/thoughts" class="primary-link">夏日记忆 <span aria-hidden="true">↗</span></RouterLink>
           <RouterLink to="/images" class="secondary-link">图库 <span aria-hidden="true">→</span></RouterLink>
@@ -37,10 +35,10 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
         <img src="/img/home/tokyo-train.webp" alt="东京街头，绿色电车经过商业楼前的高架轨道" width="1400" height="1051" fetchpriority="high" />
         <span class="photo-location">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>
-          日本 · 东京
+          东京
         </span>
         <span class="photo-caption">
-          <span><span class="photo-kicker">2024.06 / 旅途记录</span><strong>第一次日本行</strong></span>
+          <span><span class="photo-kicker">2024.06</span><strong>第一次日本行</strong></span>
           <span class="photo-arrow" aria-hidden="true">↗</span>
         </span>
       </RouterLink>
@@ -48,9 +46,8 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
 
     <section class="explore-section" aria-labelledby="explore-title">
       <div class="section-heading explore-heading">
-        <h2 id="explore-title">随处逛逛</h2>
+        <h2 id="explore-title">站内导航</h2>
         <span class="section-rule" aria-hidden="true" />
-        <span class="section-label" aria-hidden="true">EXPLORE</span>
       </div>
       <div class="feature-grid">
         <RouterLink v-for="feature in features" :key="feature.path" :to="feature.path" class="feature-card">
@@ -67,7 +64,7 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
     <div class="home-bottom">
       <section class="recent-section" aria-labelledby="recent-title">
         <div class="section-heading">
-          <div><span class="section-label" aria-hidden="true">JOURNAL</span><h2 id="recent-title">最近随笔</h2></div>
+          <h2 id="recent-title">最近随笔</h2>
           <RouterLink to="/thoughts" class="all-link">全部随笔 <span aria-hidden="true">↗</span></RouterLink>
         </div>
         <div class="recent-list">
@@ -84,12 +81,12 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
       </section>
       <section class="about-card" aria-labelledby="about-title">
         <div class="about-heading">
-          <div><span class="section-label" aria-hidden="true">ABOUT ME</span><h2 id="about-title">关于我</h2></div>
+          <h2 id="about-title">关于我</h2>
           <span class="about-mark" aria-hidden="true"><img src="/logo.svg" alt="" width="32" height="32" /></span>
         </div>
-        <p class="about-intro">同济大学计科大三在读</p>
+        <p class="about-intro">同济大学计科大四在读</p>
         <p class="about-interests">Agent / 前端 / 后端 / 移动开发</p>
-        <p>爱旅行、摄影、做有意思的事情，一直在追逐永无止境的夏。</p>
+        <p>平时喜欢旅行、拍照。</p>
         <a href="https://github.com/fluckyflucky" target="_blank" rel="noopener noreferrer" class="github-link"><svg aria-hidden="true" width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.79-.26.79-.58v-2.23c-3.34.72-4.03-1.42-4.03-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.49 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23A11.5 11.5 0 0 1 12 5.81c1.02 0 2.05.14 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.83 1.1.83 2.22v3.3c0 .32.19.69.8.57A12 12 0 0 0 24 12C24 5.37 18.63 0 12 0Z" /></svg>GitHub <span aria-hidden="true">↗</span></a>
       </section>
     </div>
@@ -123,22 +120,9 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
   padding: 28px 0 56px;
 }
 
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--home-muted);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-}
-
-.summer-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: #a1dcd8; box-shadow: 0 0 12px #79d5d140; }
-h1 { margin: 26px 0 20px; font-size: clamp(64px, 6.5vw, 92px); line-height: 1.16; font-weight: 650; letter-spacing: -.045em; }
+h1 { margin: 0 0 20px; font-size: clamp(64px, 6.5vw, 92px); line-height: 1.16; font-weight: 650; letter-spacing: -.045em; }
 h1 > span { color: #a1dcd8; }
 .hero-subtitle { font-size: 23px; font-weight: 500; letter-spacing: .035em; line-height: 1.6; }
-.hero-note { margin-top: 12px; color: var(--home-muted); font-size: 14px; line-height: 1.8; letter-spacing: .04em; }
 .hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 32px; }
 
 .primary-link, .secondary-link {
@@ -199,11 +183,8 @@ h1 > span { color: #a1dcd8; }
 
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 22px; }
 .section-heading h2, .about-heading h2 { font-size: 20px; font-weight: 600; letter-spacing: .03em; }
-.section-label { display: block; color: var(--home-muted); font-size: 10px; line-height: 1.5; letter-spacing: .16em; }
-.section-heading .section-label, .about-heading .section-label { margin-bottom: 8px; }
 .explore-heading { gap: 18px; margin-bottom: 18px; }
 .explore-heading h2 { font-size: 15px; }
-.explore-heading > .section-label { margin: 0; font-size: 9px; }
 .section-rule { flex: 1; height: 1px; background: var(--home-border); }
 .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 
@@ -266,9 +247,8 @@ h1 > span { color: #a1dcd8; }
 
 @media (max-width: 767px) {
   .home-hero { grid-template-columns: 1fr; gap: 32px; padding: 12px 0 36px; }
-  h1 { margin: 22px 0 18px; font-size: clamp(64px, 18vw, 80px); }
+  h1 { margin-bottom: 18px; font-size: clamp(64px, 18vw, 80px); }
   .hero-subtitle { font-size: 20px; }
-  .hero-note { margin-top: 8px; font-size: 13px; }
   .hero-actions { margin-top: 26px; }
   .hero-photo { height: auto; aspect-ratio: 1.2; }
   .photo-location { top: 16px; left: 16px; }
@@ -289,7 +269,6 @@ h1 > span { color: #a1dcd8; }
 }
 
 @media (max-width: 359px) {
-  .eyebrow { font-size: 9px; letter-spacing: .1em; }
   .hero-subtitle { font-size: 18px; }
   .feature-card { padding: 16px 12px; }
 }
