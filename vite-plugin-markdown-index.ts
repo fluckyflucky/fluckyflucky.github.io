@@ -71,7 +71,17 @@ export function markdownIndexPlugin(): Plugin {
         items.push({ text: title, link: `/${catName}/${date}-${slug}`, date })
       }
 
-      items.sort((a, b) => b.date.localeCompare(a.date) || a.link.localeCompare(b.link))
+      items.sort((a, b) => {
+        if (catName === 'images') {
+          const tripNumber = (item: ArticleItem) => {
+            const match = item.link.match(/-japan-(\d+)$/)
+            return match ? Number(match[1]) : -1
+          }
+          const tripOrder = tripNumber(b) - tripNumber(a)
+          if (tripOrder) return tripOrder
+        }
+        return b.date.localeCompare(a.date) || a.link.localeCompare(b.link)
+      })
 
       if (items.length === 0) continue
 

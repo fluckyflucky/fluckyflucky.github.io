@@ -147,7 +147,7 @@ const sideNavGroup = computed(() => {
     </transition>
 
     <!-- Main content -->
-    <main class="flex-1">
+    <main class="relative z-10 flex-1">
       <div class="max-w-[1440px] mx-auto px-4" :class="route.path === '/games/civilization' ? 'py-3 md:py-4' : route.path === '/' ? 'home-container py-8 md:py-10' : 'py-8 md:py-12'">
         <div v-if="showSideNav" class="flex gap-10 justify-center">
           <div class="hidden md:block pt-1">

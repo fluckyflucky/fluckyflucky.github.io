@@ -33,13 +33,11 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
       </div>
       <RouterLink to="/images/2026-05-08-japan-1" class="hero-photo" aria-label="第一次日本行">
         <img src="/img/home/tokyo-train.webp" alt="东京街头，绿色电车经过商业楼前的高架轨道" width="1400" height="1051" fetchpriority="high" />
-        <span class="photo-location glass-surface">
-          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>
-          东京
-        </span>
-        <span class="photo-caption glass-surface">
-          <span><span class="photo-kicker">2024.06</span><strong>第一次日本行</strong></span>
-          <span class="photo-arrow" aria-hidden="true">↗</span>
+        <span class="photo-caption">
+          <span>
+            <span class="photo-meta"><span class="photo-kicker">2024.06</span><span class="photo-location"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>东京</span></span>
+            <strong>第一次日本行</strong>
+          </span>
         </span>
       </RouterLink>
     </section>
@@ -50,13 +48,12 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
         <span class="section-rule" aria-hidden="true" />
       </div>
       <div class="feature-grid">
-        <RouterLink v-for="feature in features" :key="feature.path" :to="feature.path" class="feature-card glass-surface">
+        <RouterLink v-for="feature in features" :key="feature.path" :to="feature.path" class="feature-card">
           <span class="feature-icon"><img :src="feature.icon" alt="" aria-hidden="true" width="24" height="24" /></span>
           <div class="feature-copy">
             <h3>{{ feature.title }}</h3>
             <p>{{ feature.description }}</p>
           </div>
-          <span class="feature-arrow" aria-hidden="true">↗</span>
         </RouterLink>
       </div>
     </section>
@@ -79,7 +76,7 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
           <p v-if="!recommendations.length" class="empty-journal">暂无随笔</p>
         </div>
       </section>
-      <section class="about-card glass-surface" aria-labelledby="about-title">
+      <section class="about-card" aria-labelledby="about-title">
         <div class="about-heading">
           <h2 id="about-title">关于我</h2>
           <span class="about-mark" aria-hidden="true"><img src="/logo.svg" alt="" width="32" height="32" /></span>
@@ -138,7 +135,7 @@ h1 > span { color: #a1dcd8; }
   position: relative;
   display: block;
   isolation: isolate;
-  height: 410px;
+  height: 390px;
   overflow: hidden;
   border: 1px solid #beded638;
   border-radius: 16px;
@@ -149,48 +146,35 @@ h1 > span { color: #a1dcd8; }
 .hero-photo > img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 60% center; transition: transform .5s; }
 .hero-photo:hover > img { transform: scale(1.035); }
 
-.photo-location {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
-  border-radius: 20px;
-  color: #e9efef;
-  font-size: 11px;
-  letter-spacing: .04em;
-}
-
-.photo-caption { position: absolute; bottom: 16px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 20px; border-radius: 12px; color: #fff; }
-.photo-kicker { display: block; margin-bottom: 9px; color: #d0e0df; font-size: 11px; letter-spacing: .12em; }
-.photo-caption strong { font-size: 22px; font-weight: 500; letter-spacing: .035em; }
-.photo-arrow { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border: 1px solid #e9efef50; border-radius: 50%; background: rgb(255 255 255 / .05); font-size: 21px; transition: background .2s, border-color .2s; }
-.hero-photo:hover .photo-arrow { background: rgb(255 255 255 / .1); border-color: var(--home-accent); }
+.photo-caption { position: absolute; inset: auto 0 0; display: flex; align-items: end; min-height: 126px; padding: 36px 24px 22px; color: #fff; background: linear-gradient(0deg, rgb(5 19 22 / .82), rgb(5 19 22 / 0)); }
+.photo-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 5px; color: #e1ece9; font-size: 12px; text-shadow: 0 1px 8px #061719; }
+.photo-kicker { color: inherit; font-size: inherit; letter-spacing: .12em; }
+.photo-location { display: inline-flex; align-items: center; gap: 5px; }
+.photo-caption strong { font-size: 20px; font-weight: 500; letter-spacing: .035em; text-shadow: 0 1px 12px #061719; }
 
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 22px; }
 .section-heading h2, .about-heading h2 { font-size: 20px; font-weight: 600; letter-spacing: .03em; }
 .explore-heading { gap: 18px; margin-bottom: 18px; }
 .explore-heading h2 { font-size: 15px; }
 .section-rule { flex: 1; height: 1px; background: var(--home-border); }
-.feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 32px; }
 
 .feature-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: center;
-  gap: 15px;
-  min-height: 108px;
-  padding: 22px;
-  border-radius: 12px;
+  gap: 14px;
+  min-height: 86px;
+  padding: 16px 2px;
+  border-bottom: 1px solid var(--home-border);
+  transition: border-color .2s;
 }
 
 .feature-copy h3 { font-size: 17px; font-weight: 550; letter-spacing: .02em; }
-.feature-copy p { margin-top: 7px; color: var(--home-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.feature-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgb(233 239 239 / .1); border-radius: 11px; background: rgb(255 255 255 / .025); }
-.feature-arrow { color: #8daeb0; font-size: 18px; transition: color .2s; }
-.feature-card:hover .feature-arrow { color: var(--home-accent); }
+.feature-copy p { margin-top: 7px; color: var(--home-muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.feature-icon { display: grid; place-items: center; width: 24px; height: 24px; opacity: .76; }
+.feature-card:hover { border-color: rgb(185 232 222 / .48); }
+.feature-card:hover .feature-icon { opacity: 1; }
 
 .home-bottom { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 48px; padding-top: 54px; margin-bottom: 24px; }
 .recent-section { padding-top: 5px; }
@@ -203,12 +187,12 @@ h1 > span { color: #a1dcd8; }
 .recent-copy { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; min-width: 0; flex: 1; }
 .recent-title { color: #dce8e8; font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; transition: color .2s; }
 .recent-item:hover .recent-title { color: var(--home-accent); }
-.recent-copy time { flex-shrink: 0; color: var(--home-muted); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.recent-copy time { flex-shrink: 0; color: var(--home-muted); font-size: 12px; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
 .recent-arrow { color: #95b5b7; }
 
-.about-card { display: flex; flex-direction: column; padding: 28px; border-radius: 14px; }
+.about-card { display: flex; flex-direction: column; padding: 4px 0 4px 28px; border-left: 1px solid rgb(178 213 210 / .24); }
 .about-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
-.about-mark { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--home-border); border-radius: 12px; background: rgb(255 255 255 / .025); }
+.about-mark { display: grid; place-items: center; width: 36px; height: 36px; opacity: .72; }
 .about-card > p { margin-top: 12px; color: var(--home-muted); font-size: 14px; line-height: 1.85; }
 .about-card > .about-intro { margin: 0; color: #dce8e8; font-size: 15px; }
 .github-link { display: flex; gap: 10px; align-items: center; min-height: 44px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--home-border); font-size: 13px; color: #d0e0df; }
@@ -226,7 +210,7 @@ h1 > span { color: #a1dcd8; }
   transition: background-color .2s, border-color .2s, box-shadow .2s;
 }
 
-.feature-card:hover, .feature-card:focus-visible, .secondary-link:hover {
+.secondary-link:hover {
   background-color: rgb(30 40 44 / .94);
   border-color: rgb(231 244 246 / .38);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .12), inset 0 -1px 0 rgb(0 0 0 / .1), 0 10px 28px rgb(0 0 0 / .16);
@@ -239,16 +223,15 @@ h1 > span { color: #a1dcd8; }
     backdrop-filter: blur(18px) saturate(1.25);
   }
 
-  .photo-caption, .photo-location { background-color: rgb(13 22 28 / .7); }
-  .feature-card:hover, .feature-card:focus-visible, .secondary-link:hover { background-color: rgb(38 48 52 / .4); }
+  .secondary-link:hover { background-color: rgb(38 48 52 / .4); }
 }
 
 @media (max-width: 1023px) {
   .home-hero { gap: 32px; }
   .hero-photo { height: 380px; }
   .hero-subtitle { font-size: 19px; }
-  .feature-card { gap: 12px; padding: 18px; }
-  .feature-icon { width: 34px; height: 34px; }
+  .feature-grid { column-gap: 22px; }
+  .feature-card { gap: 12px; }
   .feature-copy h3 { font-size: 16px; }
   .home-bottom { gap: 28px; }
   .recent-copy { display: block; }
@@ -260,35 +243,30 @@ h1 > span { color: #a1dcd8; }
   h1 { margin-bottom: 18px; font-size: clamp(64px, 18vw, 80px); }
   .hero-subtitle { font-size: 20px; }
   .hero-actions { margin-top: 26px; }
-  .hero-photo { height: auto; aspect-ratio: 1.2; }
-  .photo-location { top: 16px; left: 16px; }
-  .photo-caption { bottom: 12px; left: 12px; right: 12px; padding: 14px 16px; }
+  .hero-photo { height: auto; aspect-ratio: 3 / 2; }
+  .photo-caption { inset: auto 0 0; min-height: 110px; padding: 36px 20px 18px; }
   .photo-caption strong { font-size: 20px; }
   .section-heading { gap: 12px; }
   .section-heading h2, .about-heading h2 { font-size: 19px; }
   .explore-heading h2 { font-size: 14px; }
-  .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .feature-card { grid-template-columns: minmax(0, 1fr) auto; align-content: start; gap: 14px 8px; padding: 18px 16px; }
-  .feature-icon { grid-column: 1; grid-row: 1; }
-  .feature-arrow { grid-column: 2; grid-row: 1; align-self: center; }
-  .feature-copy { grid-column: 1 / -1; }
+  .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
+  .feature-card { align-content: start; gap: 10px; min-height: 100px; padding: 16px 0; }
   .feature-copy p { margin-top: 6px; }
   .home-bottom { grid-template-columns: 1fr; gap: 32px; padding-top: 40px; margin-bottom: 12px; }
   .recent-item { gap: 16px; }
-  .about-card { padding: 24px; }
+  .about-card { padding: 2px 0 2px 20px; }
 }
 
 @media (max-width: 359px) {
   .hero-subtitle { font-size: 18px; }
-  .photo-caption { gap: 8px; padding: 12px; }
+  .photo-caption { padding: 30px 16px 16px; }
   .photo-caption strong { font-size: 18px; }
-  .photo-arrow { width: 34px; height: 34px; }
-  .feature-card { padding: 16px 12px; }
+  .feature-card { padding: 14px 0; }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .glass-surface { background-color: rgb(17 25 29 / .96); -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .feature-card:hover, .feature-card:focus-visible, .secondary-link:hover { background-color: rgb(30 40 44 / .96); }
+  .secondary-link:hover { background-color: rgb(30 40 44 / .96); }
 }
 
 @media (prefers-reduced-motion: reduce) {
