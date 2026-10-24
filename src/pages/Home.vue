@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { categories } from 'virtual:markdown-index'
+import { onMounted, onUnmounted, ref } from 'vue'
 import notesIcon from '../icons/home/notes.svg'
 import thoughtsIcon from '../icons/home/thoughts.svg'
 import imagesIcon from '../icons/home/images.svg'
@@ -18,6 +19,47 @@ const features = [
   { title: '小游戏', description: '益智、休闲和桌游', path: '/games', icon: gamesIcon },
 ]
 const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
+const photoImageRef = ref<HTMLImageElement | null>(null)
+const captionRef = ref<HTMLElement | null>(null)
+const lensStyle = ref<Record<string, string>>({})
+let resizeObserver: ResizeObserver | undefined
+let reducedMotion: MediaQueryList | undefined
+let reducedTransparency: MediaQueryList | undefined
+
+function syncLens() {
+  const photo = photoImageRef.value?.parentElement
+  const caption = captionRef.value
+  if (!photo || !caption) return
+  const box = caption.getBoundingClientRect()
+  const frame = photo.getBoundingClientRect()
+  lensStyle.value = {
+    '--lens-x': `${frame.width - (box.right - frame.left)}px`,
+    '--lens-y': `${frame.height - (box.bottom - frame.top)}px`,
+    '--photo-w': `${frame.width}px`,
+    '--photo-h': `${frame.height}px`,
+  }
+}
+
+function trackPointer(event: PointerEvent) {
+  if (event.pointerType !== 'mouse' || reducedMotion?.matches || reducedTransparency?.matches) return
+  const photo = photoImageRef.value?.parentElement
+  if (!photo) return
+  const caption = captionRef.value
+  if (!caption) return
+  const bounds = caption.getBoundingClientRect()
+  caption.style.setProperty('--shine-x', `${event.clientX - bounds.left}px`)
+  caption.style.setProperty('--shine-y', `${event.clientY - bounds.top}px`)
+}
+
+onMounted(() => {
+  reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
+  reducedTransparency = matchMedia('(prefers-reduced-transparency: reduce)')
+  syncLens()
+  resizeObserver = new ResizeObserver(syncLens)
+  if (photoImageRef.value?.parentElement) resizeObserver.observe(photoImageRef.value.parentElement)
+  if (captionRef.value) resizeObserver.observe(captionRef.value)
+})
+onUnmounted(() => resizeObserver?.disconnect())
 </script>
 
 <template>
@@ -31,9 +73,13 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
           <RouterLink to="/images" class="secondary-link glass-surface">图库 <span aria-hidden="true">→</span></RouterLink>
         </div>
       </div>
-      <RouterLink to="/images/2026-05-08-japan-1" class="hero-photo" aria-label="第一次日本行">
-        <img src="/img/home/tokyo-train.webp" alt="东京街头，绿色电车经过商业楼前的高架轨道" width="1400" height="1051" fetchpriority="high" />
-        <span class="photo-caption">
+      <RouterLink to="/images/2026-05-08-japan-1" class="hero-photo" :style="lensStyle" aria-label="第一次日本行" @pointermove="trackPointer">
+        <img ref="photoImageRef" src="/img/home/tokyo-train.webp" alt="东京街头，绿色电车经过商业楼前的高架轨道" width="1400" height="1051" fetchpriority="high" />
+        <span class="photo-caption" ref="captionRef">
+          <span class="caption-lens" aria-hidden="true">
+            <img src="/img/home/tokyo-train.webp" alt="" />
+            <svg class="lens-distortion" aria-hidden="true"><filter id="home-glass-warp" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".035 .07" numOctaves="1" seed="8" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+          </span>
           <span>
             <span class="photo-meta"><span class="photo-kicker">2024.06</span><span class="photo-location"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>东京</span></span>
             <strong>第一次日本行</strong>
@@ -102,16 +148,16 @@ const recommendations = categories['/thoughts']?.items.slice(0, 3) ?? []
 
 .home-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-  gap: 64px;
+  grid-template-columns: minmax(0, .83fr) minmax(0, 1.17fr);
+  gap: clamp(32px, 6vw, 84px);
   align-items: center;
-  padding: 28px 0 56px;
+  padding: 18px 0 72px;
 }
 
-h1 { margin: 0 0 20px; font-size: clamp(64px, 6.5vw, 92px); line-height: 1.16; font-weight: 650; letter-spacing: -.045em; }
-h1 > span { color: #a1dcd8; }
-.hero-subtitle { font-size: 23px; font-weight: 500; letter-spacing: .035em; line-height: 1.6; }
-.hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 32px; }
+h1 { margin: 0 0 22px; font-size: clamp(76px, 9vw, 126px); line-height: .98; font-weight: 620; letter-spacing: -.075em; }
+h1 > span { color: #a1dcd8; display: inline-block; transform: translateY(.12em); }
+.hero-subtitle { max-width: 14em; margin-top: 30px; color: #c6d6d5; font-size: clamp(18px, 2vw, 23px); font-weight: 450; letter-spacing: .055em; line-height: 1.75; }
+.hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 38px; }
 
 .primary-link, .secondary-link {
   display: inline-flex;
@@ -135,22 +181,30 @@ h1 > span { color: #a1dcd8; }
   position: relative;
   display: block;
   isolation: isolate;
-  height: 390px;
+  height: clamp(390px, 39vw, 510px);
   overflow: hidden;
   border: 1px solid #beded638;
-  border-radius: 16px;
+  border-radius: 3px;
   background: #163b42;
   box-shadow: 0 24px 64px #00000026;
 }
 
 .hero-photo > img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 60% center; transition: transform .5s; }
-.hero-photo:hover > img { transform: scale(1.035); }
+.hero-photo:hover > img { transform: none; }
 
-.photo-caption { position: absolute; inset: auto 0 0; display: flex; align-items: end; min-height: 126px; padding: 36px 24px 22px; color: #fff; background: linear-gradient(0deg, rgb(5 19 22 / .82), rgb(5 19 22 / 0)); }
-.photo-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 5px; color: #e1ece9; font-size: 12px; text-shadow: 0 1px 8px #061719; }
+.photo-caption { position: absolute; inset: auto 20px 20px auto; display: flex; align-items: end; min-height: 0; padding: 15px 19px 14px; color: #fff; border: 1px solid rgb(239 255 255 / .58); border-radius: 13px; background: rgb(17 37 42 / .96); box-shadow: inset 0 1px 0 rgb(255 255 255 / .72), inset 1px 0 0 rgb(255 255 255 / .32), inset 0 -2px 0 rgb(4 25 32 / .25), 0 10px 28px rgb(0 10 15 / .2); isolation: isolate; overflow: hidden; }
+.caption-lens { position: absolute; z-index: -1; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.caption-lens::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgb(8 28 36 / .25), rgb(4 20 28 / .58)); }
+.caption-lens img { position: absolute; right: calc(-1 * var(--lens-x)); bottom: calc(-1 * var(--lens-y)); width: var(--photo-w); height: var(--photo-h); max-width: none; object-fit: cover; object-position: 60% center; transform: scale(1.16); transform-origin: calc(100% - var(--lens-x)) calc(100% - var(--lens-y)); filter: url(#home-glass-warp) saturate(1.12) brightness(1); }
+.lens-distortion { position: absolute; width: 0; height: 0; overflow: hidden; }
+.photo-caption::after { content: ''; position: absolute; z-index: 0; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(100px circle at var(--shine-x, 50%) var(--shine-y, 50%), rgb(231 255 255 / .34), transparent 72%); transition: opacity .2s; }
+.hero-photo:hover .photo-caption::after { opacity: 1; }
+.photo-caption::before { content: ''; position: absolute; inset: 1px; pointer-events: none; border-radius: 12px; background: linear-gradient(115deg, rgb(255 255 255 / .22), transparent 34% 73%, rgb(202 250 255 / .15)); }
+.photo-caption > span:not(.caption-lens) { position: relative; z-index: 1; }
+.photo-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 5px; color: #f1ffff; font-size: 11px; text-shadow: 0 1px 8px #061719; }
 .photo-kicker { color: inherit; font-size: inherit; letter-spacing: .12em; }
 .photo-location { display: inline-flex; align-items: center; gap: 5px; }
-.photo-caption strong { font-size: 20px; font-weight: 500; letter-spacing: .035em; text-shadow: 0 1px 12px #061719; }
+.photo-caption strong { font-size: 17px; font-weight: 550; letter-spacing: .035em; text-shadow: 0 1px 12px #061719; }
 
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 22px; }
 .section-heading h2, .about-heading h2 { font-size: 20px; font-weight: 600; letter-spacing: .03em; }
@@ -224,11 +278,17 @@ h1 > span { color: #a1dcd8; }
   }
 
   .secondary-link:hover { background-color: rgb(38 48 52 / .4); }
+  .photo-caption { background: linear-gradient(140deg, rgb(235 255 255 / .2), rgb(91 137 143 / .15) 48%, rgb(14 39 45 / .25)); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .photo-caption { background: rgb(17 37 42 / .96); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .caption-lens, .photo-caption::after { display: none; }
 }
 
 @media (max-width: 1023px) {
   .home-hero { gap: 32px; }
-  .hero-photo { height: 380px; }
+  .hero-photo { height: 390px; }
   .hero-subtitle { font-size: 19px; }
   .feature-grid { column-gap: 22px; }
   .feature-card { gap: 12px; }
@@ -239,13 +299,13 @@ h1 > span { color: #a1dcd8; }
 }
 
 @media (max-width: 767px) {
-  .home-hero { grid-template-columns: 1fr; gap: 32px; padding: 12px 0 36px; }
-  h1 { margin-bottom: 18px; font-size: clamp(64px, 18vw, 80px); }
+  .home-hero { grid-template-columns: 1fr; gap: 28px; padding: 12px 0 48px; }
+  h1 { margin-bottom: 18px; font-size: clamp(76px, 22vw, 106px); }
   .hero-subtitle { font-size: 20px; }
   .hero-actions { margin-top: 26px; }
   .hero-photo { height: auto; aspect-ratio: 3 / 2; }
-  .photo-caption { inset: auto 0 0; min-height: 110px; padding: 36px 20px 18px; }
-  .photo-caption strong { font-size: 20px; }
+  .photo-caption { inset: auto 12px 12px auto; padding: 12px 15px; }
+  .photo-caption strong { font-size: 16px; }
   .section-heading { gap: 12px; }
   .section-heading h2, .about-heading h2 { font-size: 19px; }
   .explore-heading h2 { font-size: 14px; }
@@ -259,8 +319,8 @@ h1 > span { color: #a1dcd8; }
 
 @media (max-width: 359px) {
   .hero-subtitle { font-size: 18px; }
-  .photo-caption { padding: 30px 16px 16px; }
-  .photo-caption strong { font-size: 18px; }
+  .photo-caption { padding: 12px 12px; }
+  .photo-caption strong { font-size: 16px; }
   .feature-card { padding: 14px 0; }
 }
 
@@ -272,5 +332,7 @@ h1 > span { color: #a1dcd8; }
 @media (prefers-reduced-motion: reduce) {
   .home-page *, .home-page *::after { transition: none !important; }
   .hero-photo:hover > img { transform: none; }
+  .caption-lens, .photo-caption::after { display: none; }
+  .photo-caption { background: rgb(17 37 42 / .96); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 </style>
