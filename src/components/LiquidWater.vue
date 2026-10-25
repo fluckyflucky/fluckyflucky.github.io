@@ -100,7 +100,7 @@ void renderHomeWater() {
     vec2 delta = (uv - ripples[i].xy) * vec2(aspect, 1.0) * 2.8;
     // A smooth radial height field has no cusp at the point of contact.
     float radius = sqrt(dot(delta, delta) + .0025);
-    float travel = radius - age * .48;
+    float travel = radius - age * .384;
     if (abs(travel) > 1.0) continue;
     float envelope = exp(-travel * travel * 10.0) * exp(-age * .85);
     envelope *= smoothstep(0.0, .10, age) * (1.0 - smoothstep(1.5, 2.3, age));
@@ -353,7 +353,7 @@ function handlePointerMove(event: PointerEvent) {
     rippleData[offset] = x
     rippleData[offset + 1] = y
     rippleData[offset + 2] = seconds
-    rippleData[offset + 3] = Math.min(.009, .0055 + distance * .024)
+    rippleData[offset + 3] = Math.min(.0072, (.0055 + distance * .024) * .8)
     ripplesDirty = true
     rippleIndex = (rippleIndex + 1) % rippleCapacity
     lastRippleAt = now
