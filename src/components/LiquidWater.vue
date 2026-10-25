@@ -16,7 +16,11 @@ let pointerCurrent: [number, number] = [-2, -2]
 let reducedMotion: MediaQueryList | null = null
 let resizeObserver: ResizeObserver | null = null
 let disposed = false
-const rippleData = new Float32Array(6 * 4)
+const MAX_RIPPLES = 48
+let rippleCapacity = MAX_RIPPLES
+const rippleData = new Float32Array(MAX_RIPPLES * 4)
+let rippleUpload = rippleData
+let rippleOrigin: [number, number] = [-2, -2]
 let rippleIndex = 0
 let lastRippleAt = -1000
 let ripplesDirty = true
@@ -41,7 +45,7 @@ uniform vec2 resolution;
 uniform vec2 pointer;
 uniform float time;
 uniform float homeWater;
-uniform vec4 ripples[6];
+uniform vec4 ripples[RIPPLE_CAPACITY];
 
 // Analytic slope and curvature avoid unstable pixel-sized finite differences.
 void wave(inout vec2 slope, inout vec3 bend, vec2 p, vec2 direction,
@@ -84,24 +88,45 @@ void renderHomeWater() {
   vec3 bedBend = bend;
   wave(slope, bend, p, vec2(-1., .23), 21.3, .00065, -t * 1.23 + .8);
   wave(slope, bend, p, vec2(.21, -1.), 33.1, .00022, t * 1.4 + 4.1);
+  // Resting water stays below the slope needed to reflect the sun into the eye.
+  slope *= .20;
+  bedBend *= .20;
+  float surfaceHeight = 0.0;
 
   // Finite, expanding wave packets persist briefly after the pointer leaves.
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < RIPPLE_CAPACITY; i++) {
     float age = time - ripples[i].z;
+    if (ripples[i].w <= 0.0 || age <= 0.0 || age >= 2.3) continue;
     vec2 delta = (uv - ripples[i].xy) * vec2(aspect, 1.0) * 2.8;
-    float radius = length(delta);
+    // A smooth radial height field has no cusp at the point of contact.
+    float radius = sqrt(dot(delta, delta) + .0025);
     float travel = radius - age * .48;
-    float envelope = exp(-travel * travel * 14.0) * exp(-max(age, 0.0) * 1.1);
-    float phase = travel * 24.0;
-    float derivative = (24.0 * cos(phase) - 28.0 * travel * sin(phase)) * envelope;
-    slope += delta / max(radius, .04) * derivative * ripples[i].w * step(0.0, age);
+    if (abs(travel) > 1.0) continue;
+    float envelope = exp(-travel * travel * 10.0) * exp(-age * .85);
+    envelope *= smoothstep(0.0, .10, age) * (1.0 - smoothstep(1.5, 2.3, age));
+    float phase = travel * 18.0;
+    float s = sin(phase);
+    float c = cos(phase);
+    float amplitude = envelope * ripples[i].w;
+    float derivative = (18.0 * c - 20.0 * travel * s) * amplitude;
+    float secondDerivative = ((400.0 * travel * travel - 344.0) * s - 720.0 * travel * c) * amplitude;
+    vec2 radial = delta / radius;
+    surfaceHeight += s * amplitude;
+    slope += radial * derivative;
+    // Hessian of the same radial height field: curved wave flanks focus and
+    // spread transmitted light, including where the solar glint is not visible.
+    vec3 outer = vec3(radial.x * radial.x, radial.x * radial.y, radial.y * radial.y);
+    vec3 curvature = outer * secondDerivative + (vec3(1.0, 0.0, 1.0) - outer) * derivative / radius;
+    bedBend += curvature * .25;
   }
   vec3 normal = normalize(vec3(-slope, 1.0));
-  vec3 view = normalize(vec3((.40 - uv.x) * aspect * .80, -.50 - uv.y * .70, 1.10));
+  // A distant, near-overhead eye keeps the reflection angle similar across
+  // the viewport. The previous wide-angle eye confined sunlight to one corner.
+  vec3 view = normalize(vec3(0.0, -.36, 1.35));
   vec3 reflected = reflect(-view, normal);
   vec3 transmitted = refract(-view, normal, 1.0 / 1.333);
   float fresnel = .0204 + .9796 * pow(1.0 - max(dot(view, normal), 0.0), 5.0);
-  float depth = .65 + .18 * bedNoise(p * .7);
+  float depth = .65 + .18 * bedNoise(p * .7) + surfaceHeight;
   vec2 bed = p + transmitted.xy * depth / max(-transmitted.z, .2);
   float sand = bedNoise(bed * 80.0);
   vec3 transmittance = exp(-vec3(2.6, .85, .60) * depth / max(-transmitted.z, .2));
@@ -135,14 +160,17 @@ void renderHomeWater() {
   // Preserve canopy contrast after the sky/volume fill and display conversion.
   water *= exp(-shade * 2.0);
 
-  // Finite solar disc, broadened by the pixel footprint to avoid unstable pinpricks.
-  vec3 sun = normalize(vec3(.75, .65, 1.10));
+  // Sunlight uses the same normal as refraction and sky reflection, including
+  // pointer waves. Separate high-frequency normals made the glints look striped.
+  // Off-axis illumination: an undisturbed plane misses the solar reflection.
+  // Passing wave slopes catch it on one flank, rather than lighting entire rings.
+  vec3 sun = normalize(vec3(.16, .46, 1.35));
   float alignment = max(dot(reflected, sun), 0.0);
   float footprint = 2.8 / max(resolution.y, 1.0);
-  float exponent = min(1800.0, 1.0 / (footprint * footprint * 32.0));
+  float exponent = min(1800.0, 1.0 / (footprint * footprint * 20.0));
   float glint = pow(alignment, exponent);
-  float halo = pow(alignment, 80.0);
-  water += vec3(.90, 1.0, 1.04) * (glint * 4.5 + halo * .065) * fresnel * (1.0 - shade);
+  float sunlight = glint * 3.6 * fresnel * (1.0 - shade);
+  water += vec3(.98, 1.0, .96) * sunlight / (1.0 + sunlight * 1.5);
   // Lighting is combined in linear space before display conversion.
   gl_FragColor = vec4(pow(max(water, vec3(0.0)), vec3(1.0 / 2.2)), 1.0);
 }
@@ -192,8 +220,12 @@ function initialize() {
   if (!el) return false
   gl = el.getContext('webgl', { alpha: true, antialias: false, depth: false, stencil: false, premultipliedAlpha: false, powerPreference: 'low-power' })
   if (!gl) return false
+  // Leave room for the other uniforms on implementations with smaller budgets.
+  rippleCapacity = Math.max(1, Math.min(MAX_RIPPLES, gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS) - 8))
+  rippleUpload = rippleData.subarray(0, rippleCapacity * 4)
+  rippleIndex = 0
   const vs = compileShader(gl, gl.VERTEX_SHADER, vertexSource)
-  const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource)
+  const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragmentSource.replaceAll('RIPPLE_CAPACITY', String(rippleCapacity)))
   if (!vs || !fs) {
     if (vs) gl.deleteShader(vs)
     if (fs) gl.deleteShader(fs)
@@ -251,7 +283,7 @@ function drawAt(seconds: number) {
   // This context is private; the opaque fullscreen quad overwrites every pixel.
   gl.uniform1f(uniforms.time, seconds)
   if (ripplesDirty) {
-    gl.uniform4fv(uniforms.ripples, rippleData)
+    gl.uniform4fv(uniforms.ripples, rippleUpload)
     ripplesDirty = false
   }
   gl.uniform2f(uniforms.pointer, pointerCurrent[0], pointerCurrent[1])
@@ -299,6 +331,7 @@ function handleMotionChange() {
   pointerTarget = [-2, -2]
   pointerCurrent = [-2, -2]
   rippleData.fill(0)
+  rippleOrigin = [-2, -2]
   ripplesDirty = true
   if (reducedMotion?.matches) drawStatic()
   else start()
@@ -308,18 +341,24 @@ function handlePointerMove(event: PointerEvent) {
   if (event.pointerType !== 'mouse' || reducedMotion?.matches) return
   const x = event.clientX / window.innerWidth
   const y = 1 - event.clientY / window.innerHeight
-  const distance = Math.hypot(x - pointerTarget[0], y - pointerTarget[1])
+  const hasOrigin = rippleOrigin[0] >= 0
+  const distance = hasOrigin ? Math.hypot((x - rippleOrigin[0]) * window.innerWidth / window.innerHeight, y - rippleOrigin[1]) : 0
   const now = performance.now()
-  if (props.home && now - lastRippleAt > 100 && distance > .002) {
+  // Measure travel since the last emitted packet, not the last DOM event.
+  // Fade within one buffer cycle even on devices with fewer uniform slots.
+  const interval = Math.max(50, 2300 / rippleCapacity)
+  if (props.home && now - lastRippleAt >= interval && (!hasOrigin || distance > .003)) {
     const seconds = elapsedSeconds + (rafId ? (now - startTime) / 1000 : 0)
     const offset = rippleIndex * 4
     rippleData[offset] = x
     rippleData[offset + 1] = y
     rippleData[offset + 2] = seconds
-    rippleData[offset + 3] = Math.min(.004, .002 + distance * .02)
+    rippleData[offset + 3] = Math.min(.009, .0055 + distance * .024)
     ripplesDirty = true
-    rippleIndex = (rippleIndex + 1) % 6
+    rippleIndex = (rippleIndex + 1) % rippleCapacity
     lastRippleAt = now
+    rippleOrigin[0] = x
+    rippleOrigin[1] = y
   }
   pointerTarget[0] = x
   pointerTarget[1] = y
@@ -345,6 +384,7 @@ function handleContextRestored() {
 
 watch(() => props.home, () => {
   rippleData.fill(0)
+  rippleOrigin = [-2, -2]
   ripplesDirty = true
   resize()
 })
