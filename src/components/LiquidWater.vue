@@ -19,6 +19,8 @@ let disposed = false
 const rippleData = new Float32Array(6 * 4)
 let rippleIndex = 0
 let lastRippleAt = -1000
+let ripplesDirty = true
+let uniforms: Record<'resolution' | 'time' | 'homeWater' | 'ripples' | 'pointer', WebGLUniformLocation | null> | null = null
 
 const vertexSource = `
 attribute vec2 position;
@@ -214,6 +216,15 @@ function initialize() {
   gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer)
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW)
   gl.useProgram(program)
+  // Locations belong to the linked program; rebuild them after context restoration.
+  uniforms = {
+    resolution: gl.getUniformLocation(program, 'resolution'),
+    time: gl.getUniformLocation(program, 'time'),
+    homeWater: gl.getUniformLocation(program, 'homeWater'),
+    ripples: gl.getUniformLocation(program, 'ripples[0]'),
+    pointer: gl.getUniformLocation(program, 'pointer'),
+  }
+  ripplesDirty = true
   const position = gl.getAttribLocation(program, 'position')
   gl.enableVertexAttribArray(position)
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0)
@@ -222,27 +233,28 @@ function initialize() {
 }
 
 function resize() {
-  if (!canvas.value || !gl || !program) return
+  if (!canvas.value || !gl || !program || !uniforms) return
   const ratio = Math.min(window.devicePixelRatio || 1, 1) * (props.home ? .9 : .66)
-  canvas.value.width = Math.max(1, Math.round(window.innerWidth * ratio))
-  canvas.value.height = Math.max(1, Math.round(window.innerHeight * ratio))
+  const width = Math.max(1, Math.round(window.innerWidth * ratio))
+  const height = Math.max(1, Math.round(window.innerHeight * ratio))
+  // Reassigning even an unchanged canvas dimension reallocates its drawing buffer.
+  if (canvas.value.width !== width) canvas.value.width = width
+  if (canvas.value.height !== height) canvas.value.height = height
   gl.viewport(0, 0, canvas.value.width, canvas.value.height)
-  if (!program) return
-  const resolutionLocation = gl.getUniformLocation(program, 'resolution')
-  if (resolutionLocation) gl.uniform2f(resolutionLocation, canvas.value.width, canvas.value.height)
+  gl.uniform2f(uniforms.resolution, width, height)
+  gl.uniform1f(uniforms.homeWater, props.home ? 1 : 0)
   if (reducedMotion?.matches) drawStatic()
 }
 
 function drawAt(seconds: number) {
-  if (!gl || !program || !canvas.value) return
-  gl.clearColor(0, 0, 0, 0)
-  gl.clear(gl.COLOR_BUFFER_BIT)
-  gl.useProgram(program)
-  gl.uniform1f(gl.getUniformLocation(program, 'time'), seconds)
-  gl.uniform1f(gl.getUniformLocation(program, 'homeWater'), props.home ? 1 : 0)
-  gl.uniform4fv(gl.getUniformLocation(program, 'ripples[0]'), rippleData)
-  const pointerLocation = gl.getUniformLocation(program, 'pointer')
-  if (pointerLocation) gl.uniform2f(pointerLocation, pointerCurrent[0], pointerCurrent[1])
+  if (!gl || !program || !canvas.value || !uniforms) return
+  // This context is private; the opaque fullscreen quad overwrites every pixel.
+  gl.uniform1f(uniforms.time, seconds)
+  if (ripplesDirty) {
+    gl.uniform4fv(uniforms.ripples, rippleData)
+    ripplesDirty = false
+  }
+  gl.uniform2f(uniforms.pointer, pointerCurrent[0], pointerCurrent[1])
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 }
 
@@ -287,22 +299,30 @@ function handleMotionChange() {
   pointerTarget = [-2, -2]
   pointerCurrent = [-2, -2]
   rippleData.fill(0)
+  ripplesDirty = true
   if (reducedMotion?.matches) drawStatic()
   else start()
 }
 
 function handlePointerMove(event: PointerEvent) {
   if (event.pointerType !== 'mouse' || reducedMotion?.matches) return
-  const next: [number, number] = [event.clientX / window.innerWidth, 1 - event.clientY / window.innerHeight]
-  const distance = Math.hypot(next[0] - pointerTarget[0], next[1] - pointerTarget[1])
+  const x = event.clientX / window.innerWidth
+  const y = 1 - event.clientY / window.innerHeight
+  const distance = Math.hypot(x - pointerTarget[0], y - pointerTarget[1])
   const now = performance.now()
   if (props.home && now - lastRippleAt > 100 && distance > .002) {
     const seconds = elapsedSeconds + (rafId ? (now - startTime) / 1000 : 0)
-    rippleData.set([next[0], next[1], seconds, Math.min(.004, .002 + distance * .02)], rippleIndex * 4)
+    const offset = rippleIndex * 4
+    rippleData[offset] = x
+    rippleData[offset + 1] = y
+    rippleData[offset + 2] = seconds
+    rippleData[offset + 3] = Math.min(.004, .002 + distance * .02)
+    ripplesDirty = true
     rippleIndex = (rippleIndex + 1) % 6
     lastRippleAt = now
   }
-  pointerTarget = next
+  pointerTarget[0] = x
+  pointerTarget[1] = y
 }
 
 function handleContextLost(event: Event) {
@@ -311,6 +331,7 @@ function handleContextLost(event: Event) {
   fallback.value = true
   gl = null
   program = null
+  uniforms = null
 }
 
 function handleContextRestored() {
@@ -324,6 +345,7 @@ function handleContextRestored() {
 
 watch(() => props.home, () => {
   rippleData.fill(0)
+  ripplesDirty = true
   resize()
 })
 
