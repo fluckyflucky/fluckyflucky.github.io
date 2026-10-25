@@ -78,6 +78,6 @@ watch([() => props.category, () => props.slug], ([newCat, newSlug]) => {
     <p class="text-stone-400">ページが見つかりません</p>
   </div>
   <template v-else>
-    <MarkdownRenderer :content="displayContent" :category="props.category" />
+    <MarkdownRenderer :content="displayContent" :category="props.category" :class="{ 'section-index': isIndexPage && props.category !== 'tools' }" />
   </template>
 </template>

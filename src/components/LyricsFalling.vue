@@ -177,6 +177,7 @@ onUnmounted(() => {
 
 <style>
 .lyrics-container {
+  opacity: .4;
   position: fixed;
   inset: 0;
   pointer-events: none;

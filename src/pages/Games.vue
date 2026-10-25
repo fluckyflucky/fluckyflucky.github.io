@@ -50,6 +50,12 @@ document.title = '小游戏 · 青い夏'
 
 <style scoped>
 .game-cover { background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--cover-accent) 16%, transparent), transparent 75%), #101e24; }
+.game-card { background: var(--surface); border-color: var(--line); border-radius: 12px; }
+.game-card:hover { border-color: var(--accent-muted); }
+.game-card h3 { color: var(--ink); }
+.game-card p { color: var(--muted); }
+.game-card .text-cyan-300 { color: var(--accent); }
+.cover-grid { opacity: .35; }
 .cover-art { width: min(86%, 300px); height: 148px; margin-top: 20px; object-fit: contain; }
 .cover-piece { object-fit: cover; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--cover-accent) 40%, transparent); box-shadow: 0 6px 20px rgb(0 0 0 / 0.2); }
 .cover-piece-0 { width: 54px; height: 54px; }

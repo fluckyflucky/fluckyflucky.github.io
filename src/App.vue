@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
 import AppLayout from './components/AppLayout.vue'
-import SummerGlow from './components/SummerGlow.vue'
-import WaterRipples from './components/WaterRipples.vue'
+import LiquidWater from './components/LiquidWater.vue'
 import LyricsFalling from './components/LyricsFalling.vue'
+const route = useRoute()
 </script>
 
 <template>
-  <SummerGlow />
-  <WaterRipples />
+  <LiquidWater :home="route.path === '/'" />
   <LyricsFalling />
   <AppLayout>
     <router-view />

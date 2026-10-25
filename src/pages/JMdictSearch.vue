@@ -353,7 +353,7 @@ function switchTab(t: 'search' | 'flashcard') {
     <div v-if="tab === 'search'" class="max-w-[720px] mx-auto">
       <h1 class="text-center mb-6 text-2xl font-bold tracking-wide text-stone-100">JMdict</h1>
 
-      <div class="sticky top-14 z-10 py-3 mb-3 -mx-4 px-4 border-b border-stone-800">
+      <div class="dictionary-search-bar sticky top-16 z-10 py-3 mb-3 -mx-4 px-4 border-b border-stone-800">
         <div class="flex gap-2 max-w-[720px] mx-auto">
           <input
             v-model="query"

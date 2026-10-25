@@ -147,7 +147,7 @@ const sideNavGroup = computed(() => {
     </transition>
 
     <!-- Main content -->
-    <main class="relative z-10 flex-1">
+    <main class="site-main relative z-10 flex-1" :class="{ 'reading-page': route.path.startsWith('/notes') || route.path.startsWith('/thoughts'), 'gallery-page': route.path.startsWith('/images'), 'utility-page': route.path.startsWith('/tools') || route.path.startsWith('/jmdict') }">
       <div class="max-w-[1440px] mx-auto px-4" :class="route.path === '/games/civilization' ? 'py-3 md:py-4' : route.path === '/' ? 'home-container py-8 md:py-10' : 'py-8 md:py-12'">
         <div v-if="showSideNav" class="flex gap-10 justify-center">
           <div class="hidden md:block pt-1">
@@ -171,7 +171,7 @@ const sideNavGroup = computed(() => {
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-stone-800 py-6">
+    <footer class="site-footer relative z-10 py-6">
       <div class="max-w-[1440px] mx-auto px-4 text-center text-sm text-stone-500">
         powered by Vue · 終わらない夏
       </div>
@@ -180,12 +180,16 @@ const sideNavGroup = computed(() => {
 </template>
 
 <style scoped>
-.site-header { background: rgb(10 23 27 / .88); backdrop-filter: blur(18px); border-bottom: 1px solid rgb(174 218 212 / .1); }
+.site-header { background: linear-gradient(110deg, rgb(9 31 39 / .64), rgb(12 46 55 / .3)); backdrop-filter: blur(5px) saturate(1.15); border-bottom: 1px solid rgb(174 218 212 / .16); box-shadow: inset 0 -1px 0 rgb(193 250 249 / .04); }
 .header-inner { max-width: 1200px; height: 64px; }
 .brand-link { min-height: 44px; }
 .brand-subtitle { margin-left: 8px; padding-left: 14px; border-left: 1px solid #a5d8d32c; color: #a1babc; font-size: 9px; letter-spacing: .14em; }
 .nav-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; }
-.nav-link[aria-current="page"] { color: #b9e8de; background: #8bd5cd12; }
+.nav-link[aria-current="page"] { color: #d5fcf5; background: linear-gradient(135deg, #d3fff317, #8bd5cd05); box-shadow: inset 0 1px 0 #dafff53b, inset 0 -1px 0 #b1eeed17; }
 .home-container { padding-inline: 24px; }
+#mobile-navigation { background: #0d2933; border-color: var(--line); }
+#mobile-navigation button { color: var(--muted); }
+#mobile-navigation button.text-sky-300 { color: var(--accent); background: rgb(185 232 222 / .1); }
 @media (max-width: 767px) { .brand-subtitle { font-size: 8px; } .home-container { padding-inline: 20px; } }
+@media (prefers-reduced-transparency: reduce) { .site-header { background: #0b2028; backdrop-filter: none; } }
 </style>

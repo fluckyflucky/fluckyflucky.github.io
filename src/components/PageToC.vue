@@ -127,7 +127,7 @@ onMounted(() => {
 .toc-title {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #a8a29e;
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0 0.75rem;
@@ -147,7 +147,7 @@ onMounted(() => {
 .toc-link {
   display: block;
   font-size: 0.8125rem;
-  color: #78716c;
+  color: var(--muted);
   padding: 0.25rem 0.75rem;
   text-decoration: none;
   transition: color 0.15s;
@@ -155,10 +155,10 @@ onMounted(() => {
 }
 
 .toc-link:hover {
-  color: #d6d3d1;
+  color: var(--ink);
 }
 
 .toc-link.active {
-  color: #7dd3fc;
+  color: var(--accent);
 }
 </style>

@@ -124,3 +124,79 @@ button, a { cursor: pointer; }
 .fade-leave-to {
   opacity: 0;
 }
+/* Shared visual language: cool ink, quiet surfaces, one sea-glass accent. */
+:root {
+  --ink: #e3eeec;
+  --muted: #9fb6b8;
+  --accent: #b9e8de;
+  --accent-muted: #75aaa8;
+  --line: rgb(174 215 211 / .16);
+  --surface: rgb(10 31 39 / .76);
+  --field: #102b34;
+}
+body { background: #0b242d; color: var(--ink); }
+.site-footer { border-top: 1px solid var(--line); }
+.site-footer > div { color: var(--muted); font-size: 12px; letter-spacing: .04em; }
+.site-main:not(:has(.home-page)) h1 { color: var(--ink); }
+.site-main:not(:has(.home-page)) h1 { letter-spacing: .025em; line-height: 1.35; }
+.markdown-body { color: var(--ink); font-size: 16px; line-height: 1.9; }
+.markdown-body h1 { font-size: clamp(26px, 3vw, 34px); margin: 0 0 32px; font-weight: 600; }
+.markdown-body h2 { color: var(--ink); margin-top: 2.4em; font-weight: 550; }
+.markdown-body h3 { color: var(--ink); font-weight: 550; }
+.markdown-body p, .markdown-body li { color: #c5d5d4; line-height: 1.95; }
+.markdown-body a { color: var(--accent); text-decoration-color: rgb(185 232 222 / .3); text-underline-offset: 5px; }
+.markdown-body a:hover { color: #e1fff6; text-decoration-color: var(--accent); }
+.markdown-body blockquote { color: var(--muted); border-color: var(--accent-muted); font-style: normal; padding-left: 22px; }
+.markdown-body hr { border-color: var(--line); margin-block: 36px; }
+.markdown-body th { background: var(--field); color: var(--ink); border-color: var(--line); }
+.markdown-body td { border-color: var(--line); }
+.markdown-body :not(pre) > code { background: rgb(174 215 211 / .08); color: #cae8e1; }
+.markdown-body pre, .markdown-body .code-block-header { background: #091d25; }
+.markdown-body .code-block-header { border-color: var(--line); }
+.markdown-body .code-lang, .markdown-body .copy-btn { color: var(--muted); }
+.reading-page .markdown-body {
+  padding: clamp(22px, 4vw, 46px);
+  background: linear-gradient(155deg, rgb(10 30 38 / .9), rgb(10 30 38 / .68));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.gallery-page .markdown-body { padding-block: 8px; }
+.gallery-page .markdown-body img { border-radius: 4px; margin-block: 28px; }
+.section-index > ul:last-child { list-style: none; padding: 0; border-top: 1px solid var(--line); }
+.section-index > ul:last-child > li { margin: 0; border-bottom: 1px solid var(--line); }
+.section-index > ul:last-child > li > a { display: block; padding: 17px 6px; text-decoration: none; }
+.section-index > ul:last-child > li > a:hover { background: rgb(185 232 222 / .035); }
+.markdown-body a.start-link { color: var(--accent); border-color: var(--accent-muted); border-radius: 8px; background: rgb(185 232 222 / .025); }
+.markdown-body a.start-link:hover { color: var(--ink); border-color: var(--accent); box-shadow: inset 0 0 0 1px rgb(185 232 222 / .15); }
+/* Utility controls share the palette without changing game boards or semantic colors. */
+.utility-page :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), textarea, select) {
+  background-color: var(--field);
+  color: var(--ink);
+  border-color: var(--line);
+  border-radius: 8px;
+}
+.utility-page :is(input, textarea)::placeholder { color: #799a9d; }
+.utility-page :is(input, textarea, select):focus { outline: 2px solid var(--accent-muted); outline-offset: 2px; }
+.utility-page :is(.bg-stone-900, .bg-stone-800) { background-color: var(--surface); }
+.utility-page .bg-stone-950 { background-color: #284b52; color: var(--ink); }
+.utility-page .dictionary-search-bar { background: #0e2c35; }
+.utility-page h1 { font-size: clamp(26px, 3vw, 32px); font-weight: 600; }
+.utility-page :is(.border-stone-700, .border-stone-800) { border-color: var(--line); }
+.utility-page :is(.text-stone-400, .text-stone-500, .text-stone-600) { color: var(--muted); }
+.utility-page :is(.text-sky-400, .text-sky-300) { color: var(--accent); }
+.utility-page button.bg-sky-600 { background: var(--accent); color: #143a3b; font-weight: 550; }
+.utility-page button.bg-sky-600:hover { background: #d3f5ed; }
+.utility-page button.bg-stone-700 { background: #25434b; color: var(--ink); }
+.utility-page button.bg-stone-700:hover { background: #31545b; }
+@media (max-width: 767px) {
+  .reading-page .markdown-body { padding: 22px 18px; }
+  .markdown-body { font-size: 15px; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .reading-page .markdown-body { background: #0b222b; }
+}
+
+/* Keep the homepage presentation from before the shared theme update. */
+body:has(.home-page) .lyrics-container { opacity: 1; }
+body:has(.home-page) .site-footer { border-top: none; }
+body:has(.home-page) .site-footer > div { color: #78716c; font-size: 14px; letter-spacing: normal; }
