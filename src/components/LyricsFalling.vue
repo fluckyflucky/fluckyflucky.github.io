@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 
 interface LyricPair {
@@ -22,6 +22,9 @@ interface FallingItem {
   phase2: number
   phase3: number
   phase4: number
+  width: number
+  height: number
+  clearance: number
 }
 
 const route = useRoute()
@@ -32,6 +35,45 @@ let spawnTimer: ReturnType<typeof setTimeout> | null = null
 let rafId: number | null = null
 let nextId = 0
 let idx = 0
+let layoutDirty = true
+let protectedRects: DOMRect[] = []
+let viewportWidth = 0
+let viewportHeight = 0
+let previousFrame = 0
+let disposed = false
+let layoutObserver: ResizeObserver | undefined
+
+function invalidateLayout() { layoutDirty = true }
+
+function measureContent() {
+  viewportWidth = window.innerWidth
+  viewportHeight = window.innerHeight
+  protectedRects = []
+  // Measure text runs rather than whole cards, leaving their empty space open.
+  const selector = '.home-page h1, .home-page h2, .home-page h3, .home-page p, .recent-title, .recent-copy time, .all-link, .github-link'
+  document.querySelectorAll(selector).forEach(element => {
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    protectedRects.push(...Array.from(range.getClientRects()))
+  })
+  document.querySelectorAll('.hero-actions a, .hero-photo, header').forEach(element => {
+    protectedRects.push(element.getBoundingClientRect())
+  })
+  layoutDirty = false
+}
+
+watch(() => route.path, async () => {
+  if (spawnTimer) clearTimeout(spawnTimer)
+  items.forEach(item => item.el?.remove())
+  items.length = 0
+  await nextTick()
+  if (disposed) return
+  layoutObserver?.disconnect()
+  const home = document.querySelector('.home-page')
+  if (home) layoutObserver?.observe(home)
+  invalidateLayout()
+  spawnLyric()
+})
 
 const isHome = () => route.path === '/'
 const isMobile = () => window.innerWidth < 768
@@ -67,18 +109,21 @@ function spawnLyric() {
     shuffle(lyrics.value)
   }
 
-  const scale = isMobile() ? 0.7 + Math.random() * 0.2 : 0.85 + Math.random() * 0.35
+  const mobile = isMobile()
+  const x = mobile ? 30 + Math.random() * 40 : 20 + Math.random() * 60
+  const scale = mobile ? 0.7 + Math.random() * 0.2 : 0.85 + Math.random() * 0.35
   const el = createEl(lyric, scale)
+  el.style.left = `${x}%`
+  el.style.top = '0'
   container.value.appendChild(el)
 
-  const mobile = isMobile()
   const item: FallingItem = {
     id: nextId++,
     lyric,
     el,
     startTime: performance.now(),
     duration: (10 + Math.random() * 5) * 1000,
-    x: mobile ? 30 + Math.random() * 40 : 20 + Math.random() * 60,
+    x,
     scale,
     swayAmp: mobile ? 20 + Math.random() * 30 : 35 + Math.random() * 55,
     driftDir: Math.random() > 0.5 ? 1 : -1,
@@ -87,6 +132,9 @@ function spawnLyric() {
     phase2: Math.random() * Math.PI * 2,
     phase3: Math.random() * Math.PI * 2,
     phase4: Math.random() * Math.PI * 2,
+    width: el.offsetWidth,
+    height: el.offsetHeight,
+    clearance: 0,
   }
   items.push(item)
   scheduleNext()
@@ -98,6 +146,9 @@ function scheduleNext() {
 }
 
 function animate(now: number) {
+  if (layoutDirty) measureContent()
+  const smoothing = 1 - Math.exp(-Math.min(now - previousFrame, 64) / 120)
+  previousFrame = now
   for (let i = items.length - 1; i >= 0; i--) {
     const item = items[i]
     if (!item.el) continue
@@ -135,16 +186,36 @@ function animate(now: number) {
       opacity = (1 - t) / 0.4 * 0.5
     }
 
-    item.el.style.left = `${item.x}%`
-    item.el.style.top = `${y}vh`
-    item.el.style.opacity = String(Math.max(0, opacity))
-    item.el.style.transform = `translateX(${swayX}px) rotate(${rotate}deg) scale(${item.scale})`
+    // Match the transformed lyric bounds without forcing layout every frame.
+    const angle = rotate * Math.PI / 180
+    const halfWidth = (Math.abs(Math.cos(angle)) * item.width + Math.abs(Math.sin(angle)) * item.height) * item.scale / 2
+    const halfHeight = (Math.abs(Math.sin(angle)) * item.width + Math.abs(Math.cos(angle)) * item.height) * item.scale / 2
+    const centerX = item.x / 100 * viewportWidth + swayX + item.width / 2
+    const centerY = y / 100 * viewportHeight + item.height / 2
+    let clearance = 1
+    for (const rect of protectedRects) {
+      const dx = Math.max(rect.left - centerX - halfWidth, centerX - halfWidth - rect.right, 0)
+      const dy = Math.max(rect.top - centerY - halfHeight, centerY - halfHeight - rect.bottom, 0)
+      const distance = Math.hypot(dx, dy)
+      const t = Math.max(0, Math.min(1, (distance - 10) / 38))
+      clearance = Math.min(clearance, t * t * (3 - 2 * t))
+    }
+    // Fade out before reaching text; fade back in gently after leaving it.
+    item.clearance = clearance < item.clearance ? clearance : item.clearance + (clearance - item.clearance) * smoothing
+    item.el.style.opacity = String(Math.max(0, opacity) * item.clearance)
+    item.el.style.transform = `translate3d(${swayX}px, ${y}vh, 0) rotate(${rotate}deg) scale(${item.scale})`
   }
 
   rafId = requestAnimationFrame(animate)
 }
 
 onMounted(async () => {
+  window.addEventListener('scroll', invalidateLayout, { passive: true, capture: true })
+  window.addEventListener('resize', invalidateLayout, { passive: true })
+  layoutObserver = new ResizeObserver(invalidateLayout)
+  const home = document.querySelector('.home-page')
+  if (home) layoutObserver.observe(home)
+  document.fonts.ready.then(() => { if (!disposed) invalidateLayout() })
   try {
     const res = await fetch('/lyrics.json')
     const grouped: Record<string, [string, string][]> = await res.json()
@@ -155,6 +226,7 @@ onMounted(async () => {
         pool.push({ ja, zh })
       }
     }
+    if (disposed) return
     lyrics.value = shuffle(pool)
     spawnLyric()
     rafId = requestAnimationFrame(animate)
@@ -164,6 +236,10 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  disposed = true
+  window.removeEventListener('scroll', invalidateLayout, true)
+  window.removeEventListener('resize', invalidateLayout)
+  layoutObserver?.disconnect()
   if (spawnTimer) clearTimeout(spawnTimer)
   if (rafId) cancelAnimationFrame(rafId)
   items.forEach(item => item.el?.remove())

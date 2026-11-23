@@ -5,7 +5,7 @@ import LyricsFalling from './components/LyricsFalling.vue'
 </script>
 
 <template>
-  <LiquidWater home />
+  <LiquidWater />
   <LyricsFalling />
   <AppLayout>
     <router-view />

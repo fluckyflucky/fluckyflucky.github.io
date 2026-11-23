@@ -155,7 +155,7 @@ onUnmounted(() => resizeObserver?.disconnect())
 }
 
 h1 { margin: 0 0 22px; font-size: clamp(76px, 9vw, 126px); line-height: .98; font-weight: 620; letter-spacing: -.075em; }
-h1 > span { color: #a1dcd8; display: inline-block; transform: translateY(.12em); }
+h1 > span { color: #a1dcd8; }
 .hero-subtitle { max-width: 14em; margin-top: 30px; color: #c6d6d5; font-size: clamp(18px, 2vw, 23px); font-weight: 450; letter-spacing: .055em; line-height: 1.75; }
 .hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 38px; }
 

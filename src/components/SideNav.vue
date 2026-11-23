@@ -50,7 +50,7 @@ function goTo(link: string) {
 .side-nav-title {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #a8a29e;
+  color: #c2bdb9;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0 0.75rem;
@@ -71,7 +71,7 @@ function goTo(link: string) {
   width: 100%;
   text-align: left;
   font-size: 0.875rem;
-  color: #78716c;
+  color: #a8a29e;
   padding: 0.375rem 0.75rem;
   border-radius: 0.375rem;
   border: none;

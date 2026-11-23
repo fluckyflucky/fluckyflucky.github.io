@@ -1,11 +1,12 @@
 import { createRouter, createWebHashHistory, type RouteLocationNormalized } from 'vue-router'
 import Home from '../pages/Home.vue'
-import MarkdownPage from '../pages/MarkdownPage.vue'
-import ToolJsonFormatter from '../pages/ToolJsonFormatter.vue'
-import ToolBase64 from '../pages/ToolBase64.vue'
-import ToolTimestamp from '../pages/ToolTimestamp.vue'
-import ToolDownloadCalc from '../pages/ToolDownloadCalc.vue'
-import JMdictSearch from '../pages/JMdictSearch.vue'
+
+const MarkdownPage = () => import('../pages/MarkdownPage.vue')
+const ToolJsonFormatter = () => import('../pages/ToolJsonFormatter.vue')
+const ToolBase64 = () => import('../pages/ToolBase64.vue')
+const ToolTimestamp = () => import('../pages/ToolTimestamp.vue')
+const ToolDownloadCalc = () => import('../pages/ToolDownloadCalc.vue')
+const JMdictSearch = () => import('../pages/JMdictSearch.vue')
 
 const routes = [
   { path: '/', name: 'home', component: Home },

@@ -32,7 +32,7 @@ export default defineConfig({
           if (id.includes('node_modules') && (id.includes('/planck/') || id.includes('/stage-js/'))) {
             return 'game-physics'
           }
-          if (id.includes('node_modules')) {
+          if (id.includes('node_modules') && (id.includes('/vue/') || id.includes('/@vue/') || id.includes('/vue-router/'))) {
             return 'vendor'
           }
         },

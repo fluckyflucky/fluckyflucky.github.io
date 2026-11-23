@@ -179,7 +179,21 @@ body { background: #0b242d; color: var(--ink); }
 .utility-page :is(input, textarea, select):focus { outline: 2px solid var(--accent-muted); outline-offset: 2px; }
 .utility-page :is(.bg-stone-900, .bg-stone-800) { background-color: var(--surface); }
 .utility-page .bg-stone-950 { background-color: #284b52; color: var(--ink); }
-.utility-page .dictionary-search-bar { background: #0e2c35; }
+.utility-page .dictionary-search-bar {
+  background: #102e37;
+  border: 1px solid rgb(178 213 210 / .18);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgb(0 12 18 / .12);
+}
+@supports (backdrop-filter: blur(12px)) {
+  .utility-page .dictionary-search-bar {
+    background: rgb(14 40 49 / .68);
+    backdrop-filter: blur(12px);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .utility-page .dictionary-search-bar { background: #102e37; backdrop-filter: none; }
+}
 .utility-page h1 { font-size: clamp(26px, 3vw, 32px); font-weight: 600; }
 .utility-page :is(.border-stone-700, .border-stone-800) { border-color: var(--line); }
 .utility-page :is(.text-stone-400, .text-stone-500, .text-stone-600) { color: var(--muted); }
