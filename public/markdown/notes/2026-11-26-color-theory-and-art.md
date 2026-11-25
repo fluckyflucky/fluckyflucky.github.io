@@ -190,6 +190,43 @@
 
 类似色容易遇到的问题是缺乏焦点。当所有色块都在同一片冷调或暖调里徘徊时，画面会缺少视觉落点，通常需要拉大明度差距，或者留出一小块偏中性的浅色作为呼吸空间。
 
+<div style="background:#102b34;border:1px solid rgba(174,215,211,0.18);border-radius:12px;padding:18px;margin:20px 0;">
+  <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;">
+    <svg viewBox="0 0 140 140" style="width:128px;height:128px;flex-shrink:0;display:block;margin:0 auto;" role="img" aria-label="类似色在色盘上的相邻位置">
+      <circle cx="70" cy="70" r="48" fill="none" stroke="rgba(174,215,211,0.16)" stroke-width="12" />
+      <circle cx="70" cy="22" r="5" fill="#f2d03b" opacity="0.32" />
+      <circle cx="94.0" cy="28.4" r="5" fill="#eb9f33" opacity="0.32" />
+      <circle cx="111.6" cy="46.0" r="5" fill="#e06d2c" opacity="0.32" />
+      <circle cx="118.0" cy="70.0" r="5" fill="#d44731" opacity="0.32" />
+      <circle cx="111.6" cy="94.0" r="5" fill="#b8323c" opacity="0.32" />
+      <circle cx="94.0" cy="111.6" r="5" fill="#8f345f" opacity="0.32" />
+      <circle cx="70.0" cy="118.0" r="5" fill="#633a7a" opacity="0.32" />
+      <circle cx="46.0" cy="111.6" r="5" fill="#414b8c" opacity="0.32" />
+      <circle cx="28.4" cy="94.0" r="5" fill="#2c6296" opacity="0.32" />
+      <path d="M 22.0 70.0 A 48 48 0 0 1 46.0 28.4" fill="none" stroke="#e3eeec" stroke-width="2" />
+      <circle cx="22.0" cy="70.0" r="6.5" fill="#267d82" stroke="#e3eeec" stroke-width="1.5" />
+      <circle cx="28.4" cy="46.0" r="6.5" fill="#3d8c5a" stroke="#e3eeec" stroke-width="1.5" />
+      <circle cx="46.0" cy="28.4" r="6.5" fill="#8eb545" stroke="#e3eeec" stroke-width="1.5" />
+      <text x="70" y="74" text-anchor="middle" fill="#9fb6b8" font-size="11">类似色</text>
+    </svg>
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:12px;color:#9fb6b8;margin-bottom:6px;">明度接近（容易平淡）</div>
+      <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;margin-bottom:14px;">
+        <div style="width:33.3%;background:#4a8a68;"></div>
+        <div style="width:33.3%;background:#3d8c5a;"></div>
+        <div style="width:33.4%;background:#357f7a;"></div>
+      </div>
+      <div style="font-size:12px;color:#9fb6b8;margin-bottom:6px;">拉开明度 + 留出中性浅色</div>
+      <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;">
+        <div style="width:50%;background:#1b474a;"></div>
+        <div style="width:25%;background:#3d8c5a;"></div>
+        <div style="width:10%;background:#8eb545;"></div>
+        <div style="width:15%;background:#e6e3d8;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 ### 互补色：张力与面积平衡
 
 色环直径两端的两种颜色互为补色，如蓝与橙、黄与紫、红与绿。互补色能制造出最直接的戏剧感，但也最忌讳在画面里平分秋色：两种高纯度补色各占一半面积时，交界处会产生刺眼的视觉颤动。
@@ -240,11 +277,83 @@
 
 如果觉得正对面的互补色过于锋利，可以把对侧的那一个点拆成它左右相邻的两个色相，构成一个窄底的等腰三角形。例如以蓝为主调时，不去直配正对面的橙，而改用橙两侧的黄橙与红橙。这样画面既保有冷暖拉扯，边缘过渡又比纯补色柔和许多。
 
+<div style="background:#102b34;border:1px solid rgba(174,215,211,0.18);border-radius:12px;padding:18px;margin:20px 0;">
+  <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;">
+    <svg viewBox="0 0 140 140" style="width:128px;height:128px;flex-shrink:0;display:block;margin:0 auto;" role="img" aria-label="分裂互补在色盘上的等腰三角关系">
+      <circle cx="70" cy="70" r="48" fill="none" stroke="rgba(174,215,211,0.16)" stroke-width="12" />
+      <circle cx="70" cy="22" r="5" fill="#f2d03b" opacity="0.32" />
+      <circle cx="111.6" cy="46.0" r="5" fill="#e06d2c" opacity="0.32" />
+      <circle cx="111.6" cy="94.0" r="5" fill="#b8323c" opacity="0.32" />
+      <circle cx="94.0" cy="111.6" r="5" fill="#8f345f" opacity="0.32" />
+      <circle cx="70.0" cy="118.0" r="5" fill="#633a7a" opacity="0.32" />
+      <circle cx="46.0" cy="111.6" r="5" fill="#414b8c" opacity="0.32" />
+      <circle cx="22.0" cy="70.0" r="5" fill="#267d82" opacity="0.32" />
+      <circle cx="28.4" cy="46.0" r="5" fill="#3d8c5a" opacity="0.32" />
+      <circle cx="46.0" cy="28.4" r="5" fill="#8eb545" opacity="0.32" />
+      <line x1="28.4" y1="94.0" x2="111.6" y2="46.0" stroke="#9fb6b8" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.65" />
+      <polygon points="28.4,94.0 94.0,28.4 118.0,70.0" fill="rgba(185,232,222,0.10)" stroke="#e3eeec" stroke-width="1.6" />
+      <circle cx="28.4" cy="94.0" r="6.5" fill="#2c6296" stroke="#e3eeec" stroke-width="1.5" />
+      <circle cx="94.0" cy="28.4" r="6.5" fill="#eb9f33" stroke="#e3eeec" stroke-width="1.5" />
+      <circle cx="118.0" cy="70.0" r="6.5" fill="#d44731" stroke="#e3eeec" stroke-width="1.5" />
+      <text x="70" y="74" text-anchor="middle" fill="#9fb6b8" font-size="10">分裂互补</text>
+    </svg>
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:12px;color:#9fb6b8;margin-bottom:6px;">直配补色（蓝 + 橙）</div>
+      <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;margin-bottom:14px;">
+        <div style="width:70%;background:#234c7d;"></div>
+        <div style="width:30%;background:#e06d2c;"></div>
+      </div>
+      <div style="font-size:12px;color:#9fb6b8;margin-bottom:6px;">分裂互补（蓝 + 黄橙 + 红橙，过渡更柔和）</div>
+      <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;">
+        <div style="width:65%;background:#234c7d;"></div>
+        <div style="width:20%;background:#e8a845;"></div>
+        <div style="width:15%;background:#c9543c;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 ### 三角色：明快感与主次秩序
 
 在色盘上取一个等边三角形，红黄蓝或橙绿紫就属于三角色组合。三种色相彼此隔开一百二十度，自带丰富饱满的视觉节奏，常见于插画、海报与儿童读物。
 
 三角色最怕三种颜色同时保持高纯度、同时争抢注意力。成熟的用法往往让其中一种颜色承担大面积基调，第二种作为辅助过渡，第三种压小面积充当视觉重心。
+
+<div style="background:#102b34;border:1px solid rgba(174,215,211,0.18);border-radius:12px;padding:18px;margin:20px 0;">
+  <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;">
+    <svg viewBox="0 0 140 140" style="width:128px;height:128px;flex-shrink:0;display:block;margin:0 auto;" role="img" aria-label="三角色在色盘上的等边三角关系">
+      <circle cx="70" cy="70" r="48" fill="none" stroke="rgba(174,215,211,0.16)" stroke-width="12" />
+      <circle cx="94.0" cy="28.4" r="5" fill="#eb9f33" opacity="0.32" />
+      <circle cx="111.6" cy="46.0" r="5" fill="#e06d2c" opacity="0.32" />
+      <circle cx="118.0" cy="70.0" r="5" fill="#d44731" opacity="0.32" />
+      <circle cx="94.0" cy="111.6" r="5" fill="#8f345f" opacity="0.32" />
+      <circle cx="70.0" cy="118.0" r="5" fill="#633a7a" opacity="0.32" />
+      <circle cx="46.0" cy="111.6" r="5" fill="#414b8c" opacity="0.32" />
+      <circle cx="22.0" cy="70.0" r="5" fill="#267d82" opacity="0.32" />
+      <circle cx="28.4" cy="46.0" r="5" fill="#3d8c5a" opacity="0.32" />
+      <circle cx="46.0" cy="28.4" r="5" fill="#8eb545" opacity="0.32" />
+      <polygon points="70.0,22.0 111.6,94.0 28.4,94.0" fill="rgba(185,232,222,0.10)" stroke="#e3eeec" stroke-width="1.6" />
+      <circle cx="70.0" cy="22.0" r="6.5" fill="#f2d03b" stroke="#e3eeec" stroke-width="1.5" />
+      <circle cx="111.6" cy="94.0" r="6.5" fill="#b8323c" stroke="#e3eeec" stroke-width="1.5" />
+      <circle cx="28.4" cy="94.0" r="6.5" fill="#2c6296" stroke="#e3eeec" stroke-width="1.5" />
+      <text x="70" y="74" text-anchor="middle" fill="#9fb6b8" font-size="11">三角色</text>
+    </svg>
+    <div style="flex:1;min-width:220px;">
+      <div style="font-size:12px;color:#9fb6b8;margin-bottom:6px;">三色等面积高纯度（互相争抢）</div>
+      <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;margin-bottom:14px;">
+        <div style="width:33.3%;background:#2c6296;"></div>
+        <div style="width:33.3%;background:#b8323c;"></div>
+        <div style="width:33.4%;background:#f2d03b;"></div>
+      </div>
+      <div style="font-size:12px;color:#9fb6b8;margin-bottom:6px;">主次分明 + 压低底色纯度（秩序稳定）</div>
+      <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;">
+        <div style="width:65%;background:#263c54;"></div>
+        <div style="width:25%;background:#9e4b4d;"></div>
+        <div style="width:10%;background:#ecc952;"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 ## 冷暖倾向与光影中的色偏
 
