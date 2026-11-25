@@ -8,31 +8,41 @@ let gl: WebGLRenderingContext | null = null
 let program: WebGLProgram | null = null
 let quadBuffer: WebGLBuffer | null = null
 let rafId = 0
-let initRafId = 0
+let initIdleId = 0
 let initTimerId = 0
 let linkRafId = 0
+let loadHandler: (() => void) | null = null
 let lastFrame = 0
 let startTime = 0
 let elapsedSeconds = 0
+let lastWidth = 0
+let lastHeight = 0
+let currentAspect = 1
 let reducedMotion: MediaQueryList | null = null
 let resizeObserver: ResizeObserver | null = null
 let disposed = false
 const MAX_RIPPLES = 20
+const MAX_WATER_PIXELS = 1280 * 720
 let rippleCapacity = MAX_RIPPLES
 const rippleData = new Float32Array(MAX_RIPPLES * 4)
-let rippleUpload = rippleData
+const packedRipples = new Float32Array(MAX_RIPPLES * 4)
+let packedUpload = packedRipples
 let rippleOrigin: [number, number] = [-2, -2]
 let rippleIndex = 0
 let lastRippleAt = -1000
 let lastRippleSeconds = -10
-let ripplesDirty = true
-let uniforms: Record<'resolution' | 'time' | 'ripplesActive' | 'ripples', WebGLUniformLocation | null> | null = null
+let uniforms: Record<'aspect' | 'sunExponent' | 'time' | 'rippleCount' | 'ripples', WebGLUniformLocation | null> | null = null
 
 const vertexSource = `
 attribute vec2 position;
+uniform float aspect;
 varying vec2 uv;
+varying vec2 uvAspect;
+varying vec2 worldPos;
 void main() {
   uv = position * 0.5 + 0.5;
+  uvAspect = uv * vec2(aspect, 1.0);
+  worldPos = uvAspect * 2.8;
   gl_Position = vec4(position, 0.0, 1.0);
 }`
 
@@ -43,9 +53,11 @@ precision highp float;
 precision mediump float;
 #endif
 varying vec2 uv;
-uniform vec2 resolution;
+varying vec2 uvAspect;
+varying vec2 worldPos;
 uniform float time;
-uniform float ripplesActive;
+uniform float sunExponent;
+uniform int rippleCount;
 uniform vec4 ripples[RIPPLE_CAPACITY];
 
 // Analytic slope and curvature avoid unstable pixel-sized finite differences.
@@ -82,9 +94,8 @@ float branchShadow(vec2 p, vec2 a, vec2 b, float width) {
 }
 
 void main() {
-  float aspect = resolution.x / resolution.y;
   float t = time * .32;
-  vec2 p = uv * vec2(aspect, 1.0) * 2.8;
+  vec2 p = worldPos;
   vec2 slope = vec2(0.0);
   vec3 bend = vec3(0.0);
   // Broad waves carry the surface. Capillary detail affects reflection only:
@@ -101,21 +112,22 @@ void main() {
   float surfaceHeight = 0.0;
 
   // Finite, expanding wave packets persist briefly after the pointer leaves.
-  if (ripplesActive > 0.5) {
+  if (rippleCount > 0) {
     for (int i = 0; i < RIPPLE_CAPACITY; i++) {
-      float age = time - ripples[i].z;
-      if (ripples[i].w <= 0.0 || age <= 0.0 || age >= 2.3) continue;
-      vec2 delta = (uv - ripples[i].xy) * vec2(aspect, 1.0) * 2.8;
+      if (i >= rippleCount) break;
+      vec4 r = ripples[i];
+      vec2 delta = p - r.xy;
+      float distSq = dot(delta, delta);
+      float maxR = r.z + 0.85;
+      if (distSq > maxR * maxR) continue;
       // A smooth radial height field has no cusp at the point of contact.
-      float radius = sqrt(dot(delta, delta) + .0025);
-      float travel = radius - age * .384;
-      if (abs(travel) > 1.0) continue;
-      float envelope = exp(-travel * travel * 10.0) * exp(-age * .85);
-      envelope *= smoothstep(0.0, .10, age) * (1.0 - smoothstep(1.5, 2.3, age));
+      float radius = sqrt(distSq + .0025);
+      float travel = radius - r.z;
+      if (abs(travel) > 0.85) continue;
+      float amplitude = exp(-travel * travel * 10.0) * r.w;
       float phase = travel * 18.0;
       float s = sin(phase);
       float c = cos(phase);
-      float amplitude = envelope * ripples[i].w;
       float derivative = (18.0 * c - 20.0 * travel * s) * amplitude;
       float secondDerivative = ((400.0 * travel * travel - 344.0) * s - 720.0 * travel * c) * amplitude;
       vec2 radial = delta / radius;
@@ -138,24 +150,28 @@ void main() {
   float om2 = om * om;
   float fresnel = .0204 + .9796 * om2 * om2 * om;
   float depth = .65 + .18 * bedNoise(p * .7) + surfaceHeight;
-  vec2 bed = p + transmitted.xy * depth / max(-transmitted.z, .2);
+  float rayLen = depth / max(-transmitted.z, .2);
+  vec2 bed = p + transmitted.xy * rayLen;
   float sand = bedNoise(bed * 80.0);
-  vec3 transmittance = exp(-vec3(2.6, .85, .60) * depth / max(-transmitted.z, .2));
+  vec3 transmittance = exp(-vec3(2.6, .85, .60) * rayLen);
   vec3 bottom = vec3(.008, .033, .042) * (.94 + sand * .12);
   float determinant = (1.0 + bedBend.x * .85) * (1.0 + bedBend.z * .85) - bedBend.y * bedBend.y * .7225;
   float caustic = min(1.0 / (abs(determinant) + .28), 2.4);
 
   // A canopy enters from the left. Broad clusters leave open, sunlit water.
-  vec2 shadeUV = uv * vec2(aspect, 1.0) + slope * .22;
+  vec2 shadeUV = uvAspect + slope * .22;
   shadeUV += vec2(sin(t * .25 + uv.y * 3.0), cos(t * .19)) * .009;
-  float canopy = bedNoise(shadeUV * 5.0 + vec2(2.7, 1.3));
-  float leaves = bedNoise(shadeUV * 36.0) * .65 + bedNoise(shadeUV * 71.0) * .35;
   float reach = 1.0 - smoothstep(.10, .85, shadeUV.x + shadeUV.y * .20);
-  float foliage = smoothstep(.40, .66, canopy * .55 + leaves * .45) * reach;
-  float branches = branchShadow(shadeUV, vec2(-.08, .14), vec2(.39, .72), .009);
-  branches = max(branches, branchShadow(shadeUV, vec2(.10, .36), vec2(.46, .43), .004));
-  branches = max(branches, branchShadow(shadeUV, vec2(.22, .52), vec2(.14, .94), .003));
-  float shade = clamp(foliage * .76 + branches * .26 * reach, 0.0, .8);
+  float shade = 0.0;
+  if (reach > 0.0) {
+    float canopy = bedNoise(shadeUV * 5.0 + vec2(2.7, 1.3));
+    float leaves = bedNoise(shadeUV * 36.0) * .65 + bedNoise(shadeUV * 71.0) * .35;
+    float foliage = smoothstep(.40, .66, canopy * .55 + leaves * .45) * reach;
+    float branches = branchShadow(shadeUV, vec2(-.08, .14), vec2(.39, .72), .009);
+    branches = max(branches, branchShadow(shadeUV, vec2(.10, .36), vec2(.46, .43), .004));
+    branches = max(branches, branchShadow(shadeUV, vec2(.22, .52), vec2(.14, .94), .003));
+    shade = clamp(foliage * .76 + branches * .26 * reach, 0.0, .8);
+  }
   bottom *= (1.0 - shade * .62) * (.66 + caustic * .34);
   vec3 underwater = bottom * transmittance + vec3(.003, .014, .019) * (1.0 - transmittance);
   float focusedLight = smoothstep(1.15, 2.4, caustic);
@@ -169,7 +185,7 @@ void main() {
   vec3 sky = mix(vec3(.035, .15, .24), vec3(.10, .28, .38), cloud);
   vec3 water = mix(underwater, sky, fresnel);
   // Preserve canopy contrast after the sky/volume fill and display conversion.
-  water *= exp(-shade * 2.0);
+  if (shade > 0.0) water *= exp(-shade * 2.0);
 
   // Sunlight uses the same normal as refraction and sky reflection, including
   // pointer waves. Separate high-frequency normals made the glints look striped.
@@ -177,11 +193,11 @@ void main() {
   // Passing wave slopes catch it on one flank, rather than lighting entire rings.
   vec3 sun = normalize(vec3(.16, .46, 1.35));
   float alignment = max(dot(reflected, sun), 0.0);
-  float footprint = 2.8 / max(resolution.y, 1.0);
-  float exponent = min(1800.0, 1.0 / (footprint * footprint * 20.0));
-  float glint = pow(alignment, exponent);
-  float sunlight = glint * 3.6 * fresnel * (1.0 - shade);
-  water += vec3(.98, 1.0, .96) * sunlight / (1.0 + sunlight * 1.5);
+  if (alignment > 0.97 && shade < 0.999) {
+    float glint = pow(alignment, sunExponent);
+    float sunlight = glint * 3.6 * fresnel * (1.0 - shade);
+    water += vec3(.98, 1.0, .96) * sunlight / (1.0 + sunlight * 1.5);
+  }
   // Lighting is combined in linear space before display conversion.
   gl_FragColor = vec4(pow(max(water, vec3(0.0)), vec3(1.0 / 2.2)), 1.0);
 }`
@@ -210,12 +226,12 @@ function finishSetup(vs: WebGLShader, fs: WebGLShader) {
   gl.useProgram(program)
   // Locations belong to the linked program; rebuild them after context restoration.
   uniforms = {
-    resolution: gl.getUniformLocation(program, 'resolution'),
+    aspect: gl.getUniformLocation(program, 'aspect'),
+    sunExponent: gl.getUniformLocation(program, 'sunExponent'),
     time: gl.getUniformLocation(program, 'time'),
-    ripplesActive: gl.getUniformLocation(program, 'ripplesActive'),
+    rippleCount: gl.getUniformLocation(program, 'rippleCount'),
     ripples: gl.getUniformLocation(program, 'ripples[0]'),
   }
-  ripplesDirty = true
   const position = gl.getAttribLocation(program, 'position')
   gl.enableVertexAttribArray(position)
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0)
@@ -237,9 +253,11 @@ function initialize() {
   if (!el) return false
   gl = el.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' })
   if (!gl) return false
+  lastWidth = 0
+  lastHeight = 0
   // Leave room for the other uniforms on implementations with smaller budgets.
   rippleCapacity = Math.max(1, Math.min(MAX_RIPPLES, gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS) - 8))
-  rippleUpload = rippleData.subarray(0, rippleCapacity * 4)
+  packedUpload = packedRipples.subarray(0, rippleCapacity * 4)
   rippleIndex = 0
   const vs = createShader(gl, gl.VERTEX_SHADER, vertexSource)
   const fs = createShader(gl, gl.FRAGMENT_SHADER, fragmentSource.replaceAll('RIPPLE_CAPACITY', String(rippleCapacity)))
@@ -278,16 +296,33 @@ function initialize() {
   return finishSetup(vs, fs)
 }
 
+function smoothstep(edge0: number, edge1: number, x: number) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
+
 function resize() {
   if (!canvas.value || !gl || !program || !uniforms) return
-  const ratio = Math.min(window.devicePixelRatio || 1, 1) * .9
-  const width = Math.max(1, Math.round(window.innerWidth * ratio))
-  const height = Math.max(1, Math.round(window.innerHeight * ratio))
+  const ratio = Math.min(window.devicePixelRatio || 1, 1) * .8
+  let width = Math.max(1, Math.round(window.innerWidth * ratio))
+  let height = Math.max(1, Math.round(window.innerHeight * ratio))
+  const pixels = width * height
+  if (pixels > MAX_WATER_PIXELS) {
+    const scale = Math.sqrt(MAX_WATER_PIXELS / pixels)
+    width = Math.max(1, Math.round(width * scale))
+    height = Math.max(1, Math.round(height * scale))
+  }
+  if (width === lastWidth && height === lastHeight) return
+  lastWidth = width
+  lastHeight = height
   // Reassigning even an unchanged canvas dimension reallocates its drawing buffer.
   if (canvas.value.width !== width) canvas.value.width = width
   if (canvas.value.height !== height) canvas.value.height = height
-  gl.viewport(0, 0, canvas.value.width, canvas.value.height)
-  gl.uniform2f(uniforms.resolution, width, height)
+  gl.viewport(0, 0, width, height)
+  currentAspect = width / height
+  gl.uniform1f(uniforms.aspect, currentAspect)
+  const footprint = 2.8 / Math.max(height, 1)
+  gl.uniform1f(uniforms.sunExponent, Math.min(1800, 1 / (footprint * footprint * 20)))
   if (reducedMotion?.matches) drawStatic()
 }
 
@@ -295,10 +330,27 @@ function drawAt(seconds: number) {
   if (!gl || !program || !canvas.value || !uniforms) return
   // This context is private; the opaque fullscreen quad overwrites every pixel.
   gl.uniform1f(uniforms.time, seconds)
-  gl.uniform1f(uniforms.ripplesActive, seconds - lastRippleSeconds < 2.35 ? 1 : 0)
-  if (ripplesDirty) {
-    gl.uniform4fv(uniforms.ripples, rippleUpload)
-    ripplesDirty = false
+  let activeCount = 0
+  if (seconds - lastRippleSeconds < 2.35) {
+    for (let i = 0; i < rippleCapacity; i++) {
+      const src = i * 4
+      const strength = rippleData[src + 3]
+      if (strength <= 0) continue
+      const age = seconds - rippleData[src + 2]
+      if (age <= 0 || age >= 2.3) continue
+      const decayedAmp = strength * Math.exp(-age * .85) * smoothstep(0, .10, age) * (1 - smoothstep(1.5, 2.3, age))
+      if (decayedAmp <= 0) continue
+      const dst = activeCount * 4
+      packedRipples[dst] = rippleData[src] * currentAspect * 2.8
+      packedRipples[dst + 1] = rippleData[src + 1] * 2.8
+      packedRipples[dst + 2] = age * .384
+      packedRipples[dst + 3] = decayedAmp
+      activeCount++
+    }
+  }
+  gl.uniform1i(uniforms.rippleCount, activeCount)
+  if (activeCount > 0) {
+    gl.uniform4fv(uniforms.ripples, packedUpload)
   }
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 }
@@ -310,7 +362,7 @@ function drawStatic() {
 function tick(now: number) {
   rafId = 0
   if (disposed || document.hidden || reducedMotion?.matches) return
-  if (now - lastFrame >= 1000 / 30) {
+  if (now - lastFrame >= 30) {
     lastFrame = now
     drawAt(elapsedSeconds + (now - startTime) / 1000)
   }
@@ -342,7 +394,6 @@ function handleMotionChange() {
   rippleData.fill(0)
   rippleOrigin = [-2, -2]
   lastRippleSeconds = -10
-  ripplesDirty = true
   if (reducedMotion?.matches) drawStatic()
   else start()
 }
@@ -364,7 +415,6 @@ function handlePointerMove(event: PointerEvent) {
     rippleData[offset + 1] = y
     rippleData[offset + 2] = seconds
     rippleData[offset + 3] = Math.min(.0072, (.0055 + distance * .024) * .8)
-    ripplesDirty = true
     rippleIndex = (rippleIndex + 1) % rippleCapacity
     lastRippleAt = now
     lastRippleSeconds = seconds
@@ -385,6 +435,8 @@ function handleContextLost(event: Event) {
   gl = null
   program = null
   uniforms = null
+  lastWidth = 0
+  lastHeight = 0
 }
 
 function handleContextRestored() {
@@ -398,6 +450,21 @@ function boot() {
   if (!initialize()) fallback.value = true
 }
 
+function scheduleBoot() {
+  if (disposed || initIdleId || initTimerId) return
+  if (typeof window.requestIdleCallback === 'function') {
+    initIdleId = window.requestIdleCallback(() => {
+      initIdleId = 0
+      boot()
+    }, { timeout: 250 })
+  } else {
+    initTimerId = globalThis.setTimeout(() => {
+      initTimerId = 0
+      boot()
+    }, 80)
+  }
+}
+
 onMounted(() => {
   reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
   reducedMotion.addEventListener('change', handleMotionChange)
@@ -406,24 +473,25 @@ onMounted(() => {
   window.addEventListener('resize', resize, { passive: true })
   canvas.value?.addEventListener('webglcontextlost', handleContextLost)
   canvas.value?.addEventListener('webglcontextrestored', handleContextRestored)
-  if (canvas.value) resizeObserver = new ResizeObserver(resize), resizeObserver.observe(document.documentElement)
-  initRafId = requestAnimationFrame(() => {
-    initRafId = 0
-    if (disposed) return
-    initRafId = requestAnimationFrame(() => {
-      initRafId = 0
-      if (disposed) return
-      initTimerId = window.setTimeout(() => {
-        initTimerId = 0
-        boot()
-      }, 0)
-    })
-  })
+  if (canvas.value) resizeObserver = new ResizeObserver(resize), resizeObserver.observe(canvas.value)
+  if (document.readyState === 'complete') {
+    scheduleBoot()
+  } else {
+    loadHandler = () => {
+      loadHandler = null
+      scheduleBoot()
+    }
+    window.addEventListener('load', loadHandler, { once: true })
+  }
 })
 
 onUnmounted(() => {
   disposed = true
-  if (initRafId) cancelAnimationFrame(initRafId)
+  if (loadHandler) {
+    window.removeEventListener('load', loadHandler)
+    loadHandler = null
+  }
+  if (initIdleId && 'cancelIdleCallback' in window) window.cancelIdleCallback(initIdleId)
   if (initTimerId) clearTimeout(initTimerId)
   if (linkRafId) cancelAnimationFrame(linkRafId)
   stop()

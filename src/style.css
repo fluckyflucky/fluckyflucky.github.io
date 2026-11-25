@@ -134,7 +134,7 @@ button, a { cursor: pointer; }
   --surface: rgb(10 31 39 / .76);
   --field: #102b34;
 }
-body { background: #0b242d; color: var(--ink); }
+body { background: #0c2933 linear-gradient(166deg, #0c2933, #103c48 76%, #0d303b) fixed; color: var(--ink); }
 .site-footer { border-top: 1px solid var(--line); }
 .site-footer > div { color: var(--muted); font-size: 12px; letter-spacing: .04em; }
 .site-main:not(:has(.home-page)) h1 { color: var(--ink); }

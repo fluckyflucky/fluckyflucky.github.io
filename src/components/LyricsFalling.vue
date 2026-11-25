@@ -33,6 +33,11 @@ const lyrics = ref<LyricPair[]>([])
 const items: FallingItem[] = []
 let spawnTimer: ReturnType<typeof setTimeout> | null = null
 let rafId: number | null = null
+let loadIdleId = 0
+let loadTimerId = 0
+let loadHandler: (() => void) | null = null
+let lyricsLoaded = false
+let lyricsLoading = false
 let nextId = 0
 let idx = 0
 let layoutDirty = true
@@ -62,17 +67,109 @@ function measureContent() {
   layoutDirty = false
 }
 
+function startLoop() {
+  if (disposed || rafId || !isHome() || !lyricsLoaded) return
+  previousFrame = performance.now()
+  rafId = requestAnimationFrame(animate)
+}
+
+function stopLoop() {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+}
+
+async function fetchLyrics() {
+  if (disposed || lyricsLoaded || lyricsLoading) return
+  lyricsLoading = true
+  try {
+    const res = await fetch('/lyrics.json')
+    const grouped: Record<string, [string, string][]> = await res.json()
+    // Flatten all songs into one pool
+    const pool: LyricPair[] = []
+    for (const pairs of Object.values(grouped)) {
+      for (const [ja, zh] of pairs) {
+        pool.push({ ja, zh })
+      }
+    }
+    if (disposed) return
+    lyrics.value = shuffle(pool)
+    lyricsLoaded = true
+    if (isHome()) {
+      spawnLyric()
+      startLoop()
+    }
+  } catch (e) {
+    // silently fail
+  } finally {
+    lyricsLoading = false
+  }
+}
+
+function scheduleLyricsLoad() {
+  if (disposed || !isHome() || lyricsLoaded || lyricsLoading || loadIdleId || loadTimerId || loadHandler) return
+  const queueIdle = () => {
+    if (disposed || !isHome() || lyricsLoaded || lyricsLoading) return
+    if (typeof window.requestIdleCallback === 'function') {
+      loadIdleId = window.requestIdleCallback(() => {
+        loadIdleId = 0
+        fetchLyrics()
+      }, { timeout: 400 })
+    } else {
+      loadTimerId = globalThis.setTimeout(() => {
+        loadTimerId = 0
+        fetchLyrics()
+      }, 150)
+    }
+  }
+  if (document.readyState === 'complete') {
+    queueIdle()
+  } else {
+    loadHandler = () => {
+      loadHandler = null
+      queueIdle()
+    }
+    window.addEventListener('load', loadHandler, { once: true })
+  }
+}
+
 watch(() => route.path, async () => {
-  if (spawnTimer) clearTimeout(spawnTimer)
+  if (spawnTimer) {
+    clearTimeout(spawnTimer)
+    spawnTimer = null
+  }
   items.forEach(item => item.el?.remove())
   items.length = 0
+  if (!isHome()) {
+    if (loadHandler) {
+      window.removeEventListener('load', loadHandler)
+      loadHandler = null
+    }
+    if (loadIdleId && 'cancelIdleCallback' in window) {
+      window.cancelIdleCallback(loadIdleId)
+      loadIdleId = 0
+    }
+    if (loadTimerId) {
+      clearTimeout(loadTimerId)
+      loadTimerId = 0
+    }
+    stopLoop()
+    layoutObserver?.disconnect()
+    return
+  }
   await nextTick()
-  if (disposed) return
+  if (disposed || !isHome()) return
   layoutObserver?.disconnect()
   const home = document.querySelector('.home-page')
   if (home) layoutObserver?.observe(home)
   invalidateLayout()
-  spawnLyric()
+  if (lyricsLoaded) {
+    spawnLyric()
+    startLoop()
+  } else {
+    scheduleLyricsLoad()
+  }
 })
 
 const isHome = () => route.path === '/'
@@ -209,39 +306,29 @@ function animate(now: number) {
   rafId = requestAnimationFrame(animate)
 }
 
-onMounted(async () => {
+onMounted(() => {
   window.addEventListener('scroll', invalidateLayout, { passive: true, capture: true })
   window.addEventListener('resize', invalidateLayout, { passive: true })
   layoutObserver = new ResizeObserver(invalidateLayout)
   const home = document.querySelector('.home-page')
   if (home) layoutObserver.observe(home)
   document.fonts.ready.then(() => { if (!disposed) invalidateLayout() })
-  try {
-    const res = await fetch('/lyrics.json')
-    const grouped: Record<string, [string, string][]> = await res.json()
-    // Flatten all songs into one pool
-    const pool: LyricPair[] = []
-    for (const pairs of Object.values(grouped)) {
-      for (const [ja, zh] of pairs) {
-        pool.push({ ja, zh })
-      }
-    }
-    if (disposed) return
-    lyrics.value = shuffle(pool)
-    spawnLyric()
-    rafId = requestAnimationFrame(animate)
-  } catch (e) {
-    // silently fail
-  }
+  scheduleLyricsLoad()
 })
 
 onUnmounted(() => {
   disposed = true
+  if (loadHandler) {
+    window.removeEventListener('load', loadHandler)
+    loadHandler = null
+  }
+  if (loadIdleId && 'cancelIdleCallback' in window) window.cancelIdleCallback(loadIdleId)
+  if (loadTimerId) clearTimeout(loadTimerId)
   window.removeEventListener('scroll', invalidateLayout, true)
   window.removeEventListener('resize', invalidateLayout)
   layoutObserver?.disconnect()
   if (spawnTimer) clearTimeout(spawnTimer)
-  if (rafId) cancelAnimationFrame(rafId)
+  stopLoop()
   items.forEach(item => item.el?.remove())
   items.length = 0
 })

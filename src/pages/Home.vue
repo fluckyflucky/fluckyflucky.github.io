@@ -74,7 +74,7 @@ onUnmounted(() => resizeObserver?.disconnect())
         </div>
       </div>
       <RouterLink to="/images/2026-05-08-japan-1" class="hero-photo" :style="lensStyle" aria-label="第一次日本行" @pointermove="trackPointer">
-        <img ref="photoImageRef" src="/img/home/tokyo-train.webp" alt="东京街头，绿色电车经过商业楼前的高架轨道" width="1400" height="1051" fetchpriority="high" />
+        <img ref="photoImageRef" src="/img/home/tokyo-train.webp" alt="东京街头，绿色电车经过商业楼前的高架轨道" width="1120" height="841" fetchpriority="high" />
         <span class="photo-caption" ref="captionRef">
           <span class="caption-lens" aria-hidden="true">
             <img src="/img/home/tokyo-train.webp" alt="" />
