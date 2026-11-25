@@ -1,83 +1,65 @@
 # [杂项] 关于接口和抽象类
 
-**接口** 和 **抽象类** 都是实现**多态**和**代码复用**的重要机制，但它们的设计目的、使用场景和语义有本质区别。
-这几天有学弟刚学习Java，提到了这两者的问题，这里整理一下我的理解。
+接口和抽象类都能实现多态和代码复用，但它们解决的问题不同。前几天有刚学 Java 的学弟问到两者的区别，这里整理一下我的理解。
 
+## 从一个通知系统的例子说起
 
-## 一个例子
-
-假设我们要做一个“通知系统”，支持邮件、短信、站内信三种方式。
+假设我们要做一个通知系统，支持邮件、短信、站内信三种方式。
 
 ### 方案一：全用接口
 
 ```java
-    public interface Notifier {
-        void send(String message);
-    }
+public interface Notifier {
+    void send(String message);
+}
 ```
 
-然后 `EmailNotifier`, `SmsNotifier` 类各自实现。看起来干净，但问题来了：  
-**每种通知都要写一遍“记录日志”、“检查权限”、“重试机制”……**
-
-逻辑一样，重复三遍,明显不合理。
+然后由 `EmailNotifier`、`SmsNotifier` 等类各自实现。如果每种通知都要执行“记录日志”、“检查权限”、“重试机制”等前置或后置逻辑，把相同的代码在三个实现类里各写一遍显然不合理。
 
 ### 方案二：全用抽象类
 
 ```java
-    public abstract class BaseNotifier {
-        protected Logger logger = LoggerFactory.getLogger(getClass());
-        
-        public final void send(String message) {
-            logger.info("准备发送通知");
-            doSend(message);
-            logger.info("发送完成");
-        }
-        
-        protected abstract void doSend(String message);
+public abstract class BaseNotifier {
+    protected Logger logger = LoggerFactory.getLogger(getClass());
+
+    public final void send(String message) {
+        logger.info("准备发送通知");
+        doSend(message);
+        logger.info("发送完成");
     }
+
+    protected abstract void doSend(String message);
+}
 ```
 
-子类只需要实现 `doSend`，公共逻辑全在父类。代码复用是好了，但新问题来了：  
+子类只需实现 `doSend`，公共流程全部收敛在父类里。但如果某一种通知还需要支持“可取消”（比如短信发送后允许撤回），由于 Java 不支持多继承，子类就无法再继承一个 `Cancelable` 抽象类。
 
-**如果某个通知类还要支持“可取消”（比如短信能撤回），怎么办？**  
+## 抽象类和接口的分工
 
-Java 不允许多继承，没法再继承一个 `Cancelable` 抽象类。
+两者的侧重点不同：
 
+### 抽象类表达“是什么”
 
-## 其实，接口和抽象类解决的是**两类不同的问题**
+`EmailNotifier` 和 `SmsNotifier` 在本质上都属于“通知器”，可以把共有的状态和流程抽到 `BaseNotifier` 中。
 
-### **抽象类**：“**它是什么？**”  
-  比如 `EmailNotifier` 本质上和 `SmsNotifier` 共享“通知”的身份，所以可以把共性抽到 `BaseNotifier` 里。
+### 接口表达“能做什么”
 
-### **接口**：“**它能做什么？**”  
-  比如“可取消”不是所有通知都有的能力，而是一种**附加行为**。这时候定义一个 `Cancelable` 接口，让需要的类去实现，完全不影响继承结构。
+“可取消”只是部分通知具备的附加能力。定义一个 `Cancelable` 接口，让需要撤回功能的类去实现即可，不会影响原有的继承体系。
 
+## 实际项目中的取舍
 
-## 实际的选择
+在我接触过的项目里，接口的使用频率远高于抽象类，大多数模块都会先定义接口，再由具体类去实现，也就是常见的面向接口编程。
 
-我目前接触到的项目中，接口的使用频率远高于抽象类。几乎每个模块都是先定义接口，再由具体类去实现。这是一种 **面向接口** 的编程。
+抽象类更适合用来抽象具有共同本质的实体基类，比如 `Student` 和 `Teacher` 可以共同继承 `Person`。接口则更适合描述对象具备的行为能力，例如让学生实现 `study()`，让教师实现 `teach()`。
 
-个人认为，抽象类更适合用来表达具有共同本质的实体之间的继承关系,用来作为多种实体类的基类，比如 `Student` 和 `Teacher`,就可以使用 `Person` 来抽象。
-
-而接口，则更适合描述“某个对象能做什么”，而不关心它“是什么”。比如 `Student` 类的接口应当有 `study()` 方法，而 `Teacher` 类的接口应当有 `teach()` 方法。
-
----
-
-总的来说，它们不是互斥的，而是互补的：
-- 用**抽象类**组织“同类事物”的共性；
-- 用**接口**定义“跨类能力”的契约。
-
-虽然有网上有一种论调是“能用接口就别用抽象类”，显得更“面向接口编程”。  
-但是我觉得不能一刀切，**强行用接口代替抽象类，反而会让代码更啰嗦、更难维护**。
-
-就像刚刚聊到的通知系统的例子，
+两者在设计上是互补的：抽象类负责组织同类事物的共性，接口负责定义跨类型的能力契约。网上常有人主张“能用接口就别用抽象类”，但完全排斥抽象类往往会导致公共逻辑无处安放，代码反而更啰嗦。回到前面的通知系统，把两者结合起来会更自然：
 
 ```java
 // 身份：它是一个通知器
 public abstract class BaseNotifier { ... }
 
-// 能力：它还能被取消
-public interface Cancelable { 
+// 能力：支持取消
+public interface Cancelable {
     void cancel();
 }
 
@@ -86,6 +68,3 @@ public class SmsNotifier extends BaseNotifier implements Cancelable {
     public void cancel() { ... }
 }
 ```
-
-这样，结构清晰，扩展也方便。
-

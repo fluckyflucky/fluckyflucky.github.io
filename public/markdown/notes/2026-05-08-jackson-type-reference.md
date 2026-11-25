@@ -1,53 +1,53 @@
 # [后端] JSON 反序列化中 TypeReference 的使用
 
-最近在重构一个项目的后端的过程中，遇到了一个有关 JSON 反序列化的问题。
+最近在重构后端项目时，遇到了一个 JSON 反序列化泛型集合的问题。
 
-有这样的一段Java代码：
+原本的代码如下：
 
 ```java
 public List<String> getIPs() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            return objectMapper.readValue(this.broadcastServerIPs, 
-                                new TypeReference<List<String>>() {});
-        } catch (Exception e) {
-             return new ArrayList<>();
-        }
+    ObjectMapper objectMapper = new ObjectMapper();
+    try {
+        return objectMapper.readValue(
+            this.broadcastServerIPs,
+            new TypeReference<List<String>>() {}
+        );
+    } catch (Exception e) {
+        return new ArrayList<>();
     }
+}
 ```
 
-这里使用的是 `TypeReference` 作为反序列化的模版。代码能正常编译，没有任何问题。
+这里用 `TypeReference<List<String>>` 作为反序列化的类型模板，代码可以正常编译和运行。最开始我尝试直接传入 `List.class`，但静态检查提示类型不安全、泛型信息丢失，换成 `TypeReference` 之后问题才解决。
 
-事实上，在最开始的第一版代码，AI给我推荐的是 `List.class` 作为反序列化的模版，但是代码检查出现了类型未知的提示，所以重新又让AI进行修改，得到了 `TypeReference` 的结果，此时不再出现报错。
+## 背后的原因：泛型擦除
 
-### 为什么？
+Java 的泛型只在编译期有效，到了运行期会被擦除。也就是说，在运行时 `List<String>` 和 `List<Integer>` 都会退化成原始类型 `List`，`List.class` 本身无法携带 `<String>` 的元素类型。Jackson 在运行时拿不到这个信息，也就没法直接把 JSON 数组准确还原成 `List<String>`。
 
-询问AI得知：Java 泛型只在编译期存在，在 Java 中，泛型类型在运行时会被擦除。也就是说，运行时 `List<String>` 和 `List<Integer>` 都是 `List`。`List.class` 无法携带 `<String>` 信息。这意味着当我们使用泛型时，运行时无法直接获取到泛型的具体类型信息。
+`TypeReference` 利用了 Java 匿名内部类的特性来绕开这个限制。写法 `new TypeReference<List<String>>() {}` 实际上创建了 `TypeReference<List<String>>` 的一个匿名子类。虽然运行期泛型实例会被擦除，但子类字节码的父类签名中依然完整保留着 `List<String>`。Jackson 在构造 `TypeReference` 时通过反射读取这个父类签名，就能拿到目标类型。
 
-因此，Jackson 在运行时“看不见”你想要的是 String，只能靠显式告诉它。
+## 接口传参中的集合类型
 
-而TypeReference 的巧妙之处在于：通过匿名内部类获得泛型信息。虽然 Java 会擦除泛型，但这个匿名类的父类签名仍保留了 `List<String>` 的完整类型。Jackson 正是通过反射读取这个签名，准确还原出目标类型。
+在 Spring MVC 的 Controller 方法中，直接写 `@RequestBody List<User>` 通常是能正常反序列化的，因为 Spring MVC 可以反射读取方法参数的泛型签名，再交给 Jackson 处理。但如果是手动调用 `objectMapper.readValue(..., List.class)`，或者直接传递顶层泛型包装类，运行时就会丢失元素类型信息。
 
----
-
-顺带一提，**Spring Boot**项目中的 `@RequestBody` 注解在接收请求体中的 `List<User>` 时，由于 **Spring MVC** 的存在，也会面临同样问题；
-
-一种比较可行的解决方案是包装一层 **DTO** 对象：
+即便在 Controller 里，实际开发时也更建议用一层 DTO 把集合包起来：
 
 ```java
 // 使用 DTO 包装泛型集合
 public class IPListDTO {
     private List<String> ips;
-    // getter/setter ...
+    // getter / setter ...
 }
 
-// 然后在 Spring Controller 中直接接收这个 DTO
+// 在 Spring Controller 中接收 DTO
 @PostMapping("/updateIPs")
 public void update(@RequestBody IPListDTO ipList) {
     // ...
 }
 ```
 
-这样避免了 **顶层泛型** (直接暴露的泛型)，绕开类型擦除问题。
+这样既能避免直接暴露顶层集合类型，后续接口需要补充其他字段时也更容易扩展，语义更清晰。
 
-Java 的泛型擦除是一把双刃剑：它保证了与旧版本的兼容性，却牺牲了运行时的类型信息。TypeReference 是 Jackson 社区在语言限制下的一种临时应对。只有理解底层机制，才能更好地写出优美的代码。
+## 小结
+
+Java 的泛型擦除保证了和旧版本字节码的兼容，代价是运行期丢失了部分类型信息。`TypeReference` 是 Jackson 在这一语言限制下的常见解法，理解它的原理后，遇到泛型反序列化问题时也更容易判断该怎么处理。

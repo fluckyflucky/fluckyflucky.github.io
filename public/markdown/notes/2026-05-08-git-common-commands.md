@@ -81,8 +81,6 @@ git blame <file>
 git log --grep="关键词"
 ```
 
-`git log --oneline --graph` 能直观地看到分支合并情况。`git blame` 可以定位到某行代码是谁在什么时候改的。
-
 ## 撤销与回退
 
 ```bash
@@ -103,7 +101,7 @@ git reset --hard <commit>     # 丢弃所有修改（慎用）
 git revert <commit>
 ```
 
-`reset --hard` 是个危险操作，直接丢弃所有未提交的修改。在公共分支上更推荐用 `revert`，它不改写历史，而是新增一个"反向提交"来撤销变更。
+公共分支上推荐用 `revert`，它通过新增一条「反向提交」来撤销变更，不会改写历史。
 
 ## 暂存工作区
 
@@ -114,7 +112,7 @@ git revert <commit>
 git stash
 
 # 带备注的暂存
-git stash save "正在写的功能，先去修 bug"
+git stash push -m "正在写的功能，先去修 bug"
 
 # 查看暂存列表
 git stash list
@@ -226,4 +224,4 @@ git rebase develop
 git push -u origin feature/my-feature
 ```
 
-如果有不清楚的地方，先和AI/项目管理的同学提问再操作。
+拿不准的命令先确认再执行，避免误改历史。
