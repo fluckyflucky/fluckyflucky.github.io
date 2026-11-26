@@ -16,4 +16,4 @@
 
 不再青涩的夏，愿下一个五月始，我们能再相见吧。
 
-![](/img/2026-09-01-summer-farewell.png)
+![](/img/2026-09-01-summer-farewell.webp)

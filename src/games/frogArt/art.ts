@@ -1,5 +1,5 @@
 import sideEye from './images/side-eye.png'
-import smiling from './images/smiling.png'
+import smiling from './images/smiling.webp'
 import thinking from './images/thinking.jpg'
 import standing from './images/standing.jpg'
 import footSitting from './images/foot-sitting.jpg'
