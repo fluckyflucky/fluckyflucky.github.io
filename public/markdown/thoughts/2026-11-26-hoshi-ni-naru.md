@@ -6,6 +6,11 @@
 > *今僕は星になる 夜をも越えてゆけ」*  
 > —— tayori（Islet feat. 倚水）《星になる》
 
+<figure style="max-width: 28rem; margin: 1.5rem auto; text-align: center;">
+  <img src="/markdown/thoughts/img/hoshi-ni-naru.webp" alt="《星になる》单曲封面" width="1000" height="1000" style="width: 100%; height: auto;">
+  <figcaption>《星になる》单曲封面 · <a href="https://tayori-official.com/contents/128074">tayori 官方发行页</a></figcaption>
+</figure>
+
 ---
 
 ## 冬夜里寄出的一封信

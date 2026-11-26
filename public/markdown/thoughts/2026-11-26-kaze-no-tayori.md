@@ -2,6 +2,11 @@
 
 **—— tayori《風のたより》（Kaze no Tayori）全曲歌词细读与音乐随笔**
 
+<figure style="max-width: 28rem; margin: 1.5rem auto; text-align: center;">
+  <img src="/markdown/thoughts/img/kaze-no-tayori.webp" alt="《風のたより》单曲封面" width="1000" height="1000" style="width: 100%; height: auto;">
+  <figcaption>《風のたより》单曲封面 · <a href="https://tayori-official.com/contents/128075">tayori 官方发行页</a></figcaption>
+</figure>
+
 ---
 
 ## 写在风起之前：关于「tayori」这个名字的温度
